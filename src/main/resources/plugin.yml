@@ -1,0 +1,17 @@
+name: WirelessRedstone
+version: ${project.version}
+main: com.wirelessredstone.WirelessRedstonePlugin
+api-version: "1.21"
+description: Wireless Redstone plugin with linked copper bulbs
+author: Developer
+
+commands:
+  wireless:
+    description: Wireless Redstone commands
+    usage: /wireless bulbs --weathered
+    permission: wirelessredstone.use
+
+permissions:
+  wirelessredstone.use:
+    description: Allows using wireless redstone commands
+    default: op
