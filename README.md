@@ -110,6 +110,16 @@ Note: You can change defaults or assign these permissions using a permissions pl
 
 ---
 
+## 🖼️ Screenshot
+
+Here is a screenshot showing linked bulbs.
+
+![Wireless Bulb Screenshot](screenshot.png)
+
+_Caption: A pair of wireless bulbs showing synchronized lit state and the GUI title._
+
+---
+
 ## 🚧 Edge Cases & Things to Watch Out For
 
 - Chunks must be loaded for syncing to occur. If one or both bulbs are in an unloaded chunk, syncing will not happen until the chunk is loaded.
