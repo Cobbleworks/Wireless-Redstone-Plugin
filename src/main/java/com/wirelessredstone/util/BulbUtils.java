@@ -19,4 +19,20 @@ public class BulbUtils {
                type == Material.WAXED_WEATHERED_COPPER_BULB ||
                type == Material.WAXED_OXIDIZED_COPPER_BULB;
     }
+
+    public static boolean isRedstoneLamp(Block block) {
+        return isRedstoneLamp(block.getType());
+    }
+
+    public static boolean isRedstoneLamp(Material type) {
+        return type == Material.REDSTONE_LAMP;
+    }
+
+    public static boolean isWirelessCompatibleBlock(Block block) {
+        return isCopperBulb(block) || isRedstoneLamp(block);
+    }
+
+    public static boolean isWirelessCompatibleBlock(Material type) {
+        return isCopperBulb(type) || isRedstoneLamp(type);
+    }
 }

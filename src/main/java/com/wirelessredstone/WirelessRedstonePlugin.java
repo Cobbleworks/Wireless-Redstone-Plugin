@@ -3,6 +3,7 @@ package com.wirelessredstone;
 import com.wirelessredstone.command.WirelessCommand;
 import com.wirelessredstone.listener.BulbBreakListener;
 import com.wirelessredstone.listener.BulbPlaceListener;
+import com.wirelessredstone.listener.GUIListener;
 import com.wirelessredstone.manager.LinkedBulbManager;
 import com.wirelessredstone.task.BulbSyncTask;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -50,6 +51,7 @@ public class WirelessRedstonePlugin extends JavaPlugin {
         var pluginManager = getServer().getPluginManager();
         pluginManager.registerEvents(new BulbPlaceListener(bulbManager), this);
         pluginManager.registerEvents(new BulbBreakListener(bulbManager), this);
+        pluginManager.registerEvents(new GUIListener(), this);
     }
 
     private void startSyncTask() {

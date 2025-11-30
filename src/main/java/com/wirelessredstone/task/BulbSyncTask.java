@@ -1,12 +1,15 @@
 package com.wirelessredstone.task;
 
 import com.wirelessredstone.WirelessRedstonePlugin;
+import com.wirelessredstone.item.BulbVariant;
 import com.wirelessredstone.manager.LinkedBulbManager;
 import com.wirelessredstone.model.BulbPair;
 import com.wirelessredstone.util.BulbUtils;
 import com.wirelessredstone.util.ParticleEffects;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.block.Block;
+import org.bukkit.block.data.Lightable;
 import org.bukkit.block.data.type.CopperBulb;
 import org.bukkit.scheduler.BukkitRunnable;
 
@@ -41,74 +44,150 @@ public class BulbSyncTask extends BukkitRunnable {
             Block block1 = loc1.getBlock();
             Block block2 = loc2.getBlock();
 
-            if (!BulbUtils.isCopperBulb(block1) || !BulbUtils.isCopperBulb(block2)) {
-                continue;
-            }
-
-            CopperBulb data1 = (CopperBulb) block1.getBlockData();
-            CopperBulb data2 = (CopperBulb) block2.getBlockData();
-
-            boolean lit1 = data1.isLit();
-            boolean lit2 = data2.isLit();
-
-            if (lit1 == lit2) {
-                pair.setLit(lit1);
-                recentlySynced.remove(loc1);
-                recentlySynced.remove(loc2);
-                continue;
-            }
-
-            if (recentlySynced.contains(loc1) && recentlySynced.contains(loc2)) {
-                continue;
-            }
-
-            Location sourceLocation;
-            Location targetLocation;
-            Block targetBlock;
-            boolean newState;
-
-            if (!recentlySynced.contains(loc1) && lit1 != pair.isLit()) {
-                sourceLocation = loc1;
-                targetLocation = loc2;
-                targetBlock = block2;
-                newState = lit1;
-            } else if (!recentlySynced.contains(loc2) && lit2 != pair.isLit()) {
-                sourceLocation = loc2;
-                targetLocation = loc1;
-                targetBlock = block1;
-                newState = lit2;
+            if (pair.getBulbType() == BulbVariant.BulbType.REDSTONE_LAMP) {
+                syncRedstoneLamps(pair, loc1, loc2, block1, block2);
             } else {
-                sourceLocation = loc1;
-                targetLocation = loc2;
-                targetBlock = block2;
-                newState = lit1;
+                syncCopperBulbs(pair, loc1, loc2, block1, block2);
             }
-
-            syncBulb(targetBlock, targetLocation, newState);
-            pair.setLit(newState);
-
-            recentlySynced.add(sourceLocation);
-            recentlySynced.add(targetLocation);
-
-            ParticleEffects.spawnSyncParticles(sourceLocation, newState);
-            ParticleEffects.spawnSyncParticles(targetLocation, newState);
-
-            new BukkitRunnable() {
-                @Override
-                public void run() {
-                    recentlySynced.remove(sourceLocation);
-                    recentlySynced.remove(targetLocation);
-                }
-            }.runTaskLater(WirelessRedstonePlugin.getInstance(), 5L);
         }
     }
 
-    private void syncBulb(Block targetBlock, Location targetLocation, boolean lit) {
+    private void syncCopperBulbs(BulbPair pair, Location loc1, Location loc2, Block block1, Block block2) {
+        if (!BulbUtils.isCopperBulb(block1) || !BulbUtils.isCopperBulb(block2)) {
+            return;
+        }
+
+        CopperBulb data1 = (CopperBulb) block1.getBlockData();
+        CopperBulb data2 = (CopperBulb) block2.getBlockData();
+
+        boolean lit1 = data1.isLit();
+        boolean lit2 = data2.isLit();
+
+        if (lit1 == lit2) {
+            pair.setLit(lit1);
+            recentlySynced.remove(loc1);
+            recentlySynced.remove(loc2);
+            return;
+        }
+
+        if (recentlySynced.contains(loc1) && recentlySynced.contains(loc2)) {
+            return;
+        }
+
+        Location sourceLocation;
+        Location targetLocation;
+        Block targetBlock;
+        boolean newState;
+
+        if (!recentlySynced.contains(loc1) && lit1 != pair.isLit()) {
+            sourceLocation = loc1;
+            targetLocation = loc2;
+            targetBlock = block2;
+            newState = lit1;
+        } else if (!recentlySynced.contains(loc2) && lit2 != pair.isLit()) {
+            sourceLocation = loc2;
+            targetLocation = loc1;
+            targetBlock = block1;
+            newState = lit2;
+        } else {
+            sourceLocation = loc1;
+            targetLocation = loc2;
+            targetBlock = block2;
+            newState = lit1;
+        }
+
+        syncCopperBulb(targetBlock, targetLocation, newState);
+        pair.setLit(newState);
+
+        recentlySynced.add(sourceLocation);
+        recentlySynced.add(targetLocation);
+
+        ParticleEffects.spawnSyncParticles(sourceLocation, newState);
+        ParticleEffects.spawnSyncParticles(targetLocation, newState);
+
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                recentlySynced.remove(sourceLocation);
+                recentlySynced.remove(targetLocation);
+            }
+        }.runTaskLater(WirelessRedstonePlugin.getInstance(), 5L);
+    }
+
+    private void syncRedstoneLamps(BulbPair pair, Location loc1, Location loc2, Block block1, Block block2) {
+        if (!BulbUtils.isRedstoneLamp(block1) || !BulbUtils.isRedstoneLamp(block2)) {
+            return;
+        }
+
+        Lightable data1 = (Lightable) block1.getBlockData();
+        Lightable data2 = (Lightable) block2.getBlockData();
+
+        boolean lit1 = data1.isLit();
+        boolean lit2 = data2.isLit();
+
+        if (lit1 == lit2) {
+            pair.setLit(lit1);
+            recentlySynced.remove(loc1);
+            recentlySynced.remove(loc2);
+            return;
+        }
+
+        if (recentlySynced.contains(loc1) && recentlySynced.contains(loc2)) {
+            return;
+        }
+
+        Location sourceLocation;
+        Location targetLocation;
+        Block targetBlock;
+        boolean newState;
+
+        if (!recentlySynced.contains(loc1) && lit1 != pair.isLit()) {
+            sourceLocation = loc1;
+            targetLocation = loc2;
+            targetBlock = block2;
+            newState = lit1;
+        } else if (!recentlySynced.contains(loc2) && lit2 != pair.isLit()) {
+            sourceLocation = loc2;
+            targetLocation = loc1;
+            targetBlock = block1;
+            newState = lit2;
+        } else {
+            sourceLocation = loc1;
+            targetLocation = loc2;
+            targetBlock = block2;
+            newState = lit1;
+        }
+
+        syncRedstoneLamp(targetBlock, newState);
+        pair.setLit(newState);
+
+        recentlySynced.add(sourceLocation);
+        recentlySynced.add(targetLocation);
+
+        ParticleEffects.spawnSyncParticles(sourceLocation, newState);
+        ParticleEffects.spawnSyncParticles(targetLocation, newState);
+
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                recentlySynced.remove(sourceLocation);
+                recentlySynced.remove(targetLocation);
+            }
+        }.runTaskLater(WirelessRedstonePlugin.getInstance(), 5L);
+    }
+
+    private void syncCopperBulb(Block targetBlock, Location targetLocation, boolean lit) {
         CopperBulb targetData = (CopperBulb) targetBlock.getBlockData();
         targetData.setLit(lit);
         
         targetBlock.setBlockData(targetData, true);
         
         targetLocation.getWorld().getBlockAt(targetLocation).getState().update(true, true);
+    }
+
+    private void syncRedstoneLamp(Block targetBlock, boolean lit) {
+        Lightable targetData = (Lightable) targetBlock.getBlockData();
+        targetData.setLit(lit);
+        targetBlock.setBlockData(targetData, false);
     }
 }

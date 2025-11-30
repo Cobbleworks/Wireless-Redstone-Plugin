@@ -2,16 +2,25 @@ name: WirelessRedstone
 version: ${project.version}
 main: com.wirelessredstone.WirelessRedstonePlugin
 api-version: "1.21"
-description: Wireless Redstone plugin with linked copper bulbs
+description: Wireless Redstone plugin with linked copper bulbs and redstone lamps
 author: Developer
 
 commands:
   wireless:
     description: Wireless Redstone commands
-    usage: /wireless bulbs --weathered
+    usage: /wireless <bulbs|gui> [options]
     permission: wirelessredstone.use
 
 permissions:
   wirelessredstone.use:
     description: Allows using wireless redstone commands
+    default: op
+  wirelessredstone.teleport:
+    description: Allows teleporting to bulb locations via GUI
+    default: op
+  wirelessredstone.remove:
+    description: Allows removing bulb pairs via GUI
+    default: op
+  wirelessredstone.admin:
+    description: Allows viewing and managing all players' bulb pairs
     default: op

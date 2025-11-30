@@ -1,6 +1,7 @@
 package com.wirelessredstone.manager;
 
 import com.wirelessredstone.WirelessRedstonePlugin;
+import com.wirelessredstone.item.BulbVariant;
 import com.wirelessredstone.model.BulbPair;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
@@ -12,10 +13,9 @@ import org.bukkit.persistence.PersistentDataType;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 public class LinkedBulbManager {
 
@@ -26,11 +26,15 @@ public class LinkedBulbManager {
     public static final NamespacedKey WIRELESS_BULB_KEY;
     public static final NamespacedKey PAIR_ID_KEY;
     public static final NamespacedKey BULB_INDEX_KEY;
+    public static final NamespacedKey BULB_TYPE_KEY;
+    public static final NamespacedKey OWNER_KEY;
 
     static {
         WIRELESS_BULB_KEY = new NamespacedKey("wirelessredstone", "wireless_bulb");
         PAIR_ID_KEY = new NamespacedKey("wirelessredstone", "pair_id");
         BULB_INDEX_KEY = new NamespacedKey("wirelessredstone", "bulb_index");
+        BULB_TYPE_KEY = new NamespacedKey("wirelessredstone", "bulb_type");
+        OWNER_KEY = new NamespacedKey("wirelessredstone", "owner");
     }
 
     public LinkedBulbManager(WirelessRedstonePlugin plugin) {
@@ -62,9 +66,34 @@ public class LinkedBulbManager {
         return Optional.ofNullable(index);
     }
 
-    public void registerPlacedBulb(Location location, UUID pairId, int bulbIndex) {
-        BulbPair pair = bulbPairs.computeIfAbsent(pairId, id -> new BulbPair(id));
+    public Optional<BulbVariant.BulbType> getBulbType(ItemStack item) {
+        if (!isWirelessBulb(item)) return Optional.empty();
+        ItemMeta meta = item.getItemMeta();
+        String typeStr = meta.getPersistentDataContainer().get(BULB_TYPE_KEY, PersistentDataType.STRING);
+        if (typeStr == null) return Optional.of(BulbVariant.BulbType.COPPER_BULB);
+        try {
+            return Optional.of(BulbVariant.BulbType.valueOf(typeStr));
+        } catch (IllegalArgumentException e) {
+            return Optional.of(BulbVariant.BulbType.COPPER_BULB);
+        }
+    }
+
+    public Optional<UUID> getOwnerUuid(ItemStack item) {
+        if (!isWirelessBulb(item)) return Optional.empty();
+        ItemMeta meta = item.getItemMeta();
+        String ownerStr = meta.getPersistentDataContainer().get(OWNER_KEY, PersistentDataType.STRING);
+        return ownerStr != null ? Optional.of(UUID.fromString(ownerStr)) : Optional.empty();
+    }
+
+    public void registerPlacedBulb(Location location, UUID pairId, int bulbIndex, UUID ownerUuid, BulbVariant.BulbType bulbType) {
+        BulbPair pair = bulbPairs.computeIfAbsent(pairId, id -> new BulbPair(id, ownerUuid, bulbType));
         pair.setLocation(bulbIndex, location);
+        if (ownerUuid != null && pair.getOwnerUuid() == null) {
+            pair.setOwnerUuid(ownerUuid);
+        }
+        if (bulbType != null) {
+            pair.setBulbType(bulbType);
+        }
         locationToPairId.put(location, pairId);
         saveData();
     }
@@ -83,6 +112,23 @@ public class LinkedBulbManager {
         saveData();
     }
 
+    public void removePair(UUID pairId) {
+        BulbPair pair = bulbPairs.remove(pairId);
+        if (pair != null) {
+            if (pair.getLocation1() != null) {
+                locationToPairId.remove(pair.getLocation1());
+            }
+            if (pair.getLocation2() != null) {
+                locationToPairId.remove(pair.getLocation2());
+            }
+        }
+        saveData();
+    }
+
+    public Optional<BulbPair> getPairById(UUID pairId) {
+        return Optional.ofNullable(bulbPairs.get(pairId));
+    }
+
     public Optional<BulbPair> getPairByLocation(Location location) {
         UUID pairId = locationToPairId.get(location);
         return pairId != null ? Optional.ofNullable(bulbPairs.get(pairId)) : Optional.empty();
@@ -96,8 +142,20 @@ public class LinkedBulbManager {
         return locationToPairId.containsKey(location);
     }
 
-    public java.util.Collection<BulbPair> getAllPairs() {
+    public Collection<BulbPair> getAllPairs() {
         return bulbPairs.values();
+    }
+
+    public List<BulbPair> getPairsByOwner(UUID ownerUuid) {
+        return bulbPairs.values().stream()
+                .filter(pair -> ownerUuid.equals(pair.getOwnerUuid()))
+                .collect(Collectors.toList());
+    }
+
+    public List<BulbPair> getAllPlacedPairs() {
+        return bulbPairs.values().stream()
+                .filter(pair -> pair.getLocation1() != null || pair.getLocation2() != null)
+                .collect(Collectors.toList());
     }
 
     public void saveData() {
@@ -110,7 +168,11 @@ public class LinkedBulbManager {
             String basePath = "pairs." + index;
             config.set(basePath + ".id", entry.getKey().toString());
             config.set(basePath + ".lit", pair.isLit());
+            config.set(basePath + ".bulbType", pair.getBulbType().name());
 
+            if (pair.getOwnerUuid() != null) {
+                config.set(basePath + ".owner", pair.getOwnerUuid().toString());
+            }
             if (pair.getLocation1() != null) {
                 config.set(basePath + ".loc1", serializeLocation(pair.getLocation1()));
             }
@@ -142,7 +204,19 @@ public class LinkedBulbManager {
             if (idStr == null) continue;
 
             UUID pairId = UUID.fromString(idStr);
-            BulbPair pair = new BulbPair(pairId);
+            
+            String ownerStr = config.getString(basePath + ".owner");
+            UUID ownerUuid = ownerStr != null ? UUID.fromString(ownerStr) : null;
+            
+            String bulbTypeStr = config.getString(basePath + ".bulbType", "COPPER_BULB");
+            BulbVariant.BulbType bulbType;
+            try {
+                bulbType = BulbVariant.BulbType.valueOf(bulbTypeStr);
+            } catch (IllegalArgumentException e) {
+                bulbType = BulbVariant.BulbType.COPPER_BULB;
+            }
+            
+            BulbPair pair = new BulbPair(pairId, ownerUuid, bulbType);
             pair.setLit(config.getBoolean(basePath + ".lit", false));
 
             String loc1Str = config.getString(basePath + ".loc1");

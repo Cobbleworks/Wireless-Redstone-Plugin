@@ -1,12 +1,15 @@
 package com.wirelessredstone.listener;
 
 import com.wirelessredstone.WirelessRedstonePlugin;
+import com.wirelessredstone.item.BulbVariant;
 import com.wirelessredstone.manager.LinkedBulbManager;
+import com.wirelessredstone.model.BulbPair;
 import com.wirelessredstone.util.BulbUtils;
 import com.wirelessredstone.util.ParticleEffects;
 import org.bukkit.GameEvent;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
+import org.bukkit.block.data.Lightable;
 import org.bukkit.block.data.type.CopperBulb;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -37,7 +40,7 @@ public class BulbInteractionListener implements Listener {
         Location location = event.getLocation();
         Block block = location.getBlock();
 
-        if (!BulbUtils.isCopperBulb(block)) {
+        if (!BulbUtils.isWirelessCompatibleBlock(block)) {
             return;
         }
 
@@ -58,12 +61,19 @@ public class BulbInteractionListener implements Listener {
     }
 
     private void syncBulbState(Block sourceBlock) {
-        if (!BulbUtils.isCopperBulb(sourceBlock)) {
+        if (!BulbUtils.isWirelessCompatibleBlock(sourceBlock)) {
             return;
         }
 
         Location sourceLocation = sourceBlock.getLocation();
-        var linkedLocationOpt = bulbManager.getLinkedBulbLocation(sourceLocation);
+        var pairOpt = bulbManager.getPairByLocation(sourceLocation);
+        
+        if (pairOpt.isEmpty()) {
+            return;
+        }
+
+        BulbPair pair = pairOpt.get();
+        var linkedLocationOpt = pair.getOtherLocation(sourceLocation);
 
         if (linkedLocationOpt.isEmpty()) {
             return;
@@ -72,20 +82,17 @@ public class BulbInteractionListener implements Listener {
         Location linkedLocation = linkedLocationOpt.get();
         Block linkedBlock = linkedLocation.getBlock();
 
-        if (!BulbUtils.isCopperBulb(linkedBlock)) {
+        if (!BulbUtils.isWirelessCompatibleBlock(linkedBlock)) {
             return;
         }
 
-        CopperBulb sourceData = (CopperBulb) sourceBlock.getBlockData();
-        CopperBulb linkedData = (CopperBulb) linkedBlock.getBlockData();
+        boolean sourceLit = getBlockLitState(sourceBlock, pair.getBulbType());
+        boolean linkedLit = getBlockLitState(linkedBlock, pair.getBulbType());
 
-        boolean sourceLit = sourceData.isLit();
-
-        if (linkedData.isLit() != sourceLit) {
+        if (linkedLit != sourceLit) {
             processingLocations.add(linkedLocation);
 
-            linkedData.setLit(sourceLit);
-            linkedBlock.setBlockData(linkedData, false);
+            setBlockLitState(linkedBlock, sourceLit, pair.getBulbType());
 
             ParticleEffects.spawnSyncParticles(sourceLocation, sourceLit);
             ParticleEffects.spawnSyncParticles(linkedLocation, sourceLit);
@@ -96,6 +103,35 @@ public class BulbInteractionListener implements Listener {
                     processingLocations.remove(linkedLocation);
                 }
             }.runTaskLater(WirelessRedstonePlugin.getInstance(), 3L);
+        }
+    }
+
+    private boolean getBlockLitState(Block block, BulbVariant.BulbType bulbType) {
+        if (bulbType == BulbVariant.BulbType.REDSTONE_LAMP) {
+            if (BulbUtils.isRedstoneLamp(block)) {
+                return ((Lightable) block.getBlockData()).isLit();
+            }
+        } else {
+            if (BulbUtils.isCopperBulb(block)) {
+                return ((CopperBulb) block.getBlockData()).isLit();
+            }
+        }
+        return false;
+    }
+
+    private void setBlockLitState(Block block, boolean lit, BulbVariant.BulbType bulbType) {
+        if (bulbType == BulbVariant.BulbType.REDSTONE_LAMP) {
+            if (BulbUtils.isRedstoneLamp(block)) {
+                Lightable data = (Lightable) block.getBlockData();
+                data.setLit(lit);
+                block.setBlockData(data, false);
+            }
+        } else {
+            if (BulbUtils.isCopperBulb(block)) {
+                CopperBulb data = (CopperBulb) block.getBlockData();
+                data.setLit(lit);
+                block.setBlockData(data, false);
+            }
         }
     }
 }

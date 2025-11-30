@@ -13,14 +13,14 @@ import java.util.UUID;
 
 public class WirelessBulbFactory {
 
-    public static ItemStack[] createLinkedPair(UUID pairId, BulbVariant variant) {
+    public static ItemStack[] createLinkedPair(UUID pairId, BulbVariant variant, UUID ownerUuid) {
         return new ItemStack[]{
-                createBulb(pairId, 0, "Wireless Bulb A", variant),
-                createBulb(pairId, 1, "Wireless Bulb B", variant)
+                createBulb(pairId, 0, "Wireless Bulb A", variant, ownerUuid),
+                createBulb(pairId, 1, "Wireless Bulb B", variant, ownerUuid)
         };
     }
 
-    private static ItemStack createBulb(UUID pairId, int index, String name, BulbVariant variant) {
+    private static ItemStack createBulb(UUID pairId, int index, String name, BulbVariant variant, UUID ownerUuid) {
         ItemStack bulb = new ItemStack(variant.getMaterial());
         ItemMeta meta = bulb.getItemMeta();
 
@@ -43,6 +43,10 @@ public class WirelessBulbFactory {
         pdc.set(LinkedBulbManager.WIRELESS_BULB_KEY, PersistentDataType.BYTE, (byte) 1);
         pdc.set(LinkedBulbManager.PAIR_ID_KEY, PersistentDataType.STRING, pairId.toString());
         pdc.set(LinkedBulbManager.BULB_INDEX_KEY, PersistentDataType.INTEGER, index);
+        pdc.set(LinkedBulbManager.BULB_TYPE_KEY, PersistentDataType.STRING, variant.getBulbType().name());
+        if (ownerUuid != null) {
+            pdc.set(LinkedBulbManager.OWNER_KEY, PersistentDataType.STRING, ownerUuid.toString());
+        }
 
         bulb.setItemMeta(meta);
         return bulb;

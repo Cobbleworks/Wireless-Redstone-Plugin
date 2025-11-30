@@ -1,10 +1,13 @@
 package com.wirelessredstone.listener;
 
+import com.wirelessredstone.item.BulbVariant;
 import com.wirelessredstone.manager.LinkedBulbManager;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockPlaceEvent;
+
+import java.util.UUID;
 
 public class BulbPlaceListener implements Listener {
 
@@ -29,7 +32,10 @@ public class BulbPlaceListener implements Listener {
             return;
         }
 
+        UUID ownerUuid = bulbManager.getOwnerUuid(itemInHand).orElse(event.getPlayer().getUniqueId());
+        BulbVariant.BulbType bulbType = bulbManager.getBulbType(itemInHand).orElse(BulbVariant.BulbType.COPPER_BULB);
+
         var location = event.getBlock().getLocation();
-        bulbManager.registerPlacedBulb(location, pairIdOpt.get(), bulbIndexOpt.get());
+        bulbManager.registerPlacedBulb(location, pairIdOpt.get(), bulbIndexOpt.get(), ownerUuid, bulbType);
     }
 }

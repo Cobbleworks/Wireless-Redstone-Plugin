@@ -47,7 +47,7 @@ public class BulbBreakListener implements Listener {
             Location linkedLocation = linkedLocationOpt.get();
             Block linkedBlock = linkedLocation.getBlock();
 
-            if (BulbUtils.isCopperBulb(linkedBlock)) {
+            if (BulbUtils.isWirelessCompatibleBlock(linkedBlock)) {
                 processingBreaks.add(linkedLocation);
 
                 ParticleEffects.spawnBreakParticles(linkedLocation);
@@ -55,7 +55,7 @@ public class BulbBreakListener implements Listener {
                 new BukkitRunnable() {
                     @Override
                     public void run() {
-                        if (BulbUtils.isCopperBulb(linkedBlock)) {
+                        if (BulbUtils.isWirelessCompatibleBlock(linkedBlock)) {
                             linkedBlock.breakNaturally();
                         }
                         processingBreaks.remove(linkedLocation);
