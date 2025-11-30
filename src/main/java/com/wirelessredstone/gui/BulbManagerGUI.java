@@ -15,15 +15,15 @@ import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 public class BulbManagerGUI implements InventoryHolder {
 
     private static final int ROWS = 6;
     private static final int SIZE = ROWS * 9;
     private static final int ITEMS_PER_PAGE = 28;
+    
+    private static final Map<UUID, BulbPair> pendingRenames = new HashMap<>();
 
     private final LinkedBulbManager bulbManager;
     private final Player player;
@@ -112,8 +112,8 @@ public class BulbManagerGUI implements InventoryHolder {
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
 
-        String shortId = pair.getPairId().toString().substring(0, 8);
-        meta.displayName(Component.text("Pair: " + shortId, NamedTextColor.AQUA)
+        String displayName = pair.getDisplayName();
+        meta.displayName(Component.text("Pair: " + displayName, NamedTextColor.AQUA)
                 .decoration(TextDecoration.ITALIC, false));
 
         List<Component> lore = new ArrayList<>();
@@ -125,6 +125,11 @@ public class BulbManagerGUI implements InventoryHolder {
         
         lore.add(Component.text("Status: ", NamedTextColor.GRAY)
                 .append(Component.text(pair.isLit() ? "ON" : "OFF", pair.isLit() ? NamedTextColor.GREEN : NamedTextColor.RED))
+                .decoration(TextDecoration.ITALIC, false));
+        
+        lore.add(Component.text("Sync Messages: ", NamedTextColor.GRAY)
+                .append(Component.text(pair.isShowSyncMessages() ? "Enabled" : "Disabled", 
+                    pair.isShowSyncMessages() ? NamedTextColor.GREEN : NamedTextColor.RED))
                 .decoration(TextDecoration.ITALIC, false));
         
         lore.add(Component.empty());
@@ -158,6 +163,12 @@ public class BulbManagerGUI implements InventoryHolder {
                 .decoration(TextDecoration.ITALIC, false));
         lore.add(Component.text("Right-click: ", NamedTextColor.YELLOW)
                 .append(Component.text("Teleport to B", NamedTextColor.WHITE))
+                .decoration(TextDecoration.ITALIC, false));
+        lore.add(Component.text("Middle-click: ", NamedTextColor.LIGHT_PURPLE)
+                .append(Component.text("Toggle sync messages", NamedTextColor.WHITE))
+                .decoration(TextDecoration.ITALIC, false));
+        lore.add(Component.text("Drop (Q): ", NamedTextColor.GREEN)
+                .append(Component.text("Rename pair", NamedTextColor.WHITE))
                 .decoration(TextDecoration.ITALIC, false));
         lore.add(Component.text("Shift+Click: ", NamedTextColor.RED)
                 .append(Component.text("Remove pair", NamedTextColor.WHITE))
@@ -222,7 +233,7 @@ public class BulbManagerGUI implements InventoryHolder {
             loc.getBlockZ());
     }
 
-    public void handleClick(int slot, boolean isRightClick, boolean isShiftClick) {
+    public void handleClick(int slot, boolean isRightClick, boolean isShiftClick, boolean isMiddleClick, boolean isDrop) {
         if (slot == 48 && currentPage > 0) {
             currentPage--;
             populateInventory();
@@ -258,11 +269,65 @@ public class BulbManagerGUI implements InventoryHolder {
 
         if (isShiftClick) {
             handleRemovePair(pair);
+        } else if (isMiddleClick) {
+            handleToggleSyncMessages(pair);
+        } else if (isDrop) {
+            handleStartRename(pair);
         } else if (isRightClick) {
             handleTeleport(pair.getLocation2(), "B");
         } else {
             handleTeleport(pair.getLocation1(), "A");
         }
+    }
+
+    private void handleToggleSyncMessages(BulbPair pair) {
+        pair.setShowSyncMessages(!pair.isShowSyncMessages());
+        bulbManager.saveData();
+        
+        String status = pair.isShowSyncMessages() ? "enabled" : "disabled";
+        player.sendMessage(Component.text("Sync messages " + status + " for pair: " + pair.getDisplayName(), 
+            pair.isShowSyncMessages() ? NamedTextColor.GREEN : NamedTextColor.YELLOW));
+        
+        populateInventory();
+    }
+
+    private void handleStartRename(BulbPair pair) {
+        pendingRenames.put(player.getUniqueId(), pair);
+        player.closeInventory();
+        player.sendMessage(Component.text("Enter a new name for the pair (or 'cancel' to abort):", NamedTextColor.YELLOW));
+        player.sendMessage(Component.text("Current name: " + pair.getDisplayName(), NamedTextColor.GRAY));
+    }
+
+    public static boolean hasPendingRename(UUID playerUuid) {
+        return pendingRenames.containsKey(playerUuid);
+    }
+
+    public static void processRename(Player player, String newName, LinkedBulbManager bulbManager) {
+        BulbPair pair = pendingRenames.remove(player.getUniqueId());
+        if (pair == null) return;
+
+        if (newName.equalsIgnoreCase("cancel")) {
+            player.sendMessage(Component.text("Rename cancelled.", NamedTextColor.GRAY));
+            return;
+        }
+
+        if (newName.length() > 32) {
+            newName = newName.substring(0, 32);
+        }
+
+        if (newName.equalsIgnoreCase("reset") || newName.equalsIgnoreCase("clear")) {
+            pair.setCustomName(null);
+            player.sendMessage(Component.text("Pair name reset to default: " + pair.getDisplayName(), NamedTextColor.GREEN));
+        } else {
+            pair.setCustomName(newName);
+            player.sendMessage(Component.text("Pair renamed to: " + newName, NamedTextColor.GREEN));
+        }
+        
+        bulbManager.saveData();
+    }
+
+    public static void cancelPendingRename(UUID playerUuid) {
+        pendingRenames.remove(playerUuid);
     }
 
     private int getPairIndexFromSlot(int slot) {

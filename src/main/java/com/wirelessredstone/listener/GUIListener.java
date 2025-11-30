@@ -1,11 +1,22 @@
 package com.wirelessredstone.listener;
 
 import com.wirelessredstone.gui.BulbManagerGUI;
+import com.wirelessredstone.manager.LinkedBulbManager;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.player.AsyncPlayerChatEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 
 public class GUIListener implements Listener {
+
+    private final LinkedBulbManager bulbManager;
+
+    public GUIListener(LinkedBulbManager bulbManager) {
+        this.bulbManager = bulbManager;
+    }
 
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
@@ -19,6 +30,29 @@ public class GUIListener implements Listener {
             return;
         }
 
-        gui.handleClick(event.getSlot(), event.isRightClick(), event.isShiftClick());
+        boolean isMiddleClick = event.getClick() == ClickType.MIDDLE;
+        boolean isDrop = event.getClick() == ClickType.DROP || event.getClick() == ClickType.CONTROL_DROP;
+
+        gui.handleClick(event.getSlot(), event.isRightClick(), event.isShiftClick(), isMiddleClick, isDrop);
+    }
+
+    @EventHandler
+    public void onPlayerChat(AsyncPlayerChatEvent event) {
+        Player player = event.getPlayer();
+        
+        if (BulbManagerGUI.hasPendingRename(player.getUniqueId())) {
+            event.setCancelled(true);
+            String message = event.getMessage();
+            
+            player.getServer().getScheduler().runTask(
+                player.getServer().getPluginManager().getPlugin("WirelessRedstone"),
+                () -> BulbManagerGUI.processRename(player, message, bulbManager)
+            );
+        }
+    }
+
+    @EventHandler
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        BulbManagerGUI.cancelPendingRename(event.getPlayer().getUniqueId());
     }
 }

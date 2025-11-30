@@ -51,7 +51,7 @@ public class WirelessRedstonePlugin extends JavaPlugin {
         var pluginManager = getServer().getPluginManager();
         pluginManager.registerEvents(new BulbPlaceListener(bulbManager), this);
         pluginManager.registerEvents(new BulbBreakListener(bulbManager), this);
-        pluginManager.registerEvents(new GUIListener(), this);
+        pluginManager.registerEvents(new GUIListener(bulbManager), this);
     }
 
     private void startSyncTask() {

@@ -44,6 +44,7 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
         
         switch (subCommand) {
             case "bulbs" -> handleBulbsCommand(player, args);
+            case "lamps" -> handleLampsCommand(player);
             case "gui", "manage", "list" -> handleGUICommand(player, args);
             default -> {
                 player.sendMessage(Component.text("Unknown subcommand.", NamedTextColor.RED));
@@ -58,14 +59,19 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
         BulbVariant variant = BulbVariant.COPPER;
         if (args.length >= 2) {
             variant = BulbVariant.fromArg(args[1]);
-            if (variant == null) {
+            if (variant == null || variant == BulbVariant.REDSTONE_LAMP) {
                 player.sendMessage(Component.text("Unknown variant: " + args[1], NamedTextColor.RED));
+                player.sendMessage(Component.text("Use /wireless lamps for redstone lamps.", NamedTextColor.GRAY));
                 sendUsage(player);
                 return;
             }
         }
 
         giveWirelessBulbs(player, variant);
+    }
+
+    private void handleLampsCommand(Player player) {
+        giveWirelessBulbs(player, BulbVariant.REDSTONE_LAMP);
     }
 
     private void handleGUICommand(Player player, String[] args) {
@@ -76,8 +82,10 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
     private void sendUsage(Player player) {
         player.sendMessage(Component.text("=== Wireless Redstone Commands ===", NamedTextColor.GOLD));
         player.sendMessage(Component.text("/wireless bulbs [variant]", NamedTextColor.YELLOW)
-                .append(Component.text(" - Get linked bulbs", NamedTextColor.GRAY)));
-        player.sendMessage(Component.text("  Variants: --copper, --exposed, --weathered, --oxidized, --lamp", NamedTextColor.DARK_GRAY));
+                .append(Component.text(" - Get linked copper bulbs", NamedTextColor.GRAY)));
+        player.sendMessage(Component.text("  Variants: --copper, --exposed, --weathered, --oxidized", NamedTextColor.DARK_GRAY));
+        player.sendMessage(Component.text("/wireless lamps", NamedTextColor.YELLOW)
+                .append(Component.text(" - Get linked redstone lamps", NamedTextColor.GRAY)));
         player.sendMessage(Component.text("/wireless gui [--all]", NamedTextColor.YELLOW)
                 .append(Component.text(" - Open management GUI", NamedTextColor.GRAY)));
     }
@@ -105,7 +113,7 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
 
         if (args.length == 1) {
             String input = args[0].toLowerCase();
-            for (String sub : List.of("bulbs", "gui", "manage", "list")) {
+            for (String sub : List.of("bulbs", "lamps", "gui", "manage", "list")) {
                 if (sub.startsWith(input)) {
                     completions.add(sub);
                 }
@@ -116,7 +124,7 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
             
             if (subCommand.equals("bulbs")) {
                 for (BulbVariant variant : BulbVariant.values()) {
-                    if (variant.getArg().startsWith(input)) {
+                    if (variant != BulbVariant.REDSTONE_LAMP && variant.getArg().startsWith(input)) {
                         completions.add(variant.getArg());
                     }
                 }

@@ -169,9 +169,13 @@ public class LinkedBulbManager {
             config.set(basePath + ".id", entry.getKey().toString());
             config.set(basePath + ".lit", pair.isLit());
             config.set(basePath + ".bulbType", pair.getBulbType().name());
+            config.set(basePath + ".showSyncMessages", pair.isShowSyncMessages());
 
             if (pair.getOwnerUuid() != null) {
                 config.set(basePath + ".owner", pair.getOwnerUuid().toString());
+            }
+            if (pair.getCustomName() != null) {
+                config.set(basePath + ".customName", pair.getCustomName());
             }
             if (pair.getLocation1() != null) {
                 config.set(basePath + ".loc1", serializeLocation(pair.getLocation1()));
@@ -218,6 +222,8 @@ public class LinkedBulbManager {
             
             BulbPair pair = new BulbPair(pairId, ownerUuid, bulbType);
             pair.setLit(config.getBoolean(basePath + ".lit", false));
+            pair.setShowSyncMessages(config.getBoolean(basePath + ".showSyncMessages", true));
+            pair.setCustomName(config.getString(basePath + ".customName"));
 
             String loc1Str = config.getString(basePath + ".loc1");
             String loc2Str = config.getString(basePath + ".loc2");

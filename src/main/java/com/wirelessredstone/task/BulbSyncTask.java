@@ -6,11 +6,14 @@ import com.wirelessredstone.manager.LinkedBulbManager;
 import com.wirelessredstone.model.BulbPair;
 import com.wirelessredstone.util.BulbUtils;
 import com.wirelessredstone.util.ParticleEffects;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.data.Lightable;
 import org.bukkit.block.data.type.CopperBulb;
+import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.HashSet;
@@ -20,6 +23,7 @@ public class BulbSyncTask extends BukkitRunnable {
 
     private final LinkedBulbManager bulbManager;
     private final Set<Location> recentlySynced = new HashSet<>();
+    private static final double MESSAGE_RADIUS = 8.0;
 
     public BulbSyncTask(LinkedBulbManager bulbManager) {
         this.bulbManager = bulbManager;
@@ -120,6 +124,9 @@ public class BulbSyncTask extends BukkitRunnable {
         recentlySynced.add(sourceLocation);
         recentlySynced.add(targetLocation);
 
+        // Send sync messages to nearby players
+        sendSyncMessages(pair, sourceLocation, targetLocation, newState);
+
         // Spawn trigger particles for visual feedback
         ParticleEffects.spawnTriggerParticles(sourceLocation, newState);
         ParticleEffects.spawnTriggerParticles(targetLocation, newState);
@@ -185,6 +192,9 @@ public class BulbSyncTask extends BukkitRunnable {
         recentlySynced.add(sourceLocation);
         recentlySynced.add(targetLocation);
 
+        // Send sync messages to nearby players
+        sendSyncMessages(pair, sourceLocation, targetLocation, newState);
+
         // Spawn trigger particles for visual feedback
         ParticleEffects.spawnTriggerParticles(sourceLocation, newState);
         ParticleEffects.spawnTriggerParticles(targetLocation, newState);
@@ -198,6 +208,39 @@ public class BulbSyncTask extends BukkitRunnable {
                 recentlySynced.remove(targetLocation);
             }
         }.runTaskLater(WirelessRedstonePlugin.getInstance(), 5L);
+    }
+
+    private void sendSyncMessages(BulbPair pair, Location sourceLocation, Location targetLocation, boolean newState) {
+        if (!pair.isShowSyncMessages()) return;
+
+        String pairName = pair.getDisplayName();
+        String stateText = newState ? "ON" : "OFF";
+        NamedTextColor stateColor = newState ? NamedTextColor.GREEN : NamedTextColor.RED;
+
+        for (Player player : sourceLocation.getWorld().getPlayers()) {
+            Location playerLoc = player.getLocation();
+            boolean nearSource = playerLoc.distanceSquared(sourceLocation) <= MESSAGE_RADIUS * MESSAGE_RADIUS;
+            boolean nearTarget = playerLoc.distanceSquared(targetLocation) <= MESSAGE_RADIUS * MESSAGE_RADIUS;
+
+            if (nearSource || nearTarget) {
+                Location currentLoc = nearSource ? sourceLocation : targetLocation;
+                Location otherLoc = nearSource ? targetLocation : sourceLocation;
+                
+                player.sendMessage(
+                    Component.text("[" + pairName + "] ", NamedTextColor.AQUA)
+                        .append(Component.text(formatShortLocation(currentLoc), NamedTextColor.GRAY))
+                        .append(Component.text(" → ", NamedTextColor.WHITE))
+                        .append(Component.text(formatShortLocation(otherLoc), NamedTextColor.GRAY))
+                        .append(Component.text(" [", NamedTextColor.DARK_GRAY))
+                        .append(Component.text(stateText, stateColor))
+                        .append(Component.text("]", NamedTextColor.DARK_GRAY))
+                );
+            }
+        }
+    }
+
+    private String formatShortLocation(Location loc) {
+        return String.format("%d,%d,%d", loc.getBlockX(), loc.getBlockY(), loc.getBlockZ());
     }
 
     private void syncCopperBulb(Block targetBlock, Location targetLocation, boolean lit) {

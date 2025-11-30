@@ -14,6 +14,8 @@ public class BulbPair {
     private boolean lit;
     private UUID ownerUuid;
     private BulbVariant.BulbType bulbType;
+    private String customName;
+    private boolean showSyncMessages = true;
 
     public BulbPair(UUID pairId) {
         this.pairId = pairId;
@@ -99,5 +101,25 @@ public class BulbPair {
 
     public boolean isComplete() {
         return location1 != null && location2 != null;
+    }
+
+    public String getCustomName() {
+        return customName;
+    }
+
+    public void setCustomName(String customName) {
+        this.customName = customName;
+    }
+
+    public boolean isShowSyncMessages() {
+        return showSyncMessages;
+    }
+
+    public void setShowSyncMessages(boolean showSyncMessages) {
+        this.showSyncMessages = showSyncMessages;
+    }
+
+    public String getDisplayName() {
+        return customName != null ? customName : pairId.toString().substring(0, 8);
     }
 }
