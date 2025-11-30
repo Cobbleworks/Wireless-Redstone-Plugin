@@ -1,7 +1,11 @@
 package com.wirelessredstone.listener;
 
 import com.wirelessredstone.item.BulbVariant;
+import com.wirelessredstone.item.WirelessBulbFactory;
 import com.wirelessredstone.manager.LinkedBulbManager;
+import com.wirelessredstone.model.BulbPair;
+import com.wirelessredstone.util.ParticleEffects;
+import org.bukkit.Location;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -37,5 +41,20 @@ public class BulbPlaceListener implements Listener {
 
         var location = event.getBlock().getLocation();
         bulbManager.registerPlacedBulb(location, pairIdOpt.get(), bulbIndexOpt.get(), ownerUuid, bulbType);
+
+        // Spawn placement particle effect
+        ParticleEffects.spawnTriggerParticles(location, false);
+
+        // Check if the pair is now complete and notify player
+        bulbManager.getPairById(pairIdOpt.get()).ifPresent(pair -> {
+            if (pair.isComplete()) {
+                Location otherLocation = pair.getOtherLocation(location).orElse(null);
+                if (otherLocation != null) {
+                    // Spawn connection particles at both locations
+                    ParticleEffects.spawnSyncParticles(location, false);
+                    ParticleEffects.spawnSyncParticles(otherLocation, false);
+                }
+            }
+        });
     }
 }

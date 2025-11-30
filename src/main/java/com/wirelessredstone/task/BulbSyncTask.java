@@ -25,13 +25,27 @@ public class BulbSyncTask extends BukkitRunnable {
         this.bulbManager = bulbManager;
     }
 
+    private int ambientParticleTick = 0;
+    private static final int AMBIENT_PARTICLE_INTERVAL = 10; // Every 10 ticks (0.5 seconds)
+
     @Override
     public void run() {
         recentlySynced.removeIf(loc -> !bulbManager.isWirelessBulbLocation(loc));
+        ambientParticleTick++;
 
         for (BulbPair pair : bulbManager.getAllPairs()) {
             Location loc1 = pair.getLocation1();
             Location loc2 = pair.getLocation2();
+
+            // Spawn ambient particles for placed bulbs (even if only one is placed)
+            if (ambientParticleTick >= AMBIENT_PARTICLE_INTERVAL) {
+                if (loc1 != null && loc1.isChunkLoaded()) {
+                    ParticleEffects.spawnAmbientParticles(loc1, pair.isLit());
+                }
+                if (loc2 != null && loc2.isChunkLoaded()) {
+                    ParticleEffects.spawnAmbientParticles(loc2, pair.isLit());
+                }
+            }
 
             if (loc1 == null || loc2 == null) {
                 continue;
@@ -49,6 +63,10 @@ public class BulbSyncTask extends BukkitRunnable {
             } else {
                 syncCopperBulbs(pair, loc1, loc2, block1, block2);
             }
+        }
+
+        if (ambientParticleTick >= AMBIENT_PARTICLE_INTERVAL) {
+            ambientParticleTick = 0;
         }
     }
 
@@ -102,6 +120,9 @@ public class BulbSyncTask extends BukkitRunnable {
         recentlySynced.add(sourceLocation);
         recentlySynced.add(targetLocation);
 
+        // Spawn trigger particles for visual feedback
+        ParticleEffects.spawnTriggerParticles(sourceLocation, newState);
+        ParticleEffects.spawnTriggerParticles(targetLocation, newState);
         ParticleEffects.spawnSyncParticles(sourceLocation, newState);
         ParticleEffects.spawnSyncParticles(targetLocation, newState);
 
@@ -164,6 +185,9 @@ public class BulbSyncTask extends BukkitRunnable {
         recentlySynced.add(sourceLocation);
         recentlySynced.add(targetLocation);
 
+        // Spawn trigger particles for visual feedback
+        ParticleEffects.spawnTriggerParticles(sourceLocation, newState);
+        ParticleEffects.spawnTriggerParticles(targetLocation, newState);
         ParticleEffects.spawnSyncParticles(sourceLocation, newState);
         ParticleEffects.spawnSyncParticles(targetLocation, newState);
 
