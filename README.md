@@ -47,7 +47,11 @@ All commands are rooted under `/wireless`.
   - Give a pair of _linked redstone lamps_.
 
 - `/wireless gui [--all]`
+
   - Opens the Bulb Manager GUI. If `--all` is specified and the player has admin permissions, the GUI shows every placed pair on the server.
+
+- `/wireless wireview`
+  - Displays all connected bulb pairs with a glowing outline effect.
 
 ### Command Notes
 

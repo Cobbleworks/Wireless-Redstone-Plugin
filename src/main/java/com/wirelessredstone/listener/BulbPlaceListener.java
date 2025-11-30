@@ -1,5 +1,6 @@
 package com.wirelessredstone.listener;
 
+import com.wirelessredstone.WirelessRedstonePlugin;
 import com.wirelessredstone.item.BulbVariant;
 import com.wirelessredstone.item.WirelessBulbFactory;
 import com.wirelessredstone.manager.LinkedBulbManager;
@@ -44,6 +45,9 @@ public class BulbPlaceListener implements Listener {
 
         // Spawn placement particle effect
         ParticleEffects.spawnTriggerParticles(location, false);
+
+        // Refresh wireview for all players who have it enabled
+        WirelessRedstonePlugin.getInstance().getWireViewManager().refreshAllPlayers();
 
         // Check if the pair is now complete and notify player
         bulbManager.getPairById(pairIdOpt.get()).ifPresent(pair -> {

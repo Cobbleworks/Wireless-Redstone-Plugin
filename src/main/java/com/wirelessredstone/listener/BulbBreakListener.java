@@ -43,6 +43,9 @@ public class BulbBreakListener implements Listener {
 
         bulbManager.unregisterBulb(location);
 
+        // Refresh wireview for all players who have it enabled
+        WirelessRedstonePlugin.getInstance().getWireViewManager().refreshAllPlayers();
+
         if (linkedLocationOpt.isPresent()) {
             Location linkedLocation = linkedLocationOpt.get();
             Block linkedBlock = linkedLocation.getBlock();

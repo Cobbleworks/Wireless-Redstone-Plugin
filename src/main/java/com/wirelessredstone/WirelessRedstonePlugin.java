@@ -4,7 +4,9 @@ import com.wirelessredstone.command.WirelessCommand;
 import com.wirelessredstone.listener.BulbBreakListener;
 import com.wirelessredstone.listener.BulbPlaceListener;
 import com.wirelessredstone.listener.GUIListener;
+import com.wirelessredstone.listener.WireViewListener;
 import com.wirelessredstone.manager.LinkedBulbManager;
+import com.wirelessredstone.manager.WireViewManager;
 import com.wirelessredstone.task.BulbSyncTask;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
@@ -13,12 +15,14 @@ public class WirelessRedstonePlugin extends JavaPlugin {
 
     private static WirelessRedstonePlugin instance;
     private LinkedBulbManager bulbManager;
+    private WireViewManager wireViewManager;
     private BukkitTask syncTask;
 
     @Override
     public void onEnable() {
         instance = this;
         bulbManager = new LinkedBulbManager(this);
+        wireViewManager = new WireViewManager(this, bulbManager);
 
         registerCommands();
         registerListeners();
@@ -32,6 +36,9 @@ public class WirelessRedstonePlugin extends JavaPlugin {
         if (syncTask != null) {
             syncTask.cancel();
         }
+        if (wireViewManager != null) {
+            wireViewManager.cleanupAll();
+        }
         if (bulbManager != null) {
             bulbManager.saveData();
         }
@@ -41,7 +48,7 @@ public class WirelessRedstonePlugin extends JavaPlugin {
     private void registerCommands() {
         var command = getCommand("wireless");
         if (command != null) {
-            var wirelessCommand = new WirelessCommand(bulbManager);
+            var wirelessCommand = new WirelessCommand(bulbManager, wireViewManager);
             command.setExecutor(wirelessCommand);
             command.setTabCompleter(wirelessCommand);
         }
@@ -52,6 +59,7 @@ public class WirelessRedstonePlugin extends JavaPlugin {
         pluginManager.registerEvents(new BulbPlaceListener(bulbManager), this);
         pluginManager.registerEvents(new BulbBreakListener(bulbManager), this);
         pluginManager.registerEvents(new GUIListener(bulbManager), this);
+        pluginManager.registerEvents(new WireViewListener(wireViewManager), this);
     }
 
     private void startSyncTask() {
@@ -64,5 +72,9 @@ public class WirelessRedstonePlugin extends JavaPlugin {
 
     public LinkedBulbManager getBulbManager() {
         return bulbManager;
+    }
+
+    public WireViewManager getWireViewManager() {
+        return wireViewManager;
     }
 }

@@ -4,6 +4,7 @@ import com.wirelessredstone.gui.BulbManagerGUI;
 import com.wirelessredstone.item.BulbVariant;
 import com.wirelessredstone.item.WirelessBulbFactory;
 import com.wirelessredstone.manager.LinkedBulbManager;
+import com.wirelessredstone.manager.WireViewManager;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.command.Command;
@@ -18,9 +19,11 @@ import java.util.List;
 public class WirelessCommand implements CommandExecutor, TabCompleter {
 
     private final LinkedBulbManager bulbManager;
+    private final WireViewManager wireViewManager;
 
-    public WirelessCommand(LinkedBulbManager bulbManager) {
+    public WirelessCommand(LinkedBulbManager bulbManager, WireViewManager wireViewManager) {
         this.bulbManager = bulbManager;
+        this.wireViewManager = wireViewManager;
     }
 
     @Override
@@ -46,6 +49,7 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
             case "bulbs" -> handleBulbsCommand(player, args);
             case "lamps" -> handleLampsCommand(player);
             case "gui", "manage", "list" -> handleGUICommand(player, args);
+            case "wireview" -> handleWireViewCommand(player);
             default -> {
                 player.sendMessage(Component.text("Unknown subcommand.", NamedTextColor.RED));
                 sendUsage(player);
@@ -79,6 +83,17 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
         new BulbManagerGUI(bulbManager, player, showAll).open();
     }
 
+    private void handleWireViewCommand(Player player) {
+        boolean enabled = wireViewManager.toggleWireView(player);
+        if (enabled) {
+            player.sendMessage(Component.text("WireView enabled! ", NamedTextColor.GREEN)
+                    .append(Component.text("Paired bulbs are now highlighted with glowing outlines.", NamedTextColor.GRAY)));
+            player.sendMessage(Component.text("Bulbs in the same pair share the same color.", NamedTextColor.GRAY));
+        } else {
+            player.sendMessage(Component.text("WireView disabled.", NamedTextColor.YELLOW));
+        }
+    }
+
     private void sendUsage(Player player) {
         player.sendMessage(Component.text("=== Wireless Redstone Commands ===", NamedTextColor.GOLD));
         player.sendMessage(Component.text("/wireless bulbs [variant]", NamedTextColor.YELLOW)
@@ -88,6 +103,8 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
                 .append(Component.text(" - Get linked redstone lamps", NamedTextColor.GRAY)));
         player.sendMessage(Component.text("/wireless gui [--all]", NamedTextColor.YELLOW)
                 .append(Component.text(" - Open management GUI", NamedTextColor.GRAY)));
+        player.sendMessage(Component.text("/wireless wireview", NamedTextColor.YELLOW)
+                .append(Component.text(" - Toggle glowing outline on paired bulbs", NamedTextColor.GRAY)));
     }
 
     private void giveWirelessBulbs(Player player, BulbVariant variant) {
@@ -113,7 +130,7 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
 
         if (args.length == 1) {
             String input = args[0].toLowerCase();
-            for (String sub : List.of("bulbs", "lamps", "gui", "manage", "list")) {
+            for (String sub : List.of("bulbs", "lamps", "gui", "manage", "list", "wireview")) {
                 if (sub.startsWith(input)) {
                     completions.add(sub);
                 }
