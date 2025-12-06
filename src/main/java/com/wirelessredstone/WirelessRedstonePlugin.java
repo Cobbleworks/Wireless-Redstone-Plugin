@@ -5,6 +5,7 @@ import com.wirelessredstone.listener.BulbBreakListener;
 import com.wirelessredstone.listener.BulbPlaceListener;
 import com.wirelessredstone.listener.GUIListener;
 import com.wirelessredstone.listener.WireViewListener;
+import com.wirelessredstone.manager.DebugManager;
 import com.wirelessredstone.manager.LinkedBulbManager;
 import com.wirelessredstone.manager.WireViewManager;
 import com.wirelessredstone.task.BulbSyncTask;
@@ -16,6 +17,7 @@ public class WirelessRedstonePlugin extends JavaPlugin {
     private static WirelessRedstonePlugin instance;
     private LinkedBulbManager bulbManager;
     private WireViewManager wireViewManager;
+    private DebugManager debugManager;
     private BukkitTask syncTask;
 
     @Override
@@ -23,6 +25,7 @@ public class WirelessRedstonePlugin extends JavaPlugin {
         instance = this;
         bulbManager = new LinkedBulbManager(this);
         wireViewManager = new WireViewManager(this, bulbManager);
+        debugManager = new DebugManager();
 
         registerCommands();
         registerListeners();
@@ -48,7 +51,7 @@ public class WirelessRedstonePlugin extends JavaPlugin {
     private void registerCommands() {
         var command = getCommand("wireless");
         if (command != null) {
-            var wirelessCommand = new WirelessCommand(bulbManager, wireViewManager);
+            var wirelessCommand = new WirelessCommand(bulbManager, wireViewManager, debugManager);
             command.setExecutor(wirelessCommand);
             command.setTabCompleter(wirelessCommand);
         }
@@ -63,7 +66,7 @@ public class WirelessRedstonePlugin extends JavaPlugin {
     }
 
     private void startSyncTask() {
-        syncTask = new BulbSyncTask(bulbManager).runTaskTimer(this, 1L, 1L);
+        syncTask = new BulbSyncTask(bulbManager, debugManager).runTaskTimer(this, 1L, 1L);
     }
 
     public static WirelessRedstonePlugin getInstance() {
@@ -76,5 +79,9 @@ public class WirelessRedstonePlugin extends JavaPlugin {
 
     public WireViewManager getWireViewManager() {
         return wireViewManager;
+    }
+
+    public DebugManager getDebugManager() {
+        return debugManager;
     }
 }

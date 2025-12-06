@@ -4,7 +4,7 @@ import com.wirelessredstone.WirelessRedstonePlugin;
 import com.wirelessredstone.item.BulbVariant;
 import com.wirelessredstone.item.WirelessBulbFactory;
 import com.wirelessredstone.manager.LinkedBulbManager;
-import com.wirelessredstone.model.BulbPair;
+import com.wirelessredstone.model.BulbGroup;
 import com.wirelessredstone.util.ParticleEffects;
 import org.bukkit.Location;
 import org.bukkit.event.EventHandler;
@@ -12,6 +12,7 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockPlaceEvent;
 
+import java.util.List;
 import java.util.UUID;
 
 public class BulbPlaceListener implements Listener {
@@ -30,33 +31,30 @@ public class BulbPlaceListener implements Listener {
             return;
         }
 
-        var pairIdOpt = bulbManager.getPairId(itemInHand);
+        var groupIdOpt = bulbManager.getGroupId(itemInHand);
         var bulbIndexOpt = bulbManager.getBulbIndex(itemInHand);
 
-        if (pairIdOpt.isEmpty() || bulbIndexOpt.isEmpty()) {
+        if (groupIdOpt.isEmpty() || bulbIndexOpt.isEmpty()) {
             return;
         }
 
         UUID ownerUuid = bulbManager.getOwnerUuid(itemInHand).orElse(event.getPlayer().getUniqueId());
         BulbVariant.BulbType bulbType = bulbManager.getBulbType(itemInHand).orElse(BulbVariant.BulbType.COPPER_BULB);
+        int groupSize = bulbManager.getGroupSize(itemInHand).orElse(2);
 
         var location = event.getBlock().getLocation();
-        bulbManager.registerPlacedBulb(location, pairIdOpt.get(), bulbIndexOpt.get(), ownerUuid, bulbType);
+        bulbManager.registerPlacedBulb(location, groupIdOpt.get(), bulbIndexOpt.get(), ownerUuid, bulbType, groupSize);
 
-        // Spawn placement particle effect
         ParticleEffects.spawnTriggerParticles(location, false);
 
-        // Refresh wireview for all players who have it enabled
         WirelessRedstonePlugin.getInstance().getWireViewManager().refreshAllPlayers();
 
-        // Check if the pair is now complete and notify player
-        bulbManager.getPairById(pairIdOpt.get()).ifPresent(pair -> {
-            if (pair.isComplete()) {
-                Location otherLocation = pair.getOtherLocation(location).orElse(null);
-                if (otherLocation != null) {
-                    // Spawn connection particles at both locations
-                    ParticleEffects.spawnSyncParticles(location, false);
-                    ParticleEffects.spawnSyncParticles(otherLocation, false);
+        bulbManager.getGroupById(groupIdOpt.get()).ifPresent(group -> {
+            List<Location> otherLocations = group.getOtherLocations(location);
+            if (!otherLocations.isEmpty()) {
+                ParticleEffects.spawnSyncParticles(location, false);
+                for (Location otherLoc : otherLocations) {
+                    ParticleEffects.spawnSyncParticles(otherLoc, false);
                 }
             }
         });

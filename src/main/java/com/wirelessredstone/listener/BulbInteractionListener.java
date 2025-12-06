@@ -3,7 +3,7 @@ package com.wirelessredstone.listener;
 import com.wirelessredstone.WirelessRedstonePlugin;
 import com.wirelessredstone.item.BulbVariant;
 import com.wirelessredstone.manager.LinkedBulbManager;
-import com.wirelessredstone.model.BulbPair;
+import com.wirelessredstone.model.BulbGroup;
 import com.wirelessredstone.util.BulbUtils;
 import com.wirelessredstone.util.ParticleEffects;
 import org.bukkit.GameEvent;
@@ -18,6 +18,7 @@ import org.bukkit.event.world.GenericGameEvent;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 public class BulbInteractionListener implements Listener {
@@ -66,44 +67,50 @@ public class BulbInteractionListener implements Listener {
         }
 
         Location sourceLocation = sourceBlock.getLocation();
-        var pairOpt = bulbManager.getPairByLocation(sourceLocation);
+        var groupOpt = bulbManager.getGroupByLocation(sourceLocation);
         
-        if (pairOpt.isEmpty()) {
+        if (groupOpt.isEmpty()) {
             return;
         }
 
-        BulbPair pair = pairOpt.get();
-        var linkedLocationOpt = pair.getOtherLocation(sourceLocation);
+        BulbGroup group = groupOpt.get();
+        List<Location> otherLocations = group.getOtherLocations(sourceLocation);
 
-        if (linkedLocationOpt.isEmpty()) {
+        if (otherLocations.isEmpty()) {
             return;
         }
 
-        Location linkedLocation = linkedLocationOpt.get();
-        Block linkedBlock = linkedLocation.getBlock();
+        boolean sourceLit = getBlockLitState(sourceBlock, group.getBulbType());
 
-        if (!BulbUtils.isWirelessCompatibleBlock(linkedBlock)) {
-            return;
+        for (Location linkedLocation : otherLocations) {
+            if (!linkedLocation.isChunkLoaded()) continue;
+            
+            Block linkedBlock = linkedLocation.getBlock();
+            if (!BulbUtils.isWirelessCompatibleBlock(linkedBlock)) {
+                continue;
+            }
+
+            boolean linkedLit = getBlockLitState(linkedBlock, group.getBulbType());
+
+            if (linkedLit != sourceLit) {
+                processingLocations.add(linkedLocation);
+
+                setBlockLitState(linkedBlock, sourceLit, group.getBulbType());
+
+                ParticleEffects.spawnSyncParticles(linkedLocation, sourceLit);
+            }
         }
 
-        boolean sourceLit = getBlockLitState(sourceBlock, pair.getBulbType());
-        boolean linkedLit = getBlockLitState(linkedBlock, pair.getBulbType());
+        ParticleEffects.spawnSyncParticles(sourceLocation, sourceLit);
 
-        if (linkedLit != sourceLit) {
-            processingLocations.add(linkedLocation);
-
-            setBlockLitState(linkedBlock, sourceLit, pair.getBulbType());
-
-            ParticleEffects.spawnSyncParticles(sourceLocation, sourceLit);
-            ParticleEffects.spawnSyncParticles(linkedLocation, sourceLit);
-
-            new BukkitRunnable() {
-                @Override
-                public void run() {
-                    processingLocations.remove(linkedLocation);
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                for (Location loc : otherLocations) {
+                    processingLocations.remove(loc);
                 }
-            }.runTaskLater(WirelessRedstonePlugin.getInstance(), 3L);
-        }
+            }
+        }.runTaskLater(WirelessRedstonePlugin.getInstance(), 3L);
     }
 
     private boolean getBlockLitState(Block block, BulbVariant.BulbType bulbType) {

@@ -2,7 +2,7 @@ package com.wirelessredstone.manager;
 
 import com.wirelessredstone.WirelessRedstonePlugin;
 import com.wirelessredstone.item.BulbVariant;
-import com.wirelessredstone.model.BulbPair;
+import com.wirelessredstone.model.BulbGroup;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -20,21 +20,23 @@ import java.util.stream.Collectors;
 public class LinkedBulbManager {
 
     private final WirelessRedstonePlugin plugin;
-    private final Map<UUID, BulbPair> bulbPairs = new ConcurrentHashMap<>();
-    private final Map<Location, UUID> locationToPairId = new ConcurrentHashMap<>();
+    private final Map<UUID, BulbGroup> bulbGroups = new ConcurrentHashMap<>();
+    private final Map<Location, UUID> locationToGroupId = new ConcurrentHashMap<>();
     
     public static final NamespacedKey WIRELESS_BULB_KEY;
-    public static final NamespacedKey PAIR_ID_KEY;
+    public static final NamespacedKey GROUP_ID_KEY;
     public static final NamespacedKey BULB_INDEX_KEY;
     public static final NamespacedKey BULB_TYPE_KEY;
     public static final NamespacedKey OWNER_KEY;
+    public static final NamespacedKey GROUP_SIZE_KEY;
 
     static {
         WIRELESS_BULB_KEY = new NamespacedKey("wirelessredstone", "wireless_bulb");
-        PAIR_ID_KEY = new NamespacedKey("wirelessredstone", "pair_id");
+        GROUP_ID_KEY = new NamespacedKey("wirelessredstone", "group_id");
         BULB_INDEX_KEY = new NamespacedKey("wirelessredstone", "bulb_index");
         BULB_TYPE_KEY = new NamespacedKey("wirelessredstone", "bulb_type");
         OWNER_KEY = new NamespacedKey("wirelessredstone", "owner");
+        GROUP_SIZE_KEY = new NamespacedKey("wirelessredstone", "group_size");
     }
 
     public LinkedBulbManager(WirelessRedstonePlugin plugin) {
@@ -42,7 +44,7 @@ public class LinkedBulbManager {
         loadData();
     }
 
-    public UUID createNewPairId() {
+    public UUID createNewGroupId() {
         return UUID.randomUUID();
     }
 
@@ -52,11 +54,11 @@ public class LinkedBulbManager {
         return meta.getPersistentDataContainer().has(WIRELESS_BULB_KEY, PersistentDataType.BYTE);
     }
 
-    public Optional<UUID> getPairId(ItemStack item) {
+    public Optional<UUID> getGroupId(ItemStack item) {
         if (!isWirelessBulb(item)) return Optional.empty();
         ItemMeta meta = item.getItemMeta();
-        String pairIdStr = meta.getPersistentDataContainer().get(PAIR_ID_KEY, PersistentDataType.STRING);
-        return pairIdStr != null ? Optional.of(UUID.fromString(pairIdStr)) : Optional.empty();
+        String groupIdStr = meta.getPersistentDataContainer().get(GROUP_ID_KEY, PersistentDataType.STRING);
+        return groupIdStr != null ? Optional.of(UUID.fromString(groupIdStr)) : Optional.empty();
     }
 
     public Optional<Integer> getBulbIndex(ItemStack item) {
@@ -64,6 +66,13 @@ public class LinkedBulbManager {
         ItemMeta meta = item.getItemMeta();
         Integer index = meta.getPersistentDataContainer().get(BULB_INDEX_KEY, PersistentDataType.INTEGER);
         return Optional.ofNullable(index);
+    }
+
+    public Optional<Integer> getGroupSize(ItemStack item) {
+        if (!isWirelessBulb(item)) return Optional.empty();
+        ItemMeta meta = item.getItemMeta();
+        Integer size = meta.getPersistentDataContainer().get(GROUP_SIZE_KEY, PersistentDataType.INTEGER);
+        return Optional.ofNullable(size != null ? size : 2);
     }
 
     public Optional<BulbVariant.BulbType> getBulbType(ItemStack item) {
@@ -85,76 +94,77 @@ public class LinkedBulbManager {
         return ownerStr != null ? Optional.of(UUID.fromString(ownerStr)) : Optional.empty();
     }
 
-    public void registerPlacedBulb(Location location, UUID pairId, int bulbIndex, UUID ownerUuid, BulbVariant.BulbType bulbType) {
-        BulbPair pair = bulbPairs.computeIfAbsent(pairId, id -> new BulbPair(id, ownerUuid, bulbType));
-        pair.setLocation(bulbIndex, location);
-        if (ownerUuid != null && pair.getOwnerUuid() == null) {
-            pair.setOwnerUuid(ownerUuid);
+    public void registerPlacedBulb(Location location, UUID groupId, int bulbIndex, UUID ownerUuid, BulbVariant.BulbType bulbType, int groupSize) {
+        BulbGroup group = bulbGroups.computeIfAbsent(groupId, id -> new BulbGroup(id, groupSize, ownerUuid, bulbType));
+        group.setLocation(bulbIndex, location);
+        if (ownerUuid != null && group.getOwnerUuid() == null) {
+            group.setOwnerUuid(ownerUuid);
         }
         if (bulbType != null) {
-            pair.setBulbType(bulbType);
+            group.setBulbType(bulbType);
         }
-        locationToPairId.put(location, pairId);
+        locationToGroupId.put(location, groupId);
         saveData();
     }
 
     public void unregisterBulb(Location location) {
-        UUID pairId = locationToPairId.remove(location);
-        if (pairId != null) {
-            BulbPair pair = bulbPairs.get(pairId);
-            if (pair != null) {
-                pair.removeLocation(location);
-                if (pair.isEmpty()) {
-                    bulbPairs.remove(pairId);
+        UUID groupId = locationToGroupId.remove(location);
+        if (groupId != null) {
+            BulbGroup group = bulbGroups.get(groupId);
+            if (group != null) {
+                group.removeLocation(location);
+                if (group.isEmpty()) {
+                    bulbGroups.remove(groupId);
                 }
             }
         }
         saveData();
     }
 
-    public void removePair(UUID pairId) {
-        BulbPair pair = bulbPairs.remove(pairId);
-        if (pair != null) {
-            if (pair.getLocation1() != null) {
-                locationToPairId.remove(pair.getLocation1());
-            }
-            if (pair.getLocation2() != null) {
-                locationToPairId.remove(pair.getLocation2());
+    public void removeGroup(UUID groupId) {
+        BulbGroup group = bulbGroups.remove(groupId);
+        if (group != null) {
+            for (Location loc : group.getLocations()) {
+                if (loc != null) {
+                    locationToGroupId.remove(loc);
+                }
             }
         }
         saveData();
     }
 
-    public Optional<BulbPair> getPairById(UUID pairId) {
-        return Optional.ofNullable(bulbPairs.get(pairId));
+    public Optional<BulbGroup> getGroupById(UUID groupId) {
+        return Optional.ofNullable(bulbGroups.get(groupId));
     }
 
-    public Optional<BulbPair> getPairByLocation(Location location) {
-        UUID pairId = locationToPairId.get(location);
-        return pairId != null ? Optional.ofNullable(bulbPairs.get(pairId)) : Optional.empty();
+    public Optional<BulbGroup> getGroupByLocation(Location location) {
+        UUID groupId = locationToGroupId.get(location);
+        return groupId != null ? Optional.ofNullable(bulbGroups.get(groupId)) : Optional.empty();
     }
 
-    public Optional<Location> getLinkedBulbLocation(Location location) {
-        return getPairByLocation(location).flatMap(pair -> pair.getOtherLocation(location));
+    public List<Location> getOtherBulbLocations(Location location) {
+        return getGroupByLocation(location)
+                .map(group -> group.getOtherLocations(location))
+                .orElse(Collections.emptyList());
     }
 
     public boolean isWirelessBulbLocation(Location location) {
-        return locationToPairId.containsKey(location);
+        return locationToGroupId.containsKey(location);
     }
 
-    public Collection<BulbPair> getAllPairs() {
-        return bulbPairs.values();
+    public Collection<BulbGroup> getAllGroups() {
+        return bulbGroups.values();
     }
 
-    public List<BulbPair> getPairsByOwner(UUID ownerUuid) {
-        return bulbPairs.values().stream()
-                .filter(pair -> ownerUuid.equals(pair.getOwnerUuid()))
+    public List<BulbGroup> getGroupsByOwner(UUID ownerUuid) {
+        return bulbGroups.values().stream()
+                .filter(group -> ownerUuid.equals(group.getOwnerUuid()))
                 .collect(Collectors.toList());
     }
 
-    public List<BulbPair> getAllPlacedPairs() {
-        return bulbPairs.values().stream()
-                .filter(pair -> pair.getLocation1() != null || pair.getLocation2() != null)
+    public List<BulbGroup> getAllPlacedGroups() {
+        return bulbGroups.values().stream()
+                .filter(group -> group.getPlacedCount() > 0)
                 .collect(Collectors.toList());
     }
 
@@ -163,25 +173,27 @@ public class LinkedBulbManager {
         FileConfiguration config = new YamlConfiguration();
 
         int index = 0;
-        for (Map.Entry<UUID, BulbPair> entry : bulbPairs.entrySet()) {
-            BulbPair pair = entry.getValue();
-            String basePath = "pairs." + index;
+        for (Map.Entry<UUID, BulbGroup> entry : bulbGroups.entrySet()) {
+            BulbGroup group = entry.getValue();
+            String basePath = "groups." + index;
             config.set(basePath + ".id", entry.getKey().toString());
-            config.set(basePath + ".lit", pair.isLit());
-            config.set(basePath + ".bulbType", pair.getBulbType().name());
-            config.set(basePath + ".showSyncMessages", pair.isShowSyncMessages());
+            config.set(basePath + ".lit", group.isLit());
+            config.set(basePath + ".bulbType", group.getBulbType().name());
+            config.set(basePath + ".maxSize", group.getMaxSize());
 
-            if (pair.getOwnerUuid() != null) {
-                config.set(basePath + ".owner", pair.getOwnerUuid().toString());
+            if (group.getOwnerUuid() != null) {
+                config.set(basePath + ".owner", group.getOwnerUuid().toString());
             }
-            if (pair.getCustomName() != null) {
-                config.set(basePath + ".customName", pair.getCustomName());
+            if (group.getCustomName() != null) {
+                config.set(basePath + ".customName", group.getCustomName());
             }
-            if (pair.getLocation1() != null) {
-                config.set(basePath + ".loc1", serializeLocation(pair.getLocation1()));
-            }
-            if (pair.getLocation2() != null) {
-                config.set(basePath + ".loc2", serializeLocation(pair.getLocation2()));
+            
+            List<Location> locations = group.getLocations();
+            for (int i = 0; i < locations.size(); i++) {
+                Location loc = locations.get(i);
+                if (loc != null) {
+                    config.set(basePath + ".locations." + i, serializeLocation(loc));
+                }
             }
             index++;
         }
@@ -199,15 +211,28 @@ public class LinkedBulbManager {
         if (!dataFile.exists()) return;
 
         FileConfiguration config = YamlConfiguration.loadConfiguration(dataFile);
+        
+        // Try loading new format (groups)
+        var groupsSection = config.getConfigurationSection("groups");
+        if (groupsSection != null) {
+            loadNewFormat(config, groupsSection);
+            return;
+        }
+        
+        // Fall back to old format (pairs) for backwards compatibility
         var pairsSection = config.getConfigurationSection("pairs");
-        if (pairsSection == null) return;
+        if (pairsSection != null) {
+            loadOldFormat(config, pairsSection);
+        }
+    }
 
-        for (String key : pairsSection.getKeys(false)) {
-            String basePath = "pairs." + key;
+    private void loadNewFormat(FileConfiguration config, org.bukkit.configuration.ConfigurationSection groupsSection) {
+        for (String key : groupsSection.getKeys(false)) {
+            String basePath = "groups." + key;
             String idStr = config.getString(basePath + ".id");
             if (idStr == null) continue;
 
-            UUID pairId = UUID.fromString(idStr);
+            UUID groupId = UUID.fromString(idStr);
             
             String ownerStr = config.getString(basePath + ".owner");
             UUID ownerUuid = ownerStr != null ? UUID.fromString(ownerStr) : null;
@@ -220,10 +245,56 @@ public class LinkedBulbManager {
                 bulbType = BulbVariant.BulbType.COPPER_BULB;
             }
             
-            BulbPair pair = new BulbPair(pairId, ownerUuid, bulbType);
-            pair.setLit(config.getBoolean(basePath + ".lit", false));
-            pair.setShowSyncMessages(config.getBoolean(basePath + ".showSyncMessages", true));
-            pair.setCustomName(config.getString(basePath + ".customName"));
+            int maxSize = config.getInt(basePath + ".maxSize", 2);
+            
+            BulbGroup group = new BulbGroup(groupId, maxSize, ownerUuid, bulbType);
+            group.setLit(config.getBoolean(basePath + ".lit", false));
+            group.setCustomName(config.getString(basePath + ".customName"));
+
+            var locationsSection = config.getConfigurationSection(basePath + ".locations");
+            if (locationsSection != null) {
+                for (String locKey : locationsSection.getKeys(false)) {
+                    int locIndex = Integer.parseInt(locKey);
+                    String locStr = config.getString(basePath + ".locations." + locKey);
+                    if (locStr != null) {
+                        Location loc = deserializeLocation(locStr);
+                        if (loc != null) {
+                            group.setLocation(locIndex, loc);
+                            locationToGroupId.put(loc, groupId);
+                        }
+                    }
+                }
+            }
+
+            if (!group.isEmpty()) {
+                bulbGroups.put(groupId, group);
+            }
+        }
+    }
+
+    private void loadOldFormat(FileConfiguration config, org.bukkit.configuration.ConfigurationSection pairsSection) {
+        // Backwards compatibility: load old pair format as groups of size 2
+        for (String key : pairsSection.getKeys(false)) {
+            String basePath = "pairs." + key;
+            String idStr = config.getString(basePath + ".id");
+            if (idStr == null) continue;
+
+            UUID groupId = UUID.fromString(idStr);
+            
+            String ownerStr = config.getString(basePath + ".owner");
+            UUID ownerUuid = ownerStr != null ? UUID.fromString(ownerStr) : null;
+            
+            String bulbTypeStr = config.getString(basePath + ".bulbType", "COPPER_BULB");
+            BulbVariant.BulbType bulbType;
+            try {
+                bulbType = BulbVariant.BulbType.valueOf(bulbTypeStr);
+            } catch (IllegalArgumentException e) {
+                bulbType = BulbVariant.BulbType.COPPER_BULB;
+            }
+            
+            BulbGroup group = new BulbGroup(groupId, 2, ownerUuid, bulbType);
+            group.setLit(config.getBoolean(basePath + ".lit", false));
+            group.setCustomName(config.getString(basePath + ".customName"));
 
             String loc1Str = config.getString(basePath + ".loc1");
             String loc2Str = config.getString(basePath + ".loc2");
@@ -231,21 +302,26 @@ public class LinkedBulbManager {
             if (loc1Str != null) {
                 Location loc1 = deserializeLocation(loc1Str);
                 if (loc1 != null) {
-                    pair.setLocation(0, loc1);
-                    locationToPairId.put(loc1, pairId);
+                    group.setLocation(0, loc1);
+                    locationToGroupId.put(loc1, groupId);
                 }
             }
             if (loc2Str != null) {
                 Location loc2 = deserializeLocation(loc2Str);
                 if (loc2 != null) {
-                    pair.setLocation(1, loc2);
-                    locationToPairId.put(loc2, pairId);
+                    group.setLocation(1, loc2);
+                    locationToGroupId.put(loc2, groupId);
                 }
             }
 
-            if (!pair.isEmpty()) {
-                bulbPairs.put(pairId, pair);
+            if (!group.isEmpty()) {
+                bulbGroups.put(groupId, group);
             }
+        }
+        
+        // Save in new format for future loads
+        if (!bulbGroups.isEmpty()) {
+            saveData();
         }
     }
 

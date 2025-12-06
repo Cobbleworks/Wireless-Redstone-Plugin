@@ -31,9 +31,8 @@ public class GUIListener implements Listener {
         }
 
         boolean isMiddleClick = event.getClick() == ClickType.MIDDLE;
-        boolean isDrop = event.getClick() == ClickType.DROP || event.getClick() == ClickType.CONTROL_DROP;
 
-        gui.handleClick(event.getSlot(), event.isRightClick(), event.isShiftClick(), isMiddleClick, isDrop);
+        gui.handleClick(event.getSlot(), event.isRightClick(), event.isShiftClick(), isMiddleClick);
     }
 
     @EventHandler

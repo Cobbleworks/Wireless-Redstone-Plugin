@@ -1,7 +1,7 @@
 package com.wirelessredstone.manager;
 
 import com.wirelessredstone.WirelessRedstonePlugin;
-import com.wirelessredstone.model.BulbPair;
+import com.wirelessredstone.model.BulbGroup;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Location;
 import org.bukkit.entity.Entity;
@@ -81,26 +81,19 @@ public class WireViewManager {
             NamedTextColor.BLUE
         };
 
-        for (BulbPair pair : bulbManager.getAllPlacedPairs()) {
-            NamedTextColor pairColor = colors[colorIndex % colors.length];
+        for (BulbGroup group : bulbManager.getAllPlacedGroups()) {
+            NamedTextColor groupColor = colors[colorIndex % colors.length];
             colorIndex++;
 
-            String teamName = WIREVIEW_TEAM_PREFIX + pair.getPairId().toString().substring(0, 8);
+            String teamName = WIREVIEW_TEAM_PREFIX + group.getGroupId().toString().substring(0, 8);
             Team team = scoreboard.getTeam(teamName);
             if (team == null) {
                 team = scoreboard.registerNewTeam(teamName);
             }
-            team.color(pairColor);
+            team.color(groupColor);
 
-            if (pair.getLocation1() != null) {
-                Entity entity = spawnGlowEntity(pair.getLocation1(), player, team);
-                if (entity != null) {
-                    entityIds.add(entity.getUniqueId());
-                }
-            }
-
-            if (pair.getLocation2() != null) {
-                Entity entity = spawnGlowEntity(pair.getLocation2(), player, team);
+            for (Location loc : group.getPlacedLocations()) {
+                Entity entity = spawnGlowEntity(loc, player, team);
                 if (entity != null) {
                     entityIds.add(entity.getUniqueId());
                 }

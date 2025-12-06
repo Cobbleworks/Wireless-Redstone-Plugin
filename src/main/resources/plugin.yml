@@ -8,7 +8,7 @@ author: Developer
 commands:
   wireless:
     description: Wireless Redstone commands
-    usage: /wireless <bulbs|gui> [options]
+    usage: /wireless <bulbs|lamps|gui|debug> [options]
     permission: wirelessredstone.use
 
 permissions:
@@ -19,8 +19,8 @@ permissions:
     description: Allows teleporting to bulb locations via GUI
     default: op
   wirelessredstone.remove:
-    description: Allows removing bulb pairs via GUI
+    description: Allows removing bulb groups via GUI
     default: op
   wirelessredstone.admin:
-    description: Allows viewing and managing all players' bulb pairs
+    description: Allows viewing and managing all players' bulb groups
     default: op

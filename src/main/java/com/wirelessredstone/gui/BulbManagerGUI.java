@@ -2,7 +2,7 @@ package com.wirelessredstone.gui;
 
 import com.wirelessredstone.item.BulbVariant;
 import com.wirelessredstone.manager.LinkedBulbManager;
-import com.wirelessredstone.model.BulbPair;
+import com.wirelessredstone.model.BulbGroup;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
@@ -23,30 +23,30 @@ public class BulbManagerGUI implements InventoryHolder {
     private static final int SIZE = ROWS * 9;
     private static final int ITEMS_PER_PAGE = 28;
     
-    private static final Map<UUID, BulbPair> pendingRenames = new HashMap<>();
+    private static final Map<UUID, BulbGroup> pendingRenames = new HashMap<>();
 
     private final LinkedBulbManager bulbManager;
     private final Player player;
     private final Inventory inventory;
     private int currentPage = 0;
-    private List<BulbPair> pairs;
-    private boolean showAllPairs;
+    private List<BulbGroup> groups;
+    private boolean showAllGroups;
 
-    public BulbManagerGUI(LinkedBulbManager bulbManager, Player player, boolean showAllPairs) {
+    public BulbManagerGUI(LinkedBulbManager bulbManager, Player player, boolean showAllGroups) {
         this.bulbManager = bulbManager;
         this.player = player;
-        this.showAllPairs = showAllPairs;
+        this.showAllGroups = showAllGroups;
         this.inventory = Bukkit.createInventory(this, SIZE, 
-            Component.text("Wireless Bulb Manager", NamedTextColor.DARK_AQUA).decoration(TextDecoration.BOLD, true));
-        refreshPairs();
+            Component.text("Wireless Redstone Manager", NamedTextColor.DARK_AQUA).decoration(TextDecoration.BOLD, true));
+        refreshGroups();
         populateInventory();
     }
 
-    private void refreshPairs() {
-        if (showAllPairs && player.hasPermission("wirelessredstone.admin")) {
-            pairs = bulbManager.getAllPlacedPairs();
+    private void refreshGroups() {
+        if (showAllGroups && player.hasPermission("wirelessredstone.admin")) {
+            groups = bulbManager.getAllPlacedGroups();
         } else {
-            pairs = bulbManager.getPairsByOwner(player.getUniqueId());
+            groups = bulbManager.getGroupsByOwner(player.getUniqueId());
         }
     }
 
@@ -56,7 +56,7 @@ public class BulbManagerGUI implements InventoryHolder {
         fillBorder();
 
         int startIndex = currentPage * ITEMS_PER_PAGE;
-        int endIndex = Math.min(startIndex + ITEMS_PER_PAGE, pairs.size());
+        int endIndex = Math.min(startIndex + ITEMS_PER_PAGE, groups.size());
 
         int slot = 10;
         for (int i = startIndex; i < endIndex; i++) {
@@ -64,8 +64,8 @@ public class BulbManagerGUI implements InventoryHolder {
             if (slot % 9 == 8) slot += 2;
             if (slot >= 44) break;
 
-            BulbPair pair = pairs.get(i);
-            inventory.setItem(slot, createPairItem(pair));
+            BulbGroup group = groups.get(i);
+            inventory.setItem(slot, createGroupItem(group));
             slot++;
         }
 
@@ -75,7 +75,7 @@ public class BulbManagerGUI implements InventoryHolder {
 
         inventory.setItem(49, createInfoItem());
 
-        if (endIndex < pairs.size()) {
+        if (endIndex < groups.size()) {
             inventory.setItem(50, createNavigationItem(Material.ARROW, "Next Page", NamedTextColor.YELLOW));
         }
 
@@ -104,74 +104,72 @@ public class BulbManagerGUI implements InventoryHolder {
         }
     }
 
-    private ItemStack createPairItem(BulbPair pair) {
-        Material material = pair.getBulbType() == BulbVariant.BulbType.REDSTONE_LAMP 
+    private ItemStack createGroupItem(BulbGroup group) {
+        Material material = group.getBulbType() == BulbVariant.BulbType.REDSTONE_LAMP 
             ? Material.REDSTONE_LAMP 
             : Material.COPPER_BULB;
         
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
 
-        String displayName = pair.getDisplayName();
-        meta.displayName(Component.text("Pair: " + displayName, NamedTextColor.AQUA)
+        String displayName = group.getDisplayName();
+        meta.displayName(Component.text("Group: " + displayName, NamedTextColor.AQUA)
                 .decoration(TextDecoration.ITALIC, false));
 
         List<Component> lore = new ArrayList<>();
         lore.add(Component.empty());
         
         lore.add(Component.text("Type: ", NamedTextColor.GRAY)
-                .append(Component.text(pair.getBulbType().name(), NamedTextColor.WHITE))
+                .append(Component.text(group.getBulbType().name(), NamedTextColor.WHITE))
                 .decoration(TextDecoration.ITALIC, false));
         
         lore.add(Component.text("Status: ", NamedTextColor.GRAY)
-                .append(Component.text(pair.isLit() ? "ON" : "OFF", pair.isLit() ? NamedTextColor.GREEN : NamedTextColor.RED))
+                .append(Component.text(group.isLit() ? "ON" : "OFF", group.isLit() ? NamedTextColor.GREEN : NamedTextColor.RED))
                 .decoration(TextDecoration.ITALIC, false));
         
-        lore.add(Component.text("Sync Messages: ", NamedTextColor.GRAY)
-                .append(Component.text(pair.isShowSyncMessages() ? "Enabled" : "Disabled", 
-                    pair.isShowSyncMessages() ? NamedTextColor.GREEN : NamedTextColor.RED))
+        lore.add(Component.text("Placed: ", NamedTextColor.GRAY)
+                .append(Component.text(group.getPlacedCount() + "/" + group.getMaxSize(), NamedTextColor.WHITE))
                 .decoration(TextDecoration.ITALIC, false));
         
         lore.add(Component.empty());
         
-        Location loc1 = pair.getLocation1();
-        Location loc2 = pair.getLocation2();
-        
-        if (loc1 != null) {
-            lore.add(Component.text("Location A: ", NamedTextColor.GRAY)
-                    .append(Component.text(formatLocation(loc1), NamedTextColor.WHITE))
-                    .decoration(TextDecoration.ITALIC, false));
-        } else {
-            lore.add(Component.text("Location A: ", NamedTextColor.GRAY)
-                    .append(Component.text("Not placed", NamedTextColor.DARK_GRAY))
-                    .decoration(TextDecoration.ITALIC, false));
+        List<Location> locations = group.getLocations();
+        int displayedLocs = 0;
+        for (int i = 0; i < locations.size() && displayedLocs < 5; i++) {
+            Location loc = locations.get(i);
+            String label = BulbGroup.getIndexLabel(i);
+            if (loc != null) {
+                lore.add(Component.text("Location " + label + ": ", NamedTextColor.GRAY)
+                        .append(Component.text(formatLocation(loc), NamedTextColor.WHITE))
+                        .decoration(TextDecoration.ITALIC, false));
+                displayedLocs++;
+            } else if (displayedLocs < 3) {
+                lore.add(Component.text("Location " + label + ": ", NamedTextColor.GRAY)
+                        .append(Component.text("Not placed", NamedTextColor.DARK_GRAY))
+                        .decoration(TextDecoration.ITALIC, false));
+            }
         }
         
-        if (loc2 != null) {
-            lore.add(Component.text("Location B: ", NamedTextColor.GRAY)
-                    .append(Component.text(formatLocation(loc2), NamedTextColor.WHITE))
-                    .decoration(TextDecoration.ITALIC, false));
-        } else {
-            lore.add(Component.text("Location B: ", NamedTextColor.GRAY)
-                    .append(Component.text("Not placed", NamedTextColor.DARK_GRAY))
-                    .decoration(TextDecoration.ITALIC, false));
+        if (locations.size() > 5) {
+            int remaining = (int) locations.stream().filter(Objects::nonNull).count() - displayedLocs;
+            if (remaining > 0) {
+                lore.add(Component.text("... and " + remaining + " more", NamedTextColor.DARK_GRAY)
+                        .decoration(TextDecoration.ITALIC, false));
+            }
         }
         
         lore.add(Component.empty());
         lore.add(Component.text("Left-click: ", NamedTextColor.YELLOW)
-                .append(Component.text("Teleport to A", NamedTextColor.WHITE))
+                .append(Component.text("Teleport to first placed", NamedTextColor.WHITE))
                 .decoration(TextDecoration.ITALIC, false));
         lore.add(Component.text("Right-click: ", NamedTextColor.YELLOW)
-                .append(Component.text("Teleport to B", NamedTextColor.WHITE))
+                .append(Component.text("Teleport to last placed", NamedTextColor.WHITE))
                 .decoration(TextDecoration.ITALIC, false));
         lore.add(Component.text("Middle-click: ", NamedTextColor.LIGHT_PURPLE)
-                .append(Component.text("Toggle sync messages", NamedTextColor.WHITE))
-                .decoration(TextDecoration.ITALIC, false));
-        lore.add(Component.text("Drop (Q): ", NamedTextColor.GREEN)
-                .append(Component.text("Rename pair", NamedTextColor.WHITE))
+                .append(Component.text("Rename group", NamedTextColor.WHITE))
                 .decoration(TextDecoration.ITALIC, false));
         lore.add(Component.text("Shift+Click: ", NamedTextColor.RED)
-                .append(Component.text("Remove pair", NamedTextColor.WHITE))
+                .append(Component.text("Remove group", NamedTextColor.WHITE))
                 .decoration(TextDecoration.ITALIC, false));
 
         meta.lore(lore);
@@ -192,11 +190,11 @@ public class BulbManagerGUI implements InventoryHolder {
         ItemMeta meta = item.getItemMeta();
         meta.displayName(Component.text("Page Info", NamedTextColor.GOLD).decoration(TextDecoration.ITALIC, false));
         
-        int totalPages = Math.max(1, (int) Math.ceil((double) pairs.size() / ITEMS_PER_PAGE));
+        int totalPages = Math.max(1, (int) Math.ceil((double) groups.size() / ITEMS_PER_PAGE));
         meta.lore(List.of(
                 Component.text("Page " + (currentPage + 1) + "/" + totalPages, NamedTextColor.GRAY)
                         .decoration(TextDecoration.ITALIC, false),
-                Component.text("Total pairs: " + pairs.size(), NamedTextColor.GRAY)
+                Component.text("Total groups: " + groups.size(), NamedTextColor.GRAY)
                         .decoration(TextDecoration.ITALIC, false)
         ));
         
@@ -205,9 +203,9 @@ public class BulbManagerGUI implements InventoryHolder {
     }
 
     private ItemStack createToggleViewItem() {
-        ItemStack item = new ItemStack(showAllPairs ? Material.ENDER_EYE : Material.ENDER_PEARL);
+        ItemStack item = new ItemStack(showAllGroups ? Material.ENDER_EYE : Material.ENDER_PEARL);
         ItemMeta meta = item.getItemMeta();
-        meta.displayName(Component.text(showAllPairs ? "Viewing: All Pairs" : "Viewing: My Pairs", NamedTextColor.LIGHT_PURPLE)
+        meta.displayName(Component.text(showAllGroups ? "Viewing: All Groups" : "Viewing: My Groups", NamedTextColor.LIGHT_PURPLE)
                 .decoration(TextDecoration.ITALIC, false));
         meta.lore(List.of(
                 Component.text("Click to toggle view", NamedTextColor.GRAY)
@@ -233,14 +231,14 @@ public class BulbManagerGUI implements InventoryHolder {
             loc.getBlockZ());
     }
 
-    public void handleClick(int slot, boolean isRightClick, boolean isShiftClick, boolean isMiddleClick, boolean isDrop) {
+    public void handleClick(int slot, boolean isRightClick, boolean isShiftClick, boolean isMiddleClick) {
         if (slot == 48 && currentPage > 0) {
             currentPage--;
             populateInventory();
             return;
         }
 
-        int totalPages = Math.max(1, (int) Math.ceil((double) pairs.size() / ITEMS_PER_PAGE));
+        int totalPages = Math.max(1, (int) Math.ceil((double) groups.size() / ITEMS_PER_PAGE));
         if (slot == 50 && currentPage < totalPages - 1) {
             currentPage++;
             populateInventory();
@@ -248,9 +246,9 @@ public class BulbManagerGUI implements InventoryHolder {
         }
 
         if (slot == 45 && player.hasPermission("wirelessredstone.admin")) {
-            showAllPairs = !showAllPairs;
+            showAllGroups = !showAllGroups;
             currentPage = 0;
-            refreshPairs();
+            refreshGroups();
             populateInventory();
             return;
         }
@@ -260,42 +258,39 @@ public class BulbManagerGUI implements InventoryHolder {
             return;
         }
 
-        int pairIndex = getPairIndexFromSlot(slot);
-        if (pairIndex < 0 || pairIndex >= pairs.size()) {
+        int groupIndex = getGroupIndexFromSlot(slot);
+        if (groupIndex < 0 || groupIndex >= groups.size()) {
             return;
         }
 
-        BulbPair pair = pairs.get(pairIndex);
+        BulbGroup group = groups.get(groupIndex);
 
         if (isShiftClick) {
-            handleRemovePair(pair);
+            handleRemoveGroup(group);
         } else if (isMiddleClick) {
-            handleToggleSyncMessages(pair);
-        } else if (isDrop) {
-            handleStartRename(pair);
+            handleStartRename(group);
         } else if (isRightClick) {
-            handleTeleport(pair.getLocation2(), "B");
+            List<Location> placed = group.getPlacedLocations();
+            if (!placed.isEmpty()) {
+                handleTeleport(placed.get(placed.size() - 1), BulbGroup.getIndexLabel(group.getLocationIndex(placed.get(placed.size() - 1))));
+            } else {
+                player.sendMessage(Component.text("No bulbs are placed in this group!", NamedTextColor.RED));
+            }
         } else {
-            handleTeleport(pair.getLocation1(), "A");
+            List<Location> placed = group.getPlacedLocations();
+            if (!placed.isEmpty()) {
+                handleTeleport(placed.get(0), BulbGroup.getIndexLabel(group.getLocationIndex(placed.get(0))));
+            } else {
+                player.sendMessage(Component.text("No bulbs are placed in this group!", NamedTextColor.RED));
+            }
         }
     }
 
-    private void handleToggleSyncMessages(BulbPair pair) {
-        pair.setShowSyncMessages(!pair.isShowSyncMessages());
-        bulbManager.saveData();
-        
-        String status = pair.isShowSyncMessages() ? "enabled" : "disabled";
-        player.sendMessage(Component.text("Sync messages " + status + " for pair: " + pair.getDisplayName(), 
-            pair.isShowSyncMessages() ? NamedTextColor.GREEN : NamedTextColor.YELLOW));
-        
-        populateInventory();
-    }
-
-    private void handleStartRename(BulbPair pair) {
-        pendingRenames.put(player.getUniqueId(), pair);
+    private void handleStartRename(BulbGroup group) {
+        pendingRenames.put(player.getUniqueId(), group);
         player.closeInventory();
-        player.sendMessage(Component.text("Enter a new name for the pair (or 'cancel' to abort):", NamedTextColor.YELLOW));
-        player.sendMessage(Component.text("Current name: " + pair.getDisplayName(), NamedTextColor.GRAY));
+        player.sendMessage(Component.text("Enter a new name for the group (or 'cancel' to abort):", NamedTextColor.YELLOW));
+        player.sendMessage(Component.text("Current name: " + group.getDisplayName(), NamedTextColor.GRAY));
     }
 
     public static boolean hasPendingRename(UUID playerUuid) {
@@ -303,8 +298,8 @@ public class BulbManagerGUI implements InventoryHolder {
     }
 
     public static void processRename(Player player, String newName, LinkedBulbManager bulbManager) {
-        BulbPair pair = pendingRenames.remove(player.getUniqueId());
-        if (pair == null) return;
+        BulbGroup group = pendingRenames.remove(player.getUniqueId());
+        if (group == null) return;
 
         if (newName.equalsIgnoreCase("cancel")) {
             player.sendMessage(Component.text("Rename cancelled.", NamedTextColor.GRAY));
@@ -316,11 +311,11 @@ public class BulbManagerGUI implements InventoryHolder {
         }
 
         if (newName.equalsIgnoreCase("reset") || newName.equalsIgnoreCase("clear")) {
-            pair.setCustomName(null);
-            player.sendMessage(Component.text("Pair name reset to default: " + pair.getDisplayName(), NamedTextColor.GREEN));
+            group.setCustomName(null);
+            player.sendMessage(Component.text("Group name reset to default: " + group.getDisplayName(), NamedTextColor.GREEN));
         } else {
-            pair.setCustomName(newName);
-            player.sendMessage(Component.text("Pair renamed to: " + newName, NamedTextColor.GREEN));
+            group.setCustomName(newName);
+            player.sendMessage(Component.text("Group renamed to: " + newName, NamedTextColor.GREEN));
         }
         
         bulbManager.saveData();
@@ -330,7 +325,7 @@ public class BulbManagerGUI implements InventoryHolder {
         pendingRenames.remove(playerUuid);
     }
 
-    private int getPairIndexFromSlot(int slot) {
+    private int getGroupIndexFromSlot(int slot) {
         if (slot < 10 || slot > 43) return -1;
         if (slot % 9 == 0 || slot % 9 == 8) return -1;
 
@@ -360,24 +355,24 @@ public class BulbManagerGUI implements InventoryHolder {
         player.sendMessage(Component.text("Teleported to bulb " + name + "!", NamedTextColor.GREEN));
     }
 
-    private void handleRemovePair(BulbPair pair) {
+    private void handleRemoveGroup(BulbGroup group) {
         if (!player.hasPermission("wirelessredstone.remove")) {
-            player.sendMessage(Component.text("You don't have permission to remove pairs!", NamedTextColor.RED));
+            player.sendMessage(Component.text("You don't have permission to remove groups!", NamedTextColor.RED));
             return;
         }
 
-        UUID ownerId = pair.getOwnerUuid();
+        UUID ownerId = group.getOwnerUuid();
         if (ownerId != null && !ownerId.equals(player.getUniqueId()) && !player.hasPermission("wirelessredstone.admin")) {
-            player.sendMessage(Component.text("You can only remove your own pairs!", NamedTextColor.RED));
+            player.sendMessage(Component.text("You can only remove your own groups!", NamedTextColor.RED));
             return;
         }
 
-        bulbManager.removePair(pair.getPairId());
-        player.sendMessage(Component.text("Pair removed successfully!", NamedTextColor.GREEN));
+        bulbManager.removeGroup(group.getGroupId());
+        player.sendMessage(Component.text("Group removed successfully!", NamedTextColor.GREEN));
         
-        refreshPairs();
+        refreshGroups();
         
-        int totalPages = Math.max(1, (int) Math.ceil((double) pairs.size() / ITEMS_PER_PAGE));
+        int totalPages = Math.max(1, (int) Math.ceil((double) groups.size() / ITEMS_PER_PAGE));
         if (currentPage >= totalPages) {
             currentPage = Math.max(0, totalPages - 1);
         }
