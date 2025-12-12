@@ -2,6 +2,7 @@ package com.wirelessredstone.command;
 
 import com.wirelessredstone.gui.BulbManagerGUI;
 import com.wirelessredstone.item.BulbVariant;
+import com.wirelessredstone.item.ChestVariant;
 import com.wirelessredstone.item.WirelessBulbFactory;
 import com.wirelessredstone.item.WirelessChestFactory;
 import com.wirelessredstone.manager.DebugManager;
@@ -122,22 +123,34 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
 
     private void handleChestsCommand(Player player, String[] args) {
         int count = 2;
+        ChestVariant variant = ChestVariant.CHEST;
         
         for (int i = 1; i < args.length; i++) {
             String arg = args[i];
-            try {
-                count = Integer.parseInt(arg);
-                if (count < 2 || count > 26) {
-                    player.sendMessage(Component.text("Chest count must be between 2 and 26!", NamedTextColor.RED));
+            if (arg.startsWith("--")) {
+                ChestVariant parsed = ChestVariant.fromArg(arg);
+                if (parsed != null) {
+                    variant = parsed;
+                } else {
+                    player.sendMessage(Component.text("Unknown variant: " + arg, NamedTextColor.RED));
+                    player.sendMessage(Component.text("Available: --chest, --shulker, --white, --orange, --magenta, etc.", NamedTextColor.GRAY));
                     return;
                 }
-            } catch (NumberFormatException e) {
-                player.sendMessage(Component.text("Invalid number: " + arg, NamedTextColor.RED));
-                return;
+            } else {
+                try {
+                    count = Integer.parseInt(arg);
+                    if (count < 2 || count > 26) {
+                        player.sendMessage(Component.text("Container count must be between 2 and 26!", NamedTextColor.RED));
+                        return;
+                    }
+                } catch (NumberFormatException e) {
+                    player.sendMessage(Component.text("Invalid number: " + arg, NamedTextColor.RED));
+                    return;
+                }
             }
         }
 
-        giveWirelessChests(player, count);
+        giveWirelessContainers(player, variant, count);
     }
 
     private void handleDebugCommand(Player player, String[] args) {
@@ -171,7 +184,7 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
 
     private void handleGUICommand(Player player, String[] args) {
         boolean showAll = args.length >= 2 && args[1].equalsIgnoreCase("--all");
-        new BulbManagerGUI(bulbManager, player, showAll).open();
+        new BulbManagerGUI(bulbManager, chestManager, player, showAll).open();
     }
 
     private void handleWireViewCommand(Player player) {
@@ -193,8 +206,9 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
         player.sendMessage(Component.text("  Variants: --copper, --exposed, --weathered, --oxidized", NamedTextColor.DARK_GRAY));
         player.sendMessage(Component.text("/wireless lamps [count]", NamedTextColor.YELLOW)
                 .append(Component.text(" - Get linked redstone lamps", NamedTextColor.GRAY)));
-        player.sendMessage(Component.text("/wireless chests [count]", NamedTextColor.YELLOW)
-                .append(Component.text(" - Get linked wireless chests", NamedTextColor.GRAY)));
+        player.sendMessage(Component.text("/wireless chests [count] [variant]", NamedTextColor.YELLOW)
+                .append(Component.text(" - Get linked wireless containers", NamedTextColor.GRAY)));
+        player.sendMessage(Component.text("  Variants: --chest, --shulker, --white, --orange, etc.", NamedTextColor.DARK_GRAY));
         player.sendMessage(Component.text("/wireless gui [--all]", NamedTextColor.YELLOW)
                 .append(Component.text(" - Open management GUI", NamedTextColor.GRAY)));
         player.sendMessage(Component.text("/wireless wireview", NamedTextColor.YELLOW)
@@ -220,20 +234,20 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
         player.sendMessage(Component.text("Place them and they will sync their state!", NamedTextColor.GRAY));
     }
 
-    private void giveWirelessChests(Player player, int count) {
+    private void giveWirelessContainers(Player player, ChestVariant variant, int count) {
         var groupId = chestManager.createNewGroupId();
-        var chests = WirelessChestFactory.createLinkedChests(groupId, player.getUniqueId(), count);
+        var containers = WirelessChestFactory.createLinkedContainers(groupId, variant, player.getUniqueId(), count);
 
         var inventory = player.getInventory();
-        for (var chest : chests) {
+        for (var container : containers) {
             if (inventory.firstEmpty() != -1) {
-                inventory.addItem(chest);
+                inventory.addItem(container);
             } else {
-                player.getWorld().dropItemNaturally(player.getLocation(), chest);
+                player.getWorld().dropItemNaturally(player.getLocation(), container);
             }
         }
 
-        player.sendMessage(Component.text("You received " + count + " linked Wireless Chests!", NamedTextColor.GREEN));
+        player.sendMessage(Component.text("You received " + count + " linked " + variant.getDisplayName() + "s!", NamedTextColor.GREEN));
         player.sendMessage(Component.text("Place them and they will sync their contents!", NamedTextColor.GRAY));
     }
 
@@ -264,7 +278,19 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
                         completions.add(num);
                     }
                 }
-            } else if (subCommand.equals("lamps") || subCommand.equals("chests")) {
+            } else if (subCommand.equals("lamps")) {
+                for (int i = 2; i <= 10; i++) {
+                    String num = String.valueOf(i);
+                    if (num.startsWith(input)) {
+                        completions.add(num);
+                    }
+                }
+            } else if (subCommand.equals("chests")) {
+                for (ChestVariant variant : ChestVariant.values()) {
+                    if (variant.getArg().startsWith(input)) {
+                        completions.add(variant.getArg());
+                    }
+                }
                 for (int i = 2; i <= 10; i++) {
                     String num = String.valueOf(i);
                     if (num.startsWith(input)) {

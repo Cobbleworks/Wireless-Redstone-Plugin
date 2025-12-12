@@ -101,6 +101,11 @@ public class ChestInventoryListener implements Listener {
             return chest.getLocation();
         }
         
+        // Handle shulker boxes
+        if (holder instanceof org.bukkit.block.ShulkerBox shulker) {
+            return shulker.getLocation();
+        }
+        
         // Handle double chests
         if (holder instanceof org.bukkit.block.DoubleChest doubleChest) {
             var leftSide = doubleChest.getLeftSide();

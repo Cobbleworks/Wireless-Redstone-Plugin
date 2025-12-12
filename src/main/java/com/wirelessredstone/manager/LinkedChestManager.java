@@ -1,6 +1,7 @@
 package com.wirelessredstone.manager;
 
 import com.wirelessredstone.WirelessRedstonePlugin;
+import com.wirelessredstone.item.ChestVariant;
 import com.wirelessredstone.model.ChestGroup;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -28,6 +29,7 @@ public class LinkedChestManager {
     public static final NamespacedKey CHEST_INDEX_KEY;
     public static final NamespacedKey CHEST_OWNER_KEY;
     public static final NamespacedKey CHEST_GROUP_SIZE_KEY;
+    public static final NamespacedKey CHEST_CONTAINER_TYPE_KEY;
 
     static {
         WIRELESS_CHEST_KEY = new NamespacedKey("wirelessredstone", "wireless_chest");
@@ -35,6 +37,7 @@ public class LinkedChestManager {
         CHEST_INDEX_KEY = new NamespacedKey("wirelessredstone", "chest_index");
         CHEST_OWNER_KEY = new NamespacedKey("wirelessredstone", "chest_owner");
         CHEST_GROUP_SIZE_KEY = new NamespacedKey("wirelessredstone", "chest_group_size");
+        CHEST_CONTAINER_TYPE_KEY = new NamespacedKey("wirelessredstone", "chest_container_type");
     }
 
     public LinkedChestManager(WirelessRedstonePlugin plugin) {
@@ -80,11 +83,26 @@ public class LinkedChestManager {
         return ownerStr != null ? Optional.of(UUID.fromString(ownerStr)) : Optional.empty();
     }
 
-    public void registerPlacedChest(Location location, UUID groupId, int chestIndex, UUID ownerUuid, int groupSize) {
-        ChestGroup group = chestGroups.computeIfAbsent(groupId, id -> new ChestGroup(id, groupSize, ownerUuid));
+    public Optional<ChestVariant.ContainerType> getContainerType(ItemStack item) {
+        if (!isWirelessChest(item)) return Optional.empty();
+        ItemMeta meta = item.getItemMeta();
+        String typeStr = meta.getPersistentDataContainer().get(CHEST_CONTAINER_TYPE_KEY, PersistentDataType.STRING);
+        if (typeStr == null) return Optional.of(ChestVariant.ContainerType.CHEST);
+        try {
+            return Optional.of(ChestVariant.ContainerType.valueOf(typeStr));
+        } catch (IllegalArgumentException e) {
+            return Optional.of(ChestVariant.ContainerType.CHEST);
+        }
+    }
+
+    public void registerPlacedChest(Location location, UUID groupId, int chestIndex, UUID ownerUuid, int groupSize, ChestVariant.ContainerType containerType) {
+        ChestGroup group = chestGroups.computeIfAbsent(groupId, id -> new ChestGroup(id, groupSize, ownerUuid, containerType));
         group.setLocation(chestIndex, location);
         if (ownerUuid != null && group.getOwnerUuid() == null) {
             group.setOwnerUuid(ownerUuid);
+        }
+        if (containerType != null && group.getContainerType() == null) {
+            group.setContainerType(containerType);
         }
         locationToGroupId.put(location, groupId);
         saveData();
@@ -180,8 +198,16 @@ public class LinkedChestManager {
             if (loc == null || !loc.isChunkLoaded()) continue;
             
             var block = loc.getBlock();
-            if (block.getState() instanceof org.bukkit.block.Chest chest) {
-                var inventory = chest.getInventory();
+            var state = block.getState();
+            org.bukkit.inventory.Inventory inventory = null;
+            
+            if (state instanceof org.bukkit.block.Chest chest) {
+                inventory = chest.getInventory();
+            } else if (state instanceof org.bukkit.block.ShulkerBox shulker) {
+                inventory = shulker.getInventory();
+            }
+            
+            if (inventory != null) {
                 ItemStack[] shared = group.getSharedInventory();
                 for (int i = 0; i < Math.min(shared.length, inventory.getSize()); i++) {
                     inventory.setItem(i, shared[i] != null ? shared[i].clone() : null);
@@ -202,6 +228,7 @@ public class LinkedChestManager {
             String basePath = "groups." + index;
             config.set(basePath + ".id", entry.getKey().toString());
             config.set(basePath + ".maxSize", group.getMaxSize());
+            config.set(basePath + ".containerType", group.getContainerType().name());
 
             if (group.getOwnerUuid() != null) {
                 config.set(basePath + ".owner", group.getOwnerUuid().toString());
@@ -260,7 +287,15 @@ public class LinkedChestManager {
             
             int maxSize = config.getInt(basePath + ".maxSize", 2);
             
-            ChestGroup group = new ChestGroup(groupId, maxSize, ownerUuid);
+            String containerTypeStr = config.getString(basePath + ".containerType", "CHEST");
+            ChestVariant.ContainerType containerType;
+            try {
+                containerType = ChestVariant.ContainerType.valueOf(containerTypeStr);
+            } catch (IllegalArgumentException e) {
+                containerType = ChestVariant.ContainerType.CHEST;
+            }
+            
+            ChestGroup group = new ChestGroup(groupId, maxSize, ownerUuid, containerType);
             group.setCustomName(config.getString(basePath + ".customName"));
             
             String customIconStr = config.getString(basePath + ".customIcon");

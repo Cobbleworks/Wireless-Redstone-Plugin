@@ -73,7 +73,7 @@ public class WirelessRedstonePlugin extends JavaPlugin {
         pluginManager.registerEvents(new ChestPlaceListener(chestManager), this);
         pluginManager.registerEvents(new ChestBreakListener(chestManager), this);
         pluginManager.registerEvents(new ChestInventoryListener(chestManager), this);
-        pluginManager.registerEvents(new GUIListener(bulbManager), this);
+        pluginManager.registerEvents(new GUIListener(bulbManager, chestManager), this);
         pluginManager.registerEvents(new WireViewListener(wireViewManager), this);
     }
 

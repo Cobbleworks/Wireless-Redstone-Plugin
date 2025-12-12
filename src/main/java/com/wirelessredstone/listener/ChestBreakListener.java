@@ -1,6 +1,7 @@
 package com.wirelessredstone.listener;
 
 import com.wirelessredstone.WirelessRedstonePlugin;
+import com.wirelessredstone.item.ChestVariant;
 import com.wirelessredstone.manager.LinkedChestManager;
 import com.wirelessredstone.util.ParticleEffects;
 import org.bukkit.Location;
@@ -22,8 +23,9 @@ public class ChestBreakListener implements Listener {
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onBlockBreak(BlockBreakEvent event) {
         Block block = event.getBlock();
+        Material blockType = block.getType();
         
-        if (block.getType() != Material.CHEST) {
+        if (blockType != Material.CHEST && !ChestVariant.isShulkerBox(blockType)) {
             return;
         }
         

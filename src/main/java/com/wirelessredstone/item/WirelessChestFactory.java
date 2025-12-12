@@ -18,36 +18,46 @@ import java.util.UUID;
 public class WirelessChestFactory {
 
     public static ItemStack[] createLinkedChests(UUID groupId, UUID ownerUuid, int count) {
-        ItemStack[] chests = new ItemStack[count];
-        for (int i = 0; i < count; i++) {
-            String label = ChestGroup.getIndexLabel(i);
-            chests[i] = createChest(groupId, i, "Wireless Chest " + label, ownerUuid, count);
-        }
-        return chests;
+        return createLinkedContainers(groupId, ChestVariant.CHEST, ownerUuid, count);
     }
 
-    private static ItemStack createChest(UUID groupId, int index, String name, UUID ownerUuid, int groupSize) {
-        ItemStack chest = new ItemStack(Material.CHEST);
-        ItemMeta meta = chest.getItemMeta();
+    public static ItemStack[] createLinkedContainers(UUID groupId, ChestVariant variant, UUID ownerUuid, int count) {
+        ItemStack[] containers = new ItemStack[count];
+        for (int i = 0; i < count; i++) {
+            String label = ChestGroup.getIndexLabel(i);
+            containers[i] = createContainer(groupId, i, variant.getDisplayName() + " " + label, variant, ownerUuid, count);
+        }
+        return containers;
+    }
 
-        meta.displayName(Component.text(name, NamedTextColor.GOLD)
+    private static ItemStack createContainer(UUID groupId, int index, String name, ChestVariant variant, UUID ownerUuid, int groupSize) {
+        ItemStack container = new ItemStack(variant.getMaterial());
+        ItemMeta meta = container.getItemMeta();
+
+        NamedTextColor nameColor = variant.getContainerType() == ChestVariant.ContainerType.SHULKER 
+            ? NamedTextColor.LIGHT_PURPLE : NamedTextColor.GOLD;
+
+        meta.displayName(Component.text(name, nameColor)
                 .decoration(TextDecoration.ITALIC, false));
 
+        String typeDesc = variant.getContainerType() == ChestVariant.ContainerType.SHULKER 
+            ? "Linked Wireless Shulker Box" : "Linked Wireless Chest";
+
         meta.lore(List.of(
-                Component.text("Linked Wireless Chest", NamedTextColor.GRAY)
+                Component.text(typeDesc, NamedTextColor.GRAY)
                         .decoration(TextDecoration.ITALIC, false),
                 Component.empty(),
                 Component.text("Group ID: ", NamedTextColor.DARK_GRAY)
-                        .append(Component.text(groupId.toString().substring(0, 8), NamedTextColor.GOLD))
+                        .append(Component.text(groupId.toString().substring(0, 8), nameColor))
                         .decoration(TextDecoration.ITALIC, false),
                 Component.text("Group Size: ", NamedTextColor.DARK_GRAY)
-                        .append(Component.text(String.valueOf(groupSize), NamedTextColor.GOLD))
+                        .append(Component.text(String.valueOf(groupSize), nameColor))
                         .decoration(TextDecoration.ITALIC, false),
                 Component.empty(),
                 Component.text("⚡ Not yet placed", NamedTextColor.GRAY)
                         .decoration(TextDecoration.ITALIC, false),
                 Component.empty(),
-                Component.text("This chest syncs contents with its group!", NamedTextColor.YELLOW)
+                Component.text("This container syncs contents with its group!", NamedTextColor.YELLOW)
                         .decoration(TextDecoration.ITALIC, false)
         ));
 
@@ -56,15 +66,16 @@ public class WirelessChestFactory {
         pdc.set(LinkedChestManager.CHEST_GROUP_ID_KEY, PersistentDataType.STRING, groupId.toString());
         pdc.set(LinkedChestManager.CHEST_INDEX_KEY, PersistentDataType.INTEGER, index);
         pdc.set(LinkedChestManager.CHEST_GROUP_SIZE_KEY, PersistentDataType.INTEGER, groupSize);
+        pdc.set(LinkedChestManager.CHEST_CONTAINER_TYPE_KEY, PersistentDataType.STRING, variant.getContainerType().name());
         if (ownerUuid != null) {
             pdc.set(LinkedChestManager.CHEST_OWNER_KEY, PersistentDataType.STRING, ownerUuid.toString());
         }
 
-        chest.setItemMeta(meta);
-        return chest;
+        container.setItemMeta(meta);
+        return container;
     }
 
-    public static void updateLinkedChestLore(ItemStack item, List<Location> linkedLocations, boolean isConnected, int placedCount, int groupSize) {
+    public static void updateLinkedContainerLore(ItemStack item, List<Location> linkedLocations, boolean isConnected, int placedCount, int groupSize, ChestVariant.ContainerType containerType) {
         if (item == null || !item.hasItemMeta()) return;
         
         ItemMeta meta = item.getItemMeta();
@@ -77,27 +88,31 @@ public class WirelessChestFactory {
         
         if (groupIdStr == null || chestIndex == null) return;
         
-        String chestLabel = ChestGroup.getIndexLabel(chestIndex);
-        String displayName = isConnected ? "⚡ Linked Chest " + chestLabel + " ⚡" : "Wireless Chest " + chestLabel;
-        NamedTextColor nameColor = isConnected ? NamedTextColor.GREEN : NamedTextColor.GOLD;
+        String containerLabel = ChestGroup.getIndexLabel(chestIndex);
+        boolean isShulker = containerType == ChestVariant.ContainerType.SHULKER;
+        String containerName = isShulker ? "Shulker" : "Chest";
+        String displayName = isConnected ? "⚡ Linked " + containerName + " " + containerLabel + " ⚡" : "Wireless " + containerName + " " + containerLabel;
+        NamedTextColor nameColor = isConnected ? NamedTextColor.GREEN : (isShulker ? NamedTextColor.LIGHT_PURPLE : NamedTextColor.GOLD);
         
         meta.displayName(Component.text(displayName, nameColor)
                 .decoration(TextDecoration.ITALIC, false));
         
+        String typeDesc = isShulker ? "Linked Wireless Shulker Box" : "Linked Wireless Chest";
+        
         List<Component> lore = new ArrayList<>();
-        lore.add(Component.text("Linked Wireless Chest", NamedTextColor.GRAY)
+        lore.add(Component.text(typeDesc, NamedTextColor.GRAY)
                 .decoration(TextDecoration.ITALIC, false));
         lore.add(Component.empty());
         lore.add(Component.text("Group ID: ", NamedTextColor.DARK_GRAY)
-                .append(Component.text(groupIdStr.substring(0, 8), NamedTextColor.GOLD))
+                .append(Component.text(groupIdStr.substring(0, 8), nameColor))
                 .decoration(TextDecoration.ITALIC, false));
         lore.add(Component.text("Placed: ", NamedTextColor.DARK_GRAY)
-                .append(Component.text(placedCount + "/" + groupSize, NamedTextColor.GOLD))
+                .append(Component.text(placedCount + "/" + groupSize, nameColor))
                 .decoration(TextDecoration.ITALIC, false));
         lore.add(Component.empty());
         
         if (isConnected && linkedLocations != null && !linkedLocations.isEmpty()) {
-            lore.add(Component.text("⚡ Connected to " + linkedLocations.size() + " chest(s):", NamedTextColor.GREEN)
+            lore.add(Component.text("⚡ Connected to " + linkedLocations.size() + " " + containerName.toLowerCase() + "(s):", NamedTextColor.GREEN)
                     .decoration(TextDecoration.ITALIC, false));
             int shown = 0;
             for (Location loc : linkedLocations) {
@@ -113,12 +128,12 @@ public class WirelessChestFactory {
                 shown++;
             }
         } else {
-            lore.add(Component.text("⚡ No other chests placed yet", NamedTextColor.GRAY)
+            lore.add(Component.text("⚡ No other " + containerName.toLowerCase() + "s placed yet", NamedTextColor.GRAY)
                     .decoration(TextDecoration.ITALIC, false));
         }
         
         lore.add(Component.empty());
-        lore.add(Component.text("This chest syncs contents with its group!", NamedTextColor.YELLOW)
+        lore.add(Component.text("This container syncs contents with its group!", NamedTextColor.YELLOW)
                 .decoration(TextDecoration.ITALIC, false));
         
         meta.lore(lore);

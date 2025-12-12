@@ -2,6 +2,7 @@ package com.wirelessredstone.listener;
 
 import com.wirelessredstone.gui.BulbManagerGUI;
 import com.wirelessredstone.manager.LinkedBulbManager;
+import com.wirelessredstone.manager.LinkedChestManager;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -13,9 +14,11 @@ import org.bukkit.event.player.PlayerQuitEvent;
 public class GUIListener implements Listener {
 
     private final LinkedBulbManager bulbManager;
+    private final LinkedChestManager chestManager;
 
-    public GUIListener(LinkedBulbManager bulbManager) {
+    public GUIListener(LinkedBulbManager bulbManager, LinkedChestManager chestManager) {
         this.bulbManager = bulbManager;
+        this.chestManager = chestManager;
     }
 
     @EventHandler
@@ -45,7 +48,7 @@ public class GUIListener implements Listener {
             
             player.getServer().getScheduler().runTask(
                 player.getServer().getPluginManager().getPlugin("WirelessRedstone"),
-                () -> BulbManagerGUI.processRename(player, message, bulbManager)
+                () -> BulbManagerGUI.processRename(player, message, bulbManager, chestManager)
             );
         }
     }

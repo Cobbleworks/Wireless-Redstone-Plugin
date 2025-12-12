@@ -1,6 +1,7 @@
 package com.wirelessredstone.listener;
 
 import com.wirelessredstone.WirelessRedstonePlugin;
+import com.wirelessredstone.item.ChestVariant;
 import com.wirelessredstone.manager.LinkedChestManager;
 import com.wirelessredstone.model.ChestGroup;
 import com.wirelessredstone.util.ParticleEffects;
@@ -24,7 +25,8 @@ public class ChestPlaceListener implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onBlockPlace(BlockPlaceEvent event) {
-        if (event.getBlock().getType() != Material.CHEST) {
+        Material blockType = event.getBlock().getType();
+        if (blockType != Material.CHEST && !ChestVariant.isShulkerBox(blockType)) {
             return;
         }
         
@@ -43,9 +45,10 @@ public class ChestPlaceListener implements Listener {
 
         UUID ownerUuid = chestManager.getOwnerUuid(itemInHand).orElse(event.getPlayer().getUniqueId());
         int groupSize = chestManager.getGroupSize(itemInHand).orElse(2);
+        ChestVariant.ContainerType containerType = chestManager.getContainerType(itemInHand).orElse(ChestVariant.ContainerType.CHEST);
 
         var location = event.getBlock().getLocation();
-        chestManager.registerPlacedChest(location, groupIdOpt.get(), chestIndexOpt.get(), ownerUuid, groupSize);
+        chestManager.registerPlacedChest(location, groupIdOpt.get(), chestIndexOpt.get(), ownerUuid, groupSize, containerType);
 
         ParticleEffects.spawnTriggerParticles(location, false);
 
@@ -59,10 +62,18 @@ public class ChestPlaceListener implements Listener {
                     ParticleEffects.spawnSyncParticles(otherLoc, false);
                 }
                 
-                // Sync the shared inventory to the newly placed chest
+                // Sync the shared inventory to the newly placed container
                 var block = location.getBlock();
-                if (block.getState() instanceof org.bukkit.block.Chest chest) {
-                    var inventory = chest.getInventory();
+                var state = block.getState();
+                org.bukkit.inventory.Inventory inventory = null;
+                
+                if (state instanceof org.bukkit.block.Chest chest) {
+                    inventory = chest.getInventory();
+                } else if (state instanceof org.bukkit.block.ShulkerBox shulker) {
+                    inventory = shulker.getInventory();
+                }
+                
+                if (inventory != null) {
                     var sharedInventory = group.getSharedInventory();
                     for (int i = 0; i < Math.min(sharedInventory.length, inventory.getSize()); i++) {
                         inventory.setItem(i, sharedInventory[i] != null ? sharedInventory[i].clone() : null);

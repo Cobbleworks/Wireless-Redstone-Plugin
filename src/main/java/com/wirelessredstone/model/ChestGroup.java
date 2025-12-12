@@ -1,5 +1,6 @@
 package com.wirelessredstone.model;
 
+import com.wirelessredstone.item.ChestVariant;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
@@ -15,12 +16,14 @@ public class ChestGroup {
     private String customName;
     private Material customIcon;
     private ItemStack[] sharedInventory;
+    private ChestVariant.ContainerType containerType;
 
     public ChestGroup(UUID groupId, int maxSize) {
         this.groupId = groupId;
         this.maxSize = maxSize;
         this.locations = new ArrayList<>(Collections.nCopies(maxSize, null));
         this.sharedInventory = new ItemStack[27];
+        this.containerType = ChestVariant.ContainerType.CHEST;
     }
 
     public ChestGroup(UUID groupId, int maxSize, UUID ownerUuid) {
@@ -29,6 +32,16 @@ public class ChestGroup {
         this.locations = new ArrayList<>(Collections.nCopies(maxSize, null));
         this.ownerUuid = ownerUuid;
         this.sharedInventory = new ItemStack[27];
+        this.containerType = ChestVariant.ContainerType.CHEST;
+    }
+
+    public ChestGroup(UUID groupId, int maxSize, UUID ownerUuid, ChestVariant.ContainerType containerType) {
+        this.groupId = groupId;
+        this.maxSize = maxSize;
+        this.locations = new ArrayList<>(Collections.nCopies(maxSize, null));
+        this.ownerUuid = ownerUuid;
+        this.sharedInventory = new ItemStack[27];
+        this.containerType = containerType != null ? containerType : ChestVariant.ContainerType.CHEST;
     }
 
     public UUID getGroupId() {
@@ -151,6 +164,14 @@ public class ChestGroup {
         for (int i = 0; i < Math.min(inventory.length, 27); i++) {
             this.sharedInventory[i] = inventory[i] != null ? inventory[i].clone() : null;
         }
+    }
+
+    public ChestVariant.ContainerType getContainerType() {
+        return containerType;
+    }
+
+    public void setContainerType(ChestVariant.ContainerType containerType) {
+        this.containerType = containerType;
     }
 
     public static String getIndexLabel(int index) {
