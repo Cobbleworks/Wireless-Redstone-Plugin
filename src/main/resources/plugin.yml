@@ -8,7 +8,7 @@ author: Developer
 commands:
   wireless:
     description: Wireless Redstone commands
-    usage: /wireless <bulbs|lamps|gui|debug> [options]
+    usage: /wireless <bulbs|lamps|chests|gui|debug> [options]
     permission: wirelessredstone.use
 
 permissions:

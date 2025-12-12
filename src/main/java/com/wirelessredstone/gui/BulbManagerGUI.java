@@ -105,9 +105,14 @@ public class BulbManagerGUI implements InventoryHolder {
     }
 
     private ItemStack createGroupItem(BulbGroup group) {
-        Material material = group.getBulbType() == BulbVariant.BulbType.REDSTONE_LAMP 
-            ? Material.REDSTONE_LAMP 
-            : Material.COPPER_BULB;
+        Material material;
+        if (group.getCustomIcon() != null) {
+            material = group.getCustomIcon();
+        } else {
+            material = group.getBulbType() == BulbVariant.BulbType.REDSTONE_LAMP 
+                ? Material.REDSTONE_LAMP 
+                : Material.COPPER_BULB;
+        }
         
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
@@ -167,6 +172,9 @@ public class BulbManagerGUI implements InventoryHolder {
                 .decoration(TextDecoration.ITALIC, false));
         lore.add(Component.text("Middle-click: ", NamedTextColor.LIGHT_PURPLE)
                 .append(Component.text("Rename group", NamedTextColor.WHITE))
+                .decoration(TextDecoration.ITALIC, false));
+        lore.add(Component.text("Shift+Middle: ", NamedTextColor.LIGHT_PURPLE)
+                .append(Component.text("Set icon to held item", NamedTextColor.WHITE))
                 .decoration(TextDecoration.ITALIC, false));
         lore.add(Component.text("Shift+Click: ", NamedTextColor.RED)
                 .append(Component.text("Remove group", NamedTextColor.WHITE))
@@ -265,7 +273,9 @@ public class BulbManagerGUI implements InventoryHolder {
 
         BulbGroup group = groups.get(groupIndex);
 
-        if (isShiftClick) {
+        if (isShiftClick && isMiddleClick) {
+            handleSetIcon(group);
+        } else if (isShiftClick) {
             handleRemoveGroup(group);
         } else if (isMiddleClick) {
             handleStartRename(group);
@@ -291,6 +301,21 @@ public class BulbManagerGUI implements InventoryHolder {
         player.closeInventory();
         player.sendMessage(Component.text("Enter a new name for the group (or 'cancel' to abort):", NamedTextColor.YELLOW));
         player.sendMessage(Component.text("Current name: " + group.getDisplayName(), NamedTextColor.GRAY));
+    }
+
+    private void handleSetIcon(BulbGroup group) {
+        ItemStack heldItem = player.getInventory().getItemInMainHand();
+        if (heldItem.getType() == Material.AIR || heldItem.getType() == null) {
+            group.setCustomIcon(null);
+            player.sendMessage(Component.text("Group icon reset to default!", NamedTextColor.YELLOW));
+        } else {
+            group.setCustomIcon(heldItem.getType());
+            player.sendMessage(Component.text("Group icon set to ", NamedTextColor.GREEN)
+                    .append(Component.text(heldItem.getType().name(), NamedTextColor.AQUA))
+                    .append(Component.text("!", NamedTextColor.GREEN)));
+        }
+        bulbManager.saveData();
+        populateInventory();
     }
 
     public static boolean hasPendingRename(UUID playerUuid) {

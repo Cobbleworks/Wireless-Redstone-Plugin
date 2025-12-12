@@ -1,37 +1,34 @@
 package com.wirelessredstone.model;
 
-import com.wirelessredstone.item.BulbVariant;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.inventory.ItemStack;
 
 import java.util.*;
 
-public class BulbGroup {
+public class ChestGroup {
 
     private final UUID groupId;
     private final List<Location> locations;
     private final int maxSize;
-    private boolean lit;
     private UUID ownerUuid;
-    private BulbVariant.BulbType bulbType;
     private String customName;
     private Material customIcon;
+    private ItemStack[] sharedInventory;
 
-    public BulbGroup(UUID groupId, int maxSize) {
+    public ChestGroup(UUID groupId, int maxSize) {
         this.groupId = groupId;
         this.maxSize = maxSize;
         this.locations = new ArrayList<>(Collections.nCopies(maxSize, null));
-        this.lit = false;
-        this.bulbType = BulbVariant.BulbType.COPPER_BULB;
+        this.sharedInventory = new ItemStack[27];
     }
 
-    public BulbGroup(UUID groupId, int maxSize, UUID ownerUuid, BulbVariant.BulbType bulbType) {
+    public ChestGroup(UUID groupId, int maxSize, UUID ownerUuid) {
         this.groupId = groupId;
         this.maxSize = maxSize;
         this.locations = new ArrayList<>(Collections.nCopies(maxSize, null));
-        this.lit = false;
         this.ownerUuid = ownerUuid;
-        this.bulbType = bulbType;
+        this.sharedInventory = new ItemStack[27];
     }
 
     public UUID getGroupId() {
@@ -90,14 +87,6 @@ public class BulbGroup {
         return locations.stream().allMatch(Objects::isNull);
     }
 
-    public boolean isLit() {
-        return lit;
-    }
-
-    public void setLit(boolean lit) {
-        this.lit = lit;
-    }
-
     public boolean hasLocation(Location location) {
         return locations.stream().anyMatch(loc -> location.equals(loc));
     }
@@ -117,14 +106,6 @@ public class BulbGroup {
 
     public void setOwnerUuid(UUID ownerUuid) {
         this.ownerUuid = ownerUuid;
-    }
-
-    public BulbVariant.BulbType getBulbType() {
-        return bulbType;
-    }
-
-    public void setBulbType(BulbVariant.BulbType bulbType) {
-        this.bulbType = bulbType;
     }
 
     public int getPlacedCount() {
@@ -153,6 +134,23 @@ public class BulbGroup {
 
     public void setCustomIcon(Material customIcon) {
         this.customIcon = customIcon;
+    }
+
+    public ItemStack[] getSharedInventory() {
+        return sharedInventory;
+    }
+
+    public void setSharedInventory(ItemStack[] inventory) {
+        if (inventory != null && inventory.length == 27) {
+            this.sharedInventory = inventory;
+        }
+    }
+
+    public void updateSharedInventory(ItemStack[] inventory) {
+        if (inventory == null) return;
+        for (int i = 0; i < Math.min(inventory.length, 27); i++) {
+            this.sharedInventory[i] = inventory[i] != null ? inventory[i].clone() : null;
+        }
     }
 
     public static String getIndexLabel(int index) {

@@ -121,12 +121,39 @@ public class LinkedBulbManager {
         saveData();
     }
 
+    /**
+     * Unregisters a bulb and returns the group ID if the group was removed (empty after unregister).
+     */
+    public UUID unregisterBulbAndCheckGroupRemoval(Location location) {
+        UUID groupId = locationToGroupId.remove(location);
+        if (groupId != null) {
+            BulbGroup group = bulbGroups.get(groupId);
+            if (group != null) {
+                group.removeLocation(location);
+                if (group.isEmpty()) {
+                    bulbGroups.remove(groupId);
+                    saveData();
+                    return groupId;
+                }
+            }
+        }
+        saveData();
+        return null;
+    }
+
     public void removeGroup(UUID groupId) {
+        removeGroup(groupId, true);
+    }
+
+    public void removeGroup(UUID groupId, boolean removeBlocks) {
         BulbGroup group = bulbGroups.remove(groupId);
         if (group != null) {
             for (Location loc : group.getLocations()) {
                 if (loc != null) {
                     locationToGroupId.remove(loc);
+                    if (removeBlocks && loc.isChunkLoaded()) {
+                        loc.getBlock().setType(org.bukkit.Material.AIR);
+                    }
                 }
             }
         }
@@ -186,6 +213,9 @@ public class LinkedBulbManager {
             }
             if (group.getCustomName() != null) {
                 config.set(basePath + ".customName", group.getCustomName());
+            }
+            if (group.getCustomIcon() != null) {
+                config.set(basePath + ".customIcon", group.getCustomIcon().name());
             }
             
             List<Location> locations = group.getLocations();
@@ -250,6 +280,13 @@ public class LinkedBulbManager {
             BulbGroup group = new BulbGroup(groupId, maxSize, ownerUuid, bulbType);
             group.setLit(config.getBoolean(basePath + ".lit", false));
             group.setCustomName(config.getString(basePath + ".customName"));
+            
+            String customIconStr = config.getString(basePath + ".customIcon");
+            if (customIconStr != null) {
+                try {
+                    group.setCustomIcon(org.bukkit.Material.valueOf(customIconStr));
+                } catch (IllegalArgumentException ignored) {}
+            }
 
             var locationsSection = config.getConfigurationSection(basePath + ".locations");
             if (locationsSection != null) {

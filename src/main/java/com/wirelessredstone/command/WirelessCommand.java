@@ -3,8 +3,10 @@ package com.wirelessredstone.command;
 import com.wirelessredstone.gui.BulbManagerGUI;
 import com.wirelessredstone.item.BulbVariant;
 import com.wirelessredstone.item.WirelessBulbFactory;
+import com.wirelessredstone.item.WirelessChestFactory;
 import com.wirelessredstone.manager.DebugManager;
 import com.wirelessredstone.manager.LinkedBulbManager;
+import com.wirelessredstone.manager.LinkedChestManager;
 import com.wirelessredstone.manager.WireViewManager;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -20,11 +22,13 @@ import java.util.List;
 public class WirelessCommand implements CommandExecutor, TabCompleter {
 
     private final LinkedBulbManager bulbManager;
+    private final LinkedChestManager chestManager;
     private final WireViewManager wireViewManager;
     private final DebugManager debugManager;
 
-    public WirelessCommand(LinkedBulbManager bulbManager, WireViewManager wireViewManager, DebugManager debugManager) {
+    public WirelessCommand(LinkedBulbManager bulbManager, LinkedChestManager chestManager, WireViewManager wireViewManager, DebugManager debugManager) {
         this.bulbManager = bulbManager;
+        this.chestManager = chestManager;
         this.wireViewManager = wireViewManager;
         this.debugManager = debugManager;
     }
@@ -51,6 +55,7 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
         switch (subCommand) {
             case "bulbs" -> handleBulbsCommand(player, args);
             case "lamps" -> handleLampsCommand(player, args);
+            case "chests" -> handleChestsCommand(player, args);
             case "gui", "manage", "list" -> handleGUICommand(player, args);
             case "wireview" -> handleWireViewCommand(player);
             case "debug" -> handleDebugCommand(player, args);
@@ -115,6 +120,26 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
         giveWirelessBulbs(player, BulbVariant.REDSTONE_LAMP, count);
     }
 
+    private void handleChestsCommand(Player player, String[] args) {
+        int count = 2;
+        
+        for (int i = 1; i < args.length; i++) {
+            String arg = args[i];
+            try {
+                count = Integer.parseInt(arg);
+                if (count < 2 || count > 26) {
+                    player.sendMessage(Component.text("Chest count must be between 2 and 26!", NamedTextColor.RED));
+                    return;
+                }
+            } catch (NumberFormatException e) {
+                player.sendMessage(Component.text("Invalid number: " + arg, NamedTextColor.RED));
+                return;
+            }
+        }
+
+        giveWirelessChests(player, count);
+    }
+
     private void handleDebugCommand(Player player, String[] args) {
         if (args.length < 2) {
             boolean current = debugManager.isDebugEnabled(player);
@@ -168,6 +193,8 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
         player.sendMessage(Component.text("  Variants: --copper, --exposed, --weathered, --oxidized", NamedTextColor.DARK_GRAY));
         player.sendMessage(Component.text("/wireless lamps [count]", NamedTextColor.YELLOW)
                 .append(Component.text(" - Get linked redstone lamps", NamedTextColor.GRAY)));
+        player.sendMessage(Component.text("/wireless chests [count]", NamedTextColor.YELLOW)
+                .append(Component.text(" - Get linked wireless chests", NamedTextColor.GRAY)));
         player.sendMessage(Component.text("/wireless gui [--all]", NamedTextColor.YELLOW)
                 .append(Component.text(" - Open management GUI", NamedTextColor.GRAY)));
         player.sendMessage(Component.text("/wireless wireview", NamedTextColor.YELLOW)
@@ -193,13 +220,30 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
         player.sendMessage(Component.text("Place them and they will sync their state!", NamedTextColor.GRAY));
     }
 
+    private void giveWirelessChests(Player player, int count) {
+        var groupId = chestManager.createNewGroupId();
+        var chests = WirelessChestFactory.createLinkedChests(groupId, player.getUniqueId(), count);
+
+        var inventory = player.getInventory();
+        for (var chest : chests) {
+            if (inventory.firstEmpty() != -1) {
+                inventory.addItem(chest);
+            } else {
+                player.getWorld().dropItemNaturally(player.getLocation(), chest);
+            }
+        }
+
+        player.sendMessage(Component.text("You received " + count + " linked Wireless Chests!", NamedTextColor.GREEN));
+        player.sendMessage(Component.text("Place them and they will sync their contents!", NamedTextColor.GRAY));
+    }
+
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         List<String> completions = new ArrayList<>();
 
         if (args.length == 1) {
             String input = args[0].toLowerCase();
-            for (String sub : List.of("bulbs", "lamps", "gui", "manage", "list", "wireview", "debug")) {
+            for (String sub : List.of("bulbs", "lamps", "chests", "gui", "manage", "list", "wireview", "debug")) {
                 if (sub.startsWith(input)) {
                     completions.add(sub);
                 }
@@ -220,7 +264,7 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
                         completions.add(num);
                     }
                 }
-            } else if (subCommand.equals("lamps")) {
+            } else if (subCommand.equals("lamps") || subCommand.equals("chests")) {
                 for (int i = 2; i <= 10; i++) {
                     String num = String.valueOf(i);
                     if (num.startsWith(input)) {
