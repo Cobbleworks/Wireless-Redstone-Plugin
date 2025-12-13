@@ -45,6 +45,15 @@ public class LinkedChestManager {
         loadData();
     }
 
+    /**
+     * Normalizes a location to block coordinates only (removes yaw, pitch, and decimal parts).
+     * This ensures consistent map key lookups regardless of how the Location was obtained.
+     */
+    private Location normalizeLocation(Location loc) {
+        if (loc == null || loc.getWorld() == null) return null;
+        return new Location(loc.getWorld(), loc.getBlockX(), loc.getBlockY(), loc.getBlockZ());
+    }
+
     public UUID createNewGroupId() {
         return UUID.randomUUID();
     }
@@ -96,24 +105,26 @@ public class LinkedChestManager {
     }
 
     public void registerPlacedChest(Location location, UUID groupId, int chestIndex, UUID ownerUuid, int groupSize, ChestVariant.ContainerType containerType) {
+        Location normalizedLoc = normalizeLocation(location);
         ChestGroup group = chestGroups.computeIfAbsent(groupId, id -> new ChestGroup(id, groupSize, ownerUuid, containerType));
-        group.setLocation(chestIndex, location);
+        group.setLocation(chestIndex, normalizedLoc);
         if (ownerUuid != null && group.getOwnerUuid() == null) {
             group.setOwnerUuid(ownerUuid);
         }
         if (containerType != null && group.getContainerType() == null) {
             group.setContainerType(containerType);
         }
-        locationToGroupId.put(location, groupId);
+        locationToGroupId.put(normalizedLoc, groupId);
         saveData();
     }
 
     public void unregisterChest(Location location) {
-        UUID groupId = locationToGroupId.remove(location);
+        Location normalizedLoc = normalizeLocation(location);
+        UUID groupId = locationToGroupId.remove(normalizedLoc);
         if (groupId != null) {
             ChestGroup group = chestGroups.get(groupId);
             if (group != null) {
-                group.removeLocation(location);
+                group.removeLocation(normalizedLoc);
                 if (group.isEmpty()) {
                     chestGroups.remove(groupId);
                 }
@@ -123,11 +134,12 @@ public class LinkedChestManager {
     }
 
     public UUID unregisterChestAndCheckGroupRemoval(Location location) {
-        UUID groupId = locationToGroupId.remove(location);
+        Location normalizedLoc = normalizeLocation(location);
+        UUID groupId = locationToGroupId.remove(normalizedLoc);
         if (groupId != null) {
             ChestGroup group = chestGroups.get(groupId);
             if (group != null) {
-                group.removeLocation(location);
+                group.removeLocation(normalizedLoc);
                 if (group.isEmpty()) {
                     chestGroups.remove(groupId);
                     saveData();
@@ -148,7 +160,7 @@ public class LinkedChestManager {
         if (group != null) {
             for (Location loc : group.getLocations()) {
                 if (loc != null) {
-                    locationToGroupId.remove(loc);
+                    locationToGroupId.remove(normalizeLocation(loc));
                     if (removeBlocks && loc.isChunkLoaded()) {
                         loc.getBlock().setType(Material.AIR);
                     }
@@ -163,12 +175,12 @@ public class LinkedChestManager {
     }
 
     public Optional<ChestGroup> getGroupByLocation(Location location) {
-        UUID groupId = locationToGroupId.get(location);
+        UUID groupId = locationToGroupId.get(normalizeLocation(location));
         return groupId != null ? Optional.ofNullable(chestGroups.get(groupId)) : Optional.empty();
     }
 
     public boolean isWirelessChestLocation(Location location) {
-        return locationToGroupId.containsKey(location);
+        return locationToGroupId.containsKey(normalizeLocation(location));
     }
 
     public Collection<ChestGroup> getAllGroups() {

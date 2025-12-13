@@ -37,7 +37,6 @@ public class ParticleEffects {
 
         world.spawnParticle(Particle.DUST, center, 20, 0.4, 0.4, 0.4, 0, BREAK_DUST);
         world.spawnParticle(Particle.ELECTRIC_SPARK, center, 15, 0.3, 0.3, 0.3, 0.1);
-        world.spawnParticle(Particle.FLASH, center, 1, 0, 0, 0, 0);
     }
 
     public static void spawnAmbientParticles(Location location, boolean lit) {
@@ -66,7 +65,6 @@ public class ParticleEffects {
             // Bright burst when turning on
             world.spawnParticle(Particle.END_ROD, center, 20, 0.3, 0.3, 0.3, 0.1);
             world.spawnParticle(Particle.ELECTRIC_SPARK, center, 25, 0.4, 0.4, 0.4, 0.15);
-            world.spawnParticle(Particle.FLASH, center, 1, 0, 0, 0, 0);
         } else {
             // Smoke puff when turning off
             world.spawnParticle(Particle.SMOKE, center, 15, 0.3, 0.3, 0.3, 0.05);

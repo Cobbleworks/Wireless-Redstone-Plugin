@@ -69,7 +69,7 @@ public class ChestGroup {
 
     public void removeLocation(Location location) {
         for (int i = 0; i < locations.size(); i++) {
-            if (location.equals(locations.get(i))) {
+            if (isSameBlock(location, locations.get(i))) {
                 locations.set(i, null);
                 break;
             }
@@ -79,7 +79,7 @@ public class ChestGroup {
     public List<Location> getOtherLocations(Location location) {
         List<Location> others = new ArrayList<>();
         for (Location loc : locations) {
-            if (loc != null && !loc.equals(location)) {
+            if (loc != null && !isSameBlock(loc, location)) {
                 others.add(loc);
             }
         }
@@ -101,12 +101,12 @@ public class ChestGroup {
     }
 
     public boolean hasLocation(Location location) {
-        return locations.stream().anyMatch(loc -> location.equals(loc));
+        return locations.stream().anyMatch(loc -> isSameBlock(location, loc));
     }
 
     public int getLocationIndex(Location location) {
         for (int i = 0; i < locations.size(); i++) {
-            if (location.equals(locations.get(i))) {
+            if (isSameBlock(location, locations.get(i))) {
                 return i;
             }
         }
@@ -177,5 +177,18 @@ public class ChestGroup {
     public static String getIndexLabel(int index) {
         if (index < 0 || index > 25) return String.valueOf(index);
         return String.valueOf((char) ('A' + index));
+    }
+
+    /**
+     * Compares two locations by block coordinates only (ignores yaw, pitch, and decimal parts).
+     * This ensures proper comparison when locations come from different sources.
+     */
+    private static boolean isSameBlock(Location loc1, Location loc2) {
+        if (loc1 == null || loc2 == null) return false;
+        if (loc1.getWorld() == null || loc2.getWorld() == null) return false;
+        return loc1.getWorld().equals(loc2.getWorld())
+                && loc1.getBlockX() == loc2.getBlockX()
+                && loc1.getBlockY() == loc2.getBlockY()
+                && loc1.getBlockZ() == loc2.getBlockZ();
     }
 }

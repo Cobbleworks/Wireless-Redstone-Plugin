@@ -44,6 +44,15 @@ public class LinkedBulbManager {
         loadData();
     }
 
+    /**
+     * Normalizes a location to block coordinates only (removes yaw, pitch, and decimal parts).
+     * This ensures consistent map key lookups regardless of how the Location was obtained.
+     */
+    private Location normalizeLocation(Location loc) {
+        if (loc == null || loc.getWorld() == null) return null;
+        return new Location(loc.getWorld(), loc.getBlockX(), loc.getBlockY(), loc.getBlockZ());
+    }
+
     public UUID createNewGroupId() {
         return UUID.randomUUID();
     }
@@ -95,24 +104,26 @@ public class LinkedBulbManager {
     }
 
     public void registerPlacedBulb(Location location, UUID groupId, int bulbIndex, UUID ownerUuid, BulbVariant.BulbType bulbType, int groupSize) {
+        Location normalizedLoc = normalizeLocation(location);
         BulbGroup group = bulbGroups.computeIfAbsent(groupId, id -> new BulbGroup(id, groupSize, ownerUuid, bulbType));
-        group.setLocation(bulbIndex, location);
+        group.setLocation(bulbIndex, normalizedLoc);
         if (ownerUuid != null && group.getOwnerUuid() == null) {
             group.setOwnerUuid(ownerUuid);
         }
         if (bulbType != null) {
             group.setBulbType(bulbType);
         }
-        locationToGroupId.put(location, groupId);
+        locationToGroupId.put(normalizedLoc, groupId);
         saveData();
     }
 
     public void unregisterBulb(Location location) {
-        UUID groupId = locationToGroupId.remove(location);
+        Location normalizedLoc = normalizeLocation(location);
+        UUID groupId = locationToGroupId.remove(normalizedLoc);
         if (groupId != null) {
             BulbGroup group = bulbGroups.get(groupId);
             if (group != null) {
-                group.removeLocation(location);
+                group.removeLocation(normalizedLoc);
                 if (group.isEmpty()) {
                     bulbGroups.remove(groupId);
                 }
@@ -125,11 +136,12 @@ public class LinkedBulbManager {
      * Unregisters a bulb and returns the group ID if the group was removed (empty after unregister).
      */
     public UUID unregisterBulbAndCheckGroupRemoval(Location location) {
-        UUID groupId = locationToGroupId.remove(location);
+        Location normalizedLoc = normalizeLocation(location);
+        UUID groupId = locationToGroupId.remove(normalizedLoc);
         if (groupId != null) {
             BulbGroup group = bulbGroups.get(groupId);
             if (group != null) {
-                group.removeLocation(location);
+                group.removeLocation(normalizedLoc);
                 if (group.isEmpty()) {
                     bulbGroups.remove(groupId);
                     saveData();
@@ -150,7 +162,7 @@ public class LinkedBulbManager {
         if (group != null) {
             for (Location loc : group.getLocations()) {
                 if (loc != null) {
-                    locationToGroupId.remove(loc);
+                    locationToGroupId.remove(normalizeLocation(loc));
                     if (removeBlocks && loc.isChunkLoaded()) {
                         loc.getBlock().setType(org.bukkit.Material.AIR);
                     }
@@ -165,7 +177,7 @@ public class LinkedBulbManager {
     }
 
     public Optional<BulbGroup> getGroupByLocation(Location location) {
-        UUID groupId = locationToGroupId.get(location);
+        UUID groupId = locationToGroupId.get(normalizeLocation(location));
         return groupId != null ? Optional.ofNullable(bulbGroups.get(groupId)) : Optional.empty();
     }
 
@@ -176,7 +188,7 @@ public class LinkedBulbManager {
     }
 
     public boolean isWirelessBulbLocation(Location location) {
-        return locationToGroupId.containsKey(location);
+        return locationToGroupId.containsKey(normalizeLocation(location));
     }
 
     public Collection<BulbGroup> getAllGroups() {
