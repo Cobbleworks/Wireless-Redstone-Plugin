@@ -1,7 +1,7 @@
 # 📡 Wireless Redstone
 
 <p align="center">
-  <img src="icon.png" alt="Wireless Redstone Banner" width="600">
+  <img src="assets/icon.png" alt="Wireless Redstone Banner" width="600">
 </p>
 
 **Wireless Redstone** is a powerful Minecraft plugin for Paper servers that enables players to create groups of wirelessly linked blocks that synchronize their states across any distance. Link copper bulbs, redstone lamps, chests, shulker boxes, and even the new copper chests!
@@ -199,7 +199,7 @@ Data includes group IDs, locations, ownership, custom names/icons, and shared in
 
 ## 💡 Tips & Notes
 
-- **Chunk Loading**: Bulbs and containers must be in loaded chunks to sync
+- **Chunk Syncing**: Bulbs and containers automatically sync when their chunks are loaded - no manual intervention needed!
 - **Cross-Dimension**: Groups work across dimensions (Overworld, Nether, End)
 - **Waxed Bulbs**: Copper bulbs are automatically waxed to prevent oxidation changes
 - **Container Breaking**: Items stay in shared inventory when containers are broken
@@ -210,13 +210,13 @@ Data includes group IDs, locations, ownership, custom names/icons, and shared in
 
 ## 🐛 Troubleshooting
 
-| Issue                  | Solution                                           |
-| ---------------------- | -------------------------------------------------- |
-| Bulbs not syncing      | Ensure chunks are loaded, check debug mode         |
-| Containers not syncing | Check if chunks are loaded, verify group exists    |
-| GUI not working        | Check console for errors on startup                |
-| Rename not working     | Chat plugins may intercept; type `cancel` to abort |
-| Groups disappeared     | Check if world was renamed/removed                 |
+| Issue                  | Solution                                            |
+| ---------------------- | --------------------------------------------------- |
+| Bulbs not syncing      | Ensure all bulbs are placed, check debug mode       |
+| Containers not syncing | Verify group exists in GUI, try reopening container |
+| GUI not working        | Check console for errors on startup                 |
+| Rename not working     | Chat plugins may intercept; type `cancel` to abort  |
+| Groups disappeared     | Check if world was renamed/removed                  |
 
 ---
 
@@ -258,7 +258,7 @@ Items use `PersistentDataContainer` for metadata storage:
 <p align="center">
   <img src="assets/screenshots/chests.png" alt="Wireless Chests" width="400">
   <br>
-  <em>Linked shulker boxes sharing inventory</em>
+  <em>Linked chests (or shulker boxes) sharing inventory. Works with hoppers and golems too!</em>
 </p>
 
 <p align="center">

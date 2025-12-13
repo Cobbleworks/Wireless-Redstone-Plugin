@@ -6,6 +6,7 @@ import com.wirelessredstone.listener.BulbPlaceListener;
 import com.wirelessredstone.listener.ChestBreakListener;
 import com.wirelessredstone.listener.ChestInventoryListener;
 import com.wirelessredstone.listener.ChestPlaceListener;
+import com.wirelessredstone.listener.ChunkLoadListener;
 import com.wirelessredstone.listener.GUIListener;
 import com.wirelessredstone.listener.WireViewListener;
 import com.wirelessredstone.manager.DebugManager;
@@ -73,6 +74,7 @@ public class WirelessRedstonePlugin extends JavaPlugin {
         pluginManager.registerEvents(new ChestPlaceListener(chestManager), this);
         pluginManager.registerEvents(new ChestBreakListener(chestManager), this);
         pluginManager.registerEvents(new ChestInventoryListener(chestManager), this);
+        pluginManager.registerEvents(new ChunkLoadListener(bulbManager, chestManager), this);
         pluginManager.registerEvents(new GUIListener(bulbManager, chestManager), this);
         pluginManager.registerEvents(new WireViewListener(wireViewManager), this);
     }

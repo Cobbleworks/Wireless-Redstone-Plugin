@@ -11,7 +11,9 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.inventory.InventoryMoveItemEvent;
+import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemStack;
 
 public class ChestInventoryListener implements Listener {
 
@@ -19,6 +21,26 @@ public class ChestInventoryListener implements Listener {
 
     public ChestInventoryListener(LinkedChestManager chestManager) {
         this.chestManager = chestManager;
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onInventoryOpen(InventoryOpenEvent event) {
+        Inventory inventory = event.getInventory();
+        Location location = getChestLocation(inventory);
+        
+        if (location == null || !chestManager.isWirelessChestLocation(location)) {
+            return;
+        }
+        
+        // Sync the shared inventory TO this container when opened
+        // This ensures containers in previously unloaded chunks get updated
+        var groupOpt = chestManager.getGroupByLocation(location);
+        if (groupOpt.isEmpty()) return;
+        
+        ItemStack[] sharedInventory = groupOpt.get().getSharedInventory();
+        for (int i = 0; i < Math.min(sharedInventory.length, inventory.getSize()); i++) {
+            inventory.setItem(i, sharedInventory[i] != null ? sharedInventory[i].clone() : null);
+        }
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
