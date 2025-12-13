@@ -25,7 +25,7 @@ public class ChestBreakListener implements Listener {
         Block block = event.getBlock();
         Material blockType = block.getType();
         
-        if (blockType != Material.CHEST && !ChestVariant.isShulkerBox(blockType)) {
+        if (blockType != Material.CHEST && !ChestVariant.isShulkerBox(blockType) && !ChestVariant.isCopperChest(blockType)) {
             return;
         }
         

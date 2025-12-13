@@ -26,7 +26,7 @@ public class ChestPlaceListener implements Listener {
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onBlockPlace(BlockPlaceEvent event) {
         Material blockType = event.getBlock().getType();
-        if (blockType != Material.CHEST && !ChestVariant.isShulkerBox(blockType)) {
+        if (blockType != Material.CHEST && !ChestVariant.isShulkerBox(blockType) && !ChestVariant.isCopperChest(blockType)) {
             return;
         }
         
@@ -67,10 +67,8 @@ public class ChestPlaceListener implements Listener {
                 var state = block.getState();
                 org.bukkit.inventory.Inventory inventory = null;
                 
-                if (state instanceof org.bukkit.block.Chest chest) {
-                    inventory = chest.getInventory();
-                } else if (state instanceof org.bukkit.block.ShulkerBox shulker) {
-                    inventory = shulker.getInventory();
+                if (state instanceof org.bukkit.block.Container container) {
+                    inventory = container.getInventory();
                 }
                 
                 if (inventory != null) {

@@ -4,6 +4,16 @@ import org.bukkit.Material;
 
 public enum ChestVariant {
     CHEST("--chest", "Wireless Chest", Material.CHEST, ContainerType.CHEST),
+    // Copper Chests
+    COPPER_CHEST("--copper", "Wireless Copper Chest", Material.COPPER_CHEST, ContainerType.COPPER_CHEST),
+    EXPOSED_COPPER_CHEST("--copper-exposed", "Wireless Exposed Copper Chest", Material.EXPOSED_COPPER_CHEST, ContainerType.COPPER_CHEST),
+    WEATHERED_COPPER_CHEST("--copper-weathered", "Wireless Weathered Copper Chest", Material.WEATHERED_COPPER_CHEST, ContainerType.COPPER_CHEST),
+    OXIDIZED_COPPER_CHEST("--copper-oxidized", "Wireless Oxidized Copper Chest", Material.OXIDIZED_COPPER_CHEST, ContainerType.COPPER_CHEST),
+    WAXED_COPPER_CHEST("--copper-waxed", "Wireless Waxed Copper Chest", Material.WAXED_COPPER_CHEST, ContainerType.COPPER_CHEST),
+    WAXED_EXPOSED_COPPER_CHEST("--copper-waxed-exposed", "Wireless Waxed Exposed Copper Chest", Material.WAXED_EXPOSED_COPPER_CHEST, ContainerType.COPPER_CHEST),
+    WAXED_WEATHERED_COPPER_CHEST("--copper-waxed-weathered", "Wireless Waxed Weathered Copper Chest", Material.WAXED_WEATHERED_COPPER_CHEST, ContainerType.COPPER_CHEST),
+    WAXED_OXIDIZED_COPPER_CHEST("--copper-waxed-oxidized", "Wireless Waxed Oxidized Copper Chest", Material.WAXED_OXIDIZED_COPPER_CHEST, ContainerType.COPPER_CHEST),
+    // Shulker Boxes
     WHITE_SHULKER("--white", "Wireless White Shulker Box", Material.WHITE_SHULKER_BOX, ContainerType.SHULKER),
     ORANGE_SHULKER("--orange", "Wireless Orange Shulker Box", Material.ORANGE_SHULKER_BOX, ContainerType.SHULKER),
     MAGENTA_SHULKER("--magenta", "Wireless Magenta Shulker Box", Material.MAGENTA_SHULKER_BOX, ContainerType.SHULKER),
@@ -92,8 +102,20 @@ public enum ChestVariant {
                material == Material.BLACK_SHULKER_BOX;
     }
 
+    public static boolean isCopperChest(Material material) {
+        return material == Material.COPPER_CHEST ||
+               material == Material.EXPOSED_COPPER_CHEST ||
+               material == Material.WEATHERED_COPPER_CHEST ||
+               material == Material.OXIDIZED_COPPER_CHEST ||
+               material == Material.WAXED_COPPER_CHEST ||
+               material == Material.WAXED_EXPOSED_COPPER_CHEST ||
+               material == Material.WAXED_WEATHERED_COPPER_CHEST ||
+               material == Material.WAXED_OXIDIZED_COPPER_CHEST;
+    }
+
     public enum ContainerType {
         CHEST,
-        SHULKER
+        SHULKER,
+        COPPER_CHEST
     }
 }

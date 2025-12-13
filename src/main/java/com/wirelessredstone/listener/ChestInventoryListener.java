@@ -4,9 +4,6 @@ import com.wirelessredstone.WirelessRedstonePlugin;
 import com.wirelessredstone.manager.LinkedChestManager;
 import com.wirelessredstone.util.ParticleEffects;
 import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.block.Block;
-import org.bukkit.block.Chest;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -97,27 +94,24 @@ public class ChestInventoryListener implements Listener {
         if (inventory == null) return null;
         
         var holder = inventory.getHolder();
-        if (holder instanceof Chest chest) {
-            return chest.getLocation();
-        }
         
-        // Handle shulker boxes
-        if (holder instanceof org.bukkit.block.ShulkerBox shulker) {
-            return shulker.getLocation();
+        // Handle all single-block containers (chest, shulker box, copper chest, etc.)
+        if (holder instanceof org.bukkit.block.Container container) {
+            return container.getLocation();
         }
         
         // Handle double chests
         if (holder instanceof org.bukkit.block.DoubleChest doubleChest) {
             var leftSide = doubleChest.getLeftSide();
-            if (leftSide instanceof Chest chest) {
-                Location loc = chest.getLocation();
+            if (leftSide instanceof org.bukkit.block.Container container) {
+                Location loc = container.getLocation();
                 if (chestManager.isWirelessChestLocation(loc)) {
                     return loc;
                 }
             }
             var rightSide = doubleChest.getRightSide();
-            if (rightSide instanceof Chest chest) {
-                Location loc = chest.getLocation();
+            if (rightSide instanceof org.bukkit.block.Container container) {
+                Location loc = container.getLocation();
                 if (chestManager.isWirelessChestLocation(loc)) {
                     return loc;
                 }

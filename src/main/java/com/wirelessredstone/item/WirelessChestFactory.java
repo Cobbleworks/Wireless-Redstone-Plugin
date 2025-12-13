@@ -34,14 +34,20 @@ public class WirelessChestFactory {
         ItemStack container = new ItemStack(variant.getMaterial());
         ItemMeta meta = container.getItemMeta();
 
-        NamedTextColor nameColor = variant.getContainerType() == ChestVariant.ContainerType.SHULKER 
-            ? NamedTextColor.LIGHT_PURPLE : NamedTextColor.GOLD;
+        NamedTextColor nameColor = switch (variant.getContainerType()) {
+            case SHULKER -> NamedTextColor.LIGHT_PURPLE;
+            case COPPER_CHEST -> NamedTextColor.AQUA;
+            default -> NamedTextColor.GOLD;
+        };
 
         meta.displayName(Component.text(name, nameColor)
                 .decoration(TextDecoration.ITALIC, false));
 
-        String typeDesc = variant.getContainerType() == ChestVariant.ContainerType.SHULKER 
-            ? "Linked Wireless Shulker Box" : "Linked Wireless Chest";
+        String typeDesc = switch (variant.getContainerType()) {
+            case SHULKER -> "Linked Wireless Shulker Box";
+            case COPPER_CHEST -> "Linked Wireless Copper Chest";
+            default -> "Linked Wireless Chest";
+        };
 
         meta.lore(List.of(
                 Component.text(typeDesc, NamedTextColor.GRAY)
@@ -90,14 +96,15 @@ public class WirelessChestFactory {
         
         String containerLabel = ChestGroup.getIndexLabel(chestIndex);
         boolean isShulker = containerType == ChestVariant.ContainerType.SHULKER;
-        String containerName = isShulker ? "Shulker" : "Chest";
+        boolean isCopperChest = containerType == ChestVariant.ContainerType.COPPER_CHEST;
+        String containerName = isShulker ? "Shulker" : (isCopperChest ? "Copper Chest" : "Chest");
         String displayName = isConnected ? "⚡ Linked " + containerName + " " + containerLabel + " ⚡" : "Wireless " + containerName + " " + containerLabel;
-        NamedTextColor nameColor = isConnected ? NamedTextColor.GREEN : (isShulker ? NamedTextColor.LIGHT_PURPLE : NamedTextColor.GOLD);
+        NamedTextColor nameColor = isConnected ? NamedTextColor.GREEN : (isShulker ? NamedTextColor.LIGHT_PURPLE : (isCopperChest ? NamedTextColor.AQUA : NamedTextColor.GOLD));
         
         meta.displayName(Component.text(displayName, nameColor)
                 .decoration(TextDecoration.ITALIC, false));
         
-        String typeDesc = isShulker ? "Linked Wireless Shulker Box" : "Linked Wireless Chest";
+        String typeDesc = isShulker ? "Linked Wireless Shulker Box" : (isCopperChest ? "Linked Wireless Copper Chest" : "Linked Wireless Chest");
         
         List<Component> lore = new ArrayList<>();
         lore.add(Component.text(typeDesc, NamedTextColor.GRAY)
