@@ -1,235 +1,299 @@
-# Wireless Redstone
+# 📡 Wireless Redstone
 
-Wireless Redstone is a Minecraft plugin that lets players create groups of "wireless" bulbs (waxed copper bulbs), redstone lamps, and storage containers (chests and shulker boxes) that synchronize across distance. Bulb groups sync their lit state, while container groups share their inventory contents. All data persists across restarts with a management GUI for easy control.
+<p align="center">
+  <img src="icon.png" alt="Wireless Redstone Banner" width="600">
+</p>
+
+**Wireless Redstone** is a powerful Minecraft plugin for Paper servers that enables players to create groups of wirelessly linked blocks that synchronize their states across any distance. Link copper bulbs, redstone lamps, chests, shulker boxes, and even the new copper chests!
+
+[![Paper](https://img.shields.io/badge/Paper-1.21.10+-blue)](https://papermc.io/)
+[![Java](https://img.shields.io/badge/Java-21+-orange)](https://adoptium.net/)
+[![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
 ---
 
-## 📦 Features
+## ✨ Features
 
-### Wireless Bulbs & Lamps
+### 🔆 Wireless Bulbs & Lamps
 
-- Create linked groups of bulbs (copper bulbs or redstone lamps) with a single command.
-- Support for multi-connections: groups can have 2-26 bulbs (A, B, C, D, etc.) that all sync together.
-- When bulbs in a group are placed, they will synchronize their lit/unlit state automatically.
-- Multiple copper bulb variants: normal, exposed, weathered, and oxidized.
+- Create linked groups of **copper bulbs** or **redstone lamps** that sync their lit/unlit state
+- Support for **2-26 bulbs per group** (labeled A through Z)
+- All copper bulb oxidation stages: normal, exposed, weathered, and oxidized
+- Ambient particle effects show when bulbs are active
 
-### Wireless Containers (Chests & Shulker Boxes)
+### 📦 Wireless Containers
 
-- Create linked groups of chests or shulker boxes that share their inventory contents.
-- Support for all 17 shulker box colors plus regular chests.
-- When items are added or removed from one container, all linked containers update automatically.
-- Container groups support 2-26 instances syncing together.
+- Create linked groups of **chests**, **shulker boxes**, or **copper chests** that share inventory
+- Support for **all 17 shulker box colors** plus regular chests
+- **8 copper chest variants**: normal, exposed, weathered, oxidized (+ waxed versions)
+- Real-time inventory synchronization across unlimited distance
+- Hopper-compatible for automation
 
-### Management & GUI
+### 🎛️ WireView Mode
 
-- GUI-based management: teleport to bulbs, rename groups, remove groups, and set custom icons.
-- Set custom group icons via Shift+Middle-click while holding an item.
-- Visual particle effects for placement, sync, and break events.
-- Removing a group also removes all placed physical blocks for a clean reset.
-- Groups are automatically removed when the last instance is destroyed.
-- Debug mode with `/wireless debug on|off` to show sync messages for nearby blocks.
-- Data stored in `plugins/WirelessRedstone/bulbs.yml` and `chests.yml` to persist between restarts.
+- Toggle visual highlighting of all your wireless connections
+- Placed bulbs and containers glow with color-coded outlines
+- Each group has a unique color for easy identification
+
+### 🖥️ Management GUI
+
+- Visual interface to manage all your wireless groups
+- Teleport to any placed bulb or container
+- Rename groups with custom names
+- Set custom icons for groups (shift+middle-click with any item)
+- Remove groups with one click (also removes all placed blocks)
+
+### 💾 Persistence
+
+- All data saved automatically to YAML files
+- Survives server restarts and reloads
+- Automatic cleanup when groups are emptied
+
+---
+
+## 📋 Requirements
+
+- **Paper Server** 1.21.10 or higher
+- **Java 21** or higher
+- For copper chest support: Minecraft 1.21.10+
 
 ---
 
 ## ⚙️ Installation
 
-1. Build the plugin JAR (Maven):
+1. Download the latest release JAR from [Releases](../../releases)
+2. Place the JAR in your server's `plugins` folder
+3. Restart your server
+4. Done! Use `/wireless` to get started
+
+### Building from Source
 
 ```bash
+git clone https://github.com/yourusername/Wireless-Redstone.git
+cd Wireless-Redstone
 mvn clean package
 ```
 
-2. Copy the resulting JAR into your server's `plugins` folder.
-3. Start (or restart) the Minecraft server.
-4. Confirm `WirelessRedstone` appears in the server console and `plugins` list.
+The compiled JAR will be in `target/WirelessRedstone-1.0.0.jar`
 
 ---
 
 ## 🔧 Commands
 
-All commands are rooted under `/wireless`.
+All commands use `/wireless` (or `/wr` alias).
 
-- `/wireless bulbs [count] [variant]`
+| Command                              | Description                    |
+| ------------------------------------ | ------------------------------ |
+| `/wireless bulbs [count] [variant]`  | Get linked copper bulbs        |
+| `/wireless lamps [count]`            | Get linked redstone lamps      |
+| `/wireless chests [count] [variant]` | Get linked containers          |
+| `/wireless gui [--all]`              | Open management GUI            |
+| `/wireless wireview`                 | Toggle connection highlighting |
+| `/wireless debug on\|off`            | Toggle sync debug messages     |
 
-  - Gives you a group of _linked copper bulbs_.
-  - `count` is optional and defaults to 2 (range: 2-26).
-  - `variant` is optional and defaults to `--copper`. Supported copper variants:
-    - `--copper` (default)
-    - `--exposed` (exposed copper)
-    - `--weathered` (weathered copper)
-    - `--oxidized` (oxidized copper)
-  - Example: `/wireless bulbs 4 --oxidized` gives you 4 linked oxidized copper bulbs (A, B, C, D)
+### Bulb Variants
 
-- `/wireless lamps [count]`
+| Variant       | Description           |
+| ------------- | --------------------- |
+| `--copper`    | Copper bulb (default) |
+| `--exposed`   | Exposed copper bulb   |
+| `--weathered` | Weathered copper bulb |
+| `--oxidized`  | Oxidized copper bulb  |
 
-  - Gives you a group of _linked redstone lamps_.
-  - `count` is optional and defaults to 2 (range: 2-26).
-  - Example: `/wireless lamps 3` gives you 3 linked redstone lamps (A, B, C)
+### Container Variants
 
-- `/wireless chests [count] [variant]`
+| Variant                     | Description                           |
+| --------------------------- | ------------------------------------- |
+| `--chest`                   | Regular chest (default)               |
+| `--shulker`                 | Purple shulker box                    |
+| `--white`, `--orange`, etc. | Colored shulker boxes (all 16 colors) |
+| `--copper`                  | Copper chest                          |
+| `--copper-exposed`          | Exposed copper chest                  |
+| `--copper-weathered`        | Weathered copper chest                |
+| `--copper-oxidized`         | Oxidized copper chest                 |
+| `--copper-waxed`            | Waxed copper chest                    |
+| `--copper-exposed-waxed`    | Waxed exposed copper chest            |
+| `--copper-weathered-waxed`  | Waxed weathered copper chest          |
+| `--copper-oxidized-waxed`   | Waxed oxidized copper chest           |
 
-  - Gives you a group of _linked storage containers_ (chests or shulker boxes).
-  - `count` is optional and defaults to 2 (range: 2-26).
-  - `variant` is optional and defaults to `--chest`. Supported variants:
-    - `--chest` (default regular chest)
-    - `--shulker` (default purple shulker box)
-    - `--white`, `--orange`, `--magenta`, `--light-blue`, `--yellow`, `--lime`
-    - `--pink`, `--gray`, `--light-gray`, `--cyan`, `--purple`, `--blue`
-    - `--brown`, `--green`, `--red`, `--black`
-  - Example: `/wireless chests 4 --cyan` gives you 4 linked cyan shulker boxes (A, B, C, D)
-  - Example: `/wireless chests 2` gives you 2 linked regular chests (A, B)
+### Examples
 
-- `/wireless gui [--all]`
+```bash
+# Get 2 linked copper bulbs
+/wireless bulbs
 
-  - Opens the Bulb Manager GUI. If `--all` is specified and the player has admin permissions, the GUI shows every placed group on the server.
+# Get 4 linked oxidized copper bulbs
+/wireless bulbs 4 --oxidized
 
-- `/wireless wireview`
+# Get 3 linked redstone lamps
+/wireless lamps 3
 
-  - Displays all connected bulb groups with a glowing outline effect.
+# Get 2 linked regular chests
+/wireless chests
 
-- `/wireless debug on|off`
-  - Toggles debug mode for the player. When enabled, you'll see sync messages for all blocks within 3 blocks of you.
+# Get 4 linked cyan shulker boxes
+/wireless chests 4 --cyan
 
-### Command Notes
-
-- If a player's inventory is full when receiving bulbs the plugin will spawn the items on the ground at the player's location.
-- Tab completion is provided for subcommands, counts, and variants.
+# Get 2 linked copper chests
+/wireless chests 2 --copper
+```
 
 ---
 
 ## 🔐 Permissions
 
-Permissions are defined in `plugin.yml`:
-
-- `wirelessredstone.use` — Allows the player to use `/wireless` commands. (Default: op)
-- `wirelessredstone.teleport` — Allows teleporting to a bulb location via the GUI. (Default: op)
-- `wirelessredstone.remove` — Allows removing bulb groups via the GUI. (Default: op)
-- `wirelessredstone.admin` — Full admin control (see GUI `--all` view). (Default: op)
-
-Note: You can change defaults or assign these permissions using a permissions plugin such as LuckPerms.
+| Permission                  | Description                    | Default |
+| --------------------------- | ------------------------------ | ------- |
+| `wirelessredstone.use`      | Use `/wireless` commands       | op      |
+| `wirelessredstone.teleport` | Teleport via GUI               | op      |
+| `wirelessredstone.remove`   | Remove groups via GUI          | op      |
+| `wirelessredstone.admin`    | Admin access (view all groups) | op      |
 
 ---
 
-## 🧭 GUI (`/wireless gui`) — Controls / Interactions
+## 🖥️ GUI Controls
 
-- The GUI shows a paginated list of all groups owned by the player (or all groups if admin and `--all` is used).
-- Both bulb groups (displayed with aqua color) and container groups (displayed with gold color) are shown together.
-- Item interactions in the GUI:
-  - **Left-click**: Teleport to first placed item in the group (requires `wirelessredstone.teleport`).
-  - **Right-click**: Teleport to last placed item in the group (requires `wirelessredstone.teleport`).
-  - **Middle-click**: Rename the group — rename is processed through the chat (type `cancel` to abort; type `reset` or `clear` to reset to default; max 32 characters).
-  - **Shift+Right-click**: Set the group icon — hold any item in your hand and shift+right-click a group to set that item as the group's custom icon in the GUI.
-  - **Shift+Left-click**: Remove the group and all its placed blocks (requires `wirelessredstone.remove`, or admin to remove other players' groups).
-  - **Arrow icon**: next/previous page navigation.
-  - **Book**: shows page info / group count.
+Open the GUI with `/wireless gui` to manage your groups:
 
----
+| Action                             | Function                           |
+| ---------------------------------- | ---------------------------------- |
+| **Left-click**                     | Teleport to first placed block     |
+| **Right-click**                    | Teleport to last placed block      |
+| **Middle-click**                   | Rename the group                   |
+| **Shift+Left-click**               | Remove group and all placed blocks |
+| **Shift+Middle-click** (with item) | Set custom icon                    |
 
-## 🔁 How it Works (Implementation Summary)
-
-### Wireless Bulbs
-
-- Bulb groups are created with `/wireless bulbs [count]` or `/wireless lamps [count]` and carry metadata (group ID, index [A/B/C/...], owner, bulb type, group size).
-- When a player places a wireless bulb, the `BlockPlaceEvent` registers the bulb's location in the server memory via `LinkedBulbManager`.
-- Once multiple bulbs of a group are placed and loaded (chunks must be loaded), a sync task will mirror the `lit` state across all bulbs in the group.
-- The `BulbSyncTask` runs every tick and does the following:
-  - Spawn ambient particles for placed bulbs occasionally.
-  - On each group where multiple bulbs are present and chunks are loaded, check their block states; if one changes, apply the same state to all others.
-  - Use a `recentlySynced` set to avoid infinite sync loops.
-  - Send debug messages to players within 3 blocks who have debug mode enabled, and spawn particle effects on sync.
-- When a bulb is broken, only that bulb is unregistered from the group. If it was the last bulb, the group is automatically removed.
-- When a group is removed via GUI, all physical bulb blocks are also removed from the world.
-- All group data persists in `plugins/WirelessRedstone/bulbs.yml`.
-
-### Wireless Containers
-
-- Container groups are created with `/wireless chests [count] [variant]` and carry metadata (group ID, index, owner, container type, group size).
-- When a player places a wireless container, the `BlockPlaceEvent` registers it via `LinkedChestManager` and restores the shared inventory.
-- When items are added or removed from any container in a group, the `InventoryClickEvent` and `InventoryDragEvent` trigger synchronization to all other containers.
-- The shared inventory is stored in memory and synced to all placed containers in real-time.
-- When a container is broken, its contents are NOT dropped (since they're shared). The container is unregistered from the group.
-- If it was the last container in a group, the group is automatically removed.
-- All container group data persists in `plugins/WirelessRedstone/chests.yml`.
+Use the arrow buttons to navigate pages if you have many groups.
 
 ---
 
-## 📝 Data / Configuration
+## 📁 Data Storage
 
-- Bulb groups are saved in `bulbs.yml` with the following properties for each group:
-  - `id`, `lit`, `bulbType`, `maxSize`, `owner`, `customName`, `customIcon`, `locations` (map of index to location).
-- Container groups are saved in `chests.yml` with:
-  - `id`, `containerType`, `maxSize`, `owner`, `customName`, `sharedInventory` (base64 encoded), `locations`.
-- Location serialization uses `world,x,y,z`. If a world is missing (e.g. removed or renamed), that saved location will be ignored when loading.
-- Old data format (pairs with loc1/loc2) is automatically migrated to the new group format on first load.
+Data is stored in the `plugins/WirelessRedstone/` folder:
 
----
+- `bulbs.yml` - Wireless bulb/lamp group data
+- `chests.yml` - Wireless container group data
 
-## 🖼️ Screenshot
-
-Here is a screenshot showing linked bulbs.
-
-![Wireless Bulb Screenshot](screenshot.png)
-
-_Caption: A group of wireless bulbs showing synchronized lit state and the GUI title._
+Data includes group IDs, locations, ownership, custom names/icons, and shared inventories.
 
 ---
 
-## 🚧 Edge Cases & Things to Watch Out For
+## 🔁 How It Works
 
-### Bulbs
+### Bulb Synchronization
 
-- Chunks must be loaded for syncing to occur. If bulbs are in an unloaded chunk, syncing will not happen until the chunk is loaded.
-- Teleportation from the GUI requires `wirelessredstone.teleport` permission. If a player has no permission the teleport will be refused.
-- When a player breaks a bulb, only that bulb is unregistered. If it's the last bulb in the group, the group is automatically removed.
-- If the server renames or removes a world referenced in `bulbs.yml`, the plugin will ignore the missing world, and those locations will not be loaded into memory — groups may become incomplete.
-- Renaming groups uses chat input — other chat plugins that cancel/modify chat (chat channels, moderation, or format enforcement) might interfere; if rename fails, cancel or retype.
-- The plugin uses persistent data container keys to detect wireless bulbs; removing or modifying these keys via other plugins may break detection.
-- The plugin supports both waxed and non-waxed copper bulb material checks; however, the factory currently creates the waxed versions to avoid oxidation.
-- Redstone lamp syncing uses `Lightable` block data. Physics options differ from copper bulbs set via `setBlockData(..., false/true)` — in rare cases, this may lead to different behavior or block updates. Expect slightly different sync behaviors across Minecraft versions.
-- Players without `wirelessredstone.use` cannot use commands and will receive a permission-denied message.
+1. Create a group with `/wireless bulbs` or `/wireless lamps`
+2. Place the bulbs anywhere in the world
+3. When one bulb's state changes (powered/unpowered), all others sync automatically
+4. Chunks must be loaded for syncing to occur
 
-### Containers (Chests & Shulker Boxes)
+### Container Synchronization
 
-- Wireless containers share their entire inventory. When one is broken, the contents stay in the shared inventory (not dropped).
-- Breaking the last container in a group will remove the group and its shared inventory permanently.
-- Chunks must be loaded for containers to receive inventory updates.
-- Shulker boxes must be placed to access inventory — they cannot be opened from inventory like regular shulker boxes.
-- Hopper interactions with wireless containers will trigger inventory sync to all other containers in the group.
-- If the server renames or removes a world referenced in `chests.yml`, those locations will be ignored.
+1. Create a group with `/wireless chests`
+2. Place the containers anywhere in the world
+3. Items added/removed from one container instantly appear in all others
+4. Breaking a container does NOT drop items (they remain in the shared inventory)
+5. Breaking the last container removes the shared inventory permanently
 
 ---
 
-## 🧩 Tips & Troubleshooting
+## 💡 Tips & Notes
 
-- If items don't sync or show errors, check server logs for errors or stack traces — look for exceptions from `WirelessRedstone` plugin.
-- If renaming doesn't work, check for chat plugins that intercept or cancel player's chat events.
-- Groups are now automatically removed when the last instance is broken — no need to manually clean `bulbs.yml` or `chests.yml`.
-- If the GUI seems to not work or produce errors on startup, verify the plugin registers listeners and is started successfully (`onEnable` log entry).
-- Use `/wireless debug on` to see sync messages and troubleshoot connection issues.
-- For wireless containers, if inventory doesn't sync, ensure all container chunks are loaded.
+- **Chunk Loading**: Bulbs and containers must be in loaded chunks to sync
+- **Cross-Dimension**: Groups work across dimensions (Overworld, Nether, End)
+- **Waxed Bulbs**: Copper bulbs are automatically waxed to prevent oxidation changes
+- **Container Breaking**: Items stay in shared inventory when containers are broken
+- **Hopper Support**: Hoppers can interact with wireless containers and trigger syncs
+- **Debug Mode**: Use `/wireless debug on` to see sync messages near you
 
 ---
 
-## 🆘 Developer Notes
+## 🐛 Troubleshooting
 
-- The code expects `api-version: 1.21` in `plugin.yml`.
-- Bulbs use `PersistentDataContainer` keys defined in `LinkedBulbManager` to store group information (`wireless_bulb`, `group_id`, `bulb_index`, `bulb_type`, `owner`, `group_size`). Modifying the plugin to change or migrate keys must handle saved data.
-- Containers use similar PDC keys defined in `LinkedChestManager` (`wireless_chest`, `group_id`, `chest_index`, `container_type`, `owner`, `group_size`).
-- If you want to add custom behavior (e.g., linking to commands, additional bulb types, or config toggles), consider adding a `config.yml` and exposing config options for particle effects, debug radius, and storage location.
+| Issue                  | Solution                                           |
+| ---------------------- | -------------------------------------------------- |
+| Bulbs not syncing      | Ensure chunks are loaded, check debug mode         |
+| Containers not syncing | Check if chunks are loaded, verify group exists    |
+| GUI not working        | Check console for errors on startup                |
+| Rename not working     | Chat plugins may intercept; type `cancel` to abort |
+| Groups disappeared     | Check if world was renamed/removed                 |
+
+---
+
+## 🛠️ For Developers
+
+### Building
+
+```bash
+mvn clean package
+```
+
+### Key Classes
+
+- `LinkedBulbManager` - Manages bulb groups and synchronization
+- `LinkedChestManager` - Manages container groups and inventory sync
+- `WireViewManager` - Handles glowing entity visualization
+- `BulbSyncTask` - Tick-based bulb state synchronization
+
+### PDC Keys
+
+Items use `PersistentDataContainer` for metadata storage:
+
+- `wireless:wireless_bulb` / `wireless:wireless_chest` - Identifier
+- `wireless:group_id` - UUID string
+- `wireless:bulb_index` / `wireless:chest_index` - Position in group
+- `wireless:owner` - Owner UUID
+- `wireless:group_size` - Total group size
+
+---
+
+## 📸 Screenshots
+
+<p align="center">
+  <img src="assets/screenshots/bulbs.png" alt="Wireless Bulbs" width="400">
+  <br>
+  <em>Linked copper bulbs syncing their lit state</em>
+</p>
+
+<p align="center">
+  <img src="assets/screenshots/chests.png" alt="Wireless Chests" width="400">
+  <br>
+  <em>Linked shulker boxes sharing inventory</em>
+</p>
+
+<p align="center">
+  <img src="assets/screenshots/gui.png" alt="Management GUI" width="400">
+  <br>
+  <em>Management GUI for all your wireless groups</em>
+</p>
 
 ---
 
 ## 📄 License
 
-(Include your preferred license here; e.g., MIT License)
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 
-If you’d like, I can also:
+## 🤝 Contributing
 
-- Add a small `config.yml` to expose settings (e.g., particle intensity, message radius, save path).
-- Improve edge-case handling for chunk unloading and cross-world pairing.
-- Add a command to list/inspect a player's pairs and provide a JSON export.
+Contributions are welcome! Please feel free to submit issues and pull requests.
 
-If you want me to implement any of those suggestions, tell me which one and I’ll proceed.
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+---
+
+## 📞 Support
+
+- Open an [Issue](../../issues) for bug reports or feature requests
+- Check the [Wiki](../../wiki) for additional documentation
+
+---
+
+<p align="center">
+  Made with ❤️ for the Minecraft community
+</p>
