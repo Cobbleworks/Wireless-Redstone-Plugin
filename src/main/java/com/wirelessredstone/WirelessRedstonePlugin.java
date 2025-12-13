@@ -30,7 +30,7 @@ public class WirelessRedstonePlugin extends JavaPlugin {
         instance = this;
         bulbManager = new LinkedBulbManager(this);
         chestManager = new LinkedChestManager(this);
-        wireViewManager = new WireViewManager(this, bulbManager);
+        wireViewManager = new WireViewManager(this, bulbManager, chestManager);
         debugManager = new DebugManager();
 
         registerCommands();

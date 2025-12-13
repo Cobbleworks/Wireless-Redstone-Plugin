@@ -2,6 +2,7 @@ package com.wirelessredstone.manager;
 
 import com.wirelessredstone.WirelessRedstonePlugin;
 import com.wirelessredstone.model.BulbGroup;
+import com.wirelessredstone.model.ChestGroup;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Location;
 import org.bukkit.entity.Entity;
@@ -20,14 +21,17 @@ public class WireViewManager {
 
     private final WirelessRedstonePlugin plugin;
     private final LinkedBulbManager bulbManager;
+    private final LinkedChestManager chestManager;
     private final Set<UUID> playersWithWireView = ConcurrentHashMap.newKeySet();
     private final Map<UUID, Set<UUID>> playerGlowEntities = new ConcurrentHashMap<>();
 
     private static final String WIREVIEW_TEAM_PREFIX = "wv_";
+    private static final String WIREVIEW_CHEST_TEAM_PREFIX = "wvc_";
 
-    public WireViewManager(WirelessRedstonePlugin plugin, LinkedBulbManager bulbManager) {
+    public WireViewManager(WirelessRedstonePlugin plugin, LinkedBulbManager bulbManager, LinkedChestManager chestManager) {
         this.plugin = plugin;
         this.bulbManager = bulbManager;
+        this.chestManager = chestManager;
     }
 
     public boolean toggleWireView(Player player) {
@@ -70,7 +74,7 @@ public class WireViewManager {
 
         Scoreboard scoreboard = player.getScoreboard();
         int colorIndex = 0;
-        NamedTextColor[] colors = {
+        NamedTextColor[] bulbColors = {
             NamedTextColor.AQUA,
             NamedTextColor.GOLD,
             NamedTextColor.GREEN,
@@ -81,11 +85,43 @@ public class WireViewManager {
             NamedTextColor.BLUE
         };
 
+        // Spawn glow entities for bulb groups
         for (BulbGroup group : bulbManager.getAllPlacedGroups()) {
-            NamedTextColor groupColor = colors[colorIndex % colors.length];
+            NamedTextColor groupColor = bulbColors[colorIndex % bulbColors.length];
             colorIndex++;
 
             String teamName = WIREVIEW_TEAM_PREFIX + group.getGroupId().toString().substring(0, 8);
+            Team team = scoreboard.getTeam(teamName);
+            if (team == null) {
+                team = scoreboard.registerNewTeam(teamName);
+            }
+            team.color(groupColor);
+
+            for (Location loc : group.getPlacedLocations()) {
+                Entity entity = spawnGlowEntity(loc, player, team);
+                if (entity != null) {
+                    entityIds.add(entity.getUniqueId());
+                }
+            }
+        }
+
+        // Spawn glow entities for chest groups with different color palette
+        int chestColorIndex = 0;
+        NamedTextColor[] chestColors = {
+            NamedTextColor.DARK_AQUA,
+            NamedTextColor.DARK_GREEN,
+            NamedTextColor.DARK_RED,
+            NamedTextColor.DARK_PURPLE,
+            NamedTextColor.DARK_BLUE,
+            NamedTextColor.DARK_GRAY,
+            NamedTextColor.GRAY
+        };
+
+        for (ChestGroup group : chestManager.getAllPlacedGroups()) {
+            NamedTextColor groupColor = chestColors[chestColorIndex % chestColors.length];
+            chestColorIndex++;
+
+            String teamName = WIREVIEW_CHEST_TEAM_PREFIX + group.getGroupId().toString().substring(0, 8);
             Team team = scoreboard.getTeam(teamName);
             if (team == null) {
                 team = scoreboard.registerNewTeam(teamName);
@@ -141,7 +177,7 @@ public class WireViewManager {
         Scoreboard scoreboard = player.getScoreboard();
         Set<Team> teamsToRemove = new HashSet<>();
         for (Team team : scoreboard.getTeams()) {
-            if (team.getName().startsWith(WIREVIEW_TEAM_PREFIX)) {
+            if (team.getName().startsWith(WIREVIEW_TEAM_PREFIX) || team.getName().startsWith(WIREVIEW_CHEST_TEAM_PREFIX)) {
                 teamsToRemove.add(team);
             }
         }
