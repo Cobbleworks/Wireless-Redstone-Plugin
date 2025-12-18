@@ -137,6 +137,18 @@ public class GroupEntry {
         return type == GroupType.BULB ? bulbGroup.getLocationIndex(location) : chestGroup.getLocationIndex(location);
     }
 
+    public UUID getCategoryId() {
+        return type == GroupType.BULB ? bulbGroup.getCategoryId() : chestGroup.getCategoryId();
+    }
+
+    public void setCategoryId(UUID categoryId) {
+        if (type == GroupType.BULB) {
+            bulbGroup.setCategoryId(categoryId);
+        } else {
+            chestGroup.setCategoryId(categoryId);
+        }
+    }
+
     public static String getIndexLabel(int index) {
         if (index < 0 || index > 25) return String.valueOf(index);
         return String.valueOf((char) ('A' + index));

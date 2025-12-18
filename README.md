@@ -38,9 +38,10 @@
 ### 🖥️ Management GUI
 
 - Visual interface to manage all your wireless groups
+- **Category system** to organize groups (bulbs, lamps, containers)
 - Teleport to any placed bulb or container
-- Rename groups with custom names
-- Set custom icons for groups (shift+middle-click with any item)
+- Rename groups and categories with custom names
+- Set custom icons for groups and categories
 - Remove groups with one click (also removes all placed blocks)
 
 ### 💾 Persistence
@@ -87,7 +88,8 @@ All commands use `/wireless` (or `/wr` alias).
 | `/wireless bulbs [count] [variant]`  | Get linked copper bulbs        |
 | `/wireless lamps [count]`            | Get linked redstone lamps      |
 | `/wireless chests [count] [variant]` | Get linked containers          |
-| `/wireless gui [--all]`              | Open management GUI            |
+| `/wireless gui [--all]`              | Open category selection GUI    |
+| `/wireless gui --nocategory`         | Open GUI without categories    |
 | `/wireless wireview`                 | Toggle connection highlighting |
 | `/wireless debug on\|off`            | Toggle sync debug messages     |
 
@@ -153,15 +155,29 @@ All commands use `/wireless` (or `/wr` alias).
 
 ## 🖥️ GUI Controls
 
-Open the GUI with `/wireless gui` to manage your groups:
+Open the GUI with `/wireless gui` to access the category selection screen.
 
-| Action                             | Function                           |
-| ---------------------------------- | ---------------------------------- |
-| **Left-click**                     | Teleport to first placed block     |
-| **Right-click**                    | Teleport to last placed block      |
-| **Middle-click**                   | Rename the group                   |
-| **Shift+Left-click**               | Remove group and all placed blocks |
-| **Shift+Middle-click** (with item) | Set custom icon                    |
+### Category Selection
+
+| Action                   | Function                               |
+| ------------------------ | -------------------------------------- |
+| **Click category**       | View groups in that category           |
+| **Click Uncategorized**  | View groups without a category         |
+| **Click emerald button** | Create a new category                  |
+| **Middle-click**         | Rename the category                    |
+| **Shift+Right-click**    | Set category icon (with held item)     |
+| **Shift+Left-click**     | Delete category (moves groups to none) |
+
+### Group Management
+
+| Action                | Function                           |
+| --------------------- | ---------------------------------- |
+| **Left-click**        | Teleport to first placed block     |
+| **Right-click**       | Teleport to last placed block      |
+| **Middle-click**      | Rename the group                   |
+| **Q (Drop key)**      | Change group category              |
+| **Shift+Right-click** | Set custom icon (with held item)   |
+| **Shift+Left-click**  | Remove group and all placed blocks |
 
 Use the arrow buttons to navigate pages if you have many groups.
 
@@ -173,8 +189,9 @@ Data is stored in the `plugins/WirelessRedstone/` folder:
 
 - `bulbs.yml` - Wireless bulb/lamp group data
 - `chests.yml` - Wireless container group data
+- `categories.yml` - Category organization data
 
-Data includes group IDs, locations, ownership, custom names/icons, and shared inventories.
+Data includes group IDs, locations, ownership, custom names/icons, categories, and shared inventories.
 
 ---
 
@@ -232,6 +249,7 @@ mvn clean package
 
 - `LinkedBulbManager` - Manages bulb groups and synchronization
 - `LinkedChestManager` - Manages container groups and inventory sync
+- `CategoryManager` - Manages category creation, renaming, and persistence
 - `WireViewManager` - Handles glowing entity visualization
 - `BulbSyncTask` - Tick-based bulb state synchronization
 

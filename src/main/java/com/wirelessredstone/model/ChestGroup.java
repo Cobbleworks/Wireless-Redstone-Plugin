@@ -17,6 +17,7 @@ public class ChestGroup {
     private Material customIcon;
     private ItemStack[] sharedInventory;
     private ChestVariant.ContainerType containerType;
+    private UUID categoryId;
 
     public ChestGroup(UUID groupId, int maxSize) {
         this.groupId = groupId;
@@ -172,6 +173,14 @@ public class ChestGroup {
 
     public void setContainerType(ChestVariant.ContainerType containerType) {
         this.containerType = containerType;
+    }
+
+    public UUID getCategoryId() {
+        return categoryId;
+    }
+
+    public void setCategoryId(UUID categoryId) {
+        this.categoryId = categoryId;
     }
 
     public static String getIndexLabel(int index) {

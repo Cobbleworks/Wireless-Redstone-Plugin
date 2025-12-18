@@ -229,6 +229,9 @@ public class LinkedBulbManager {
             if (group.getCustomIcon() != null) {
                 config.set(basePath + ".customIcon", group.getCustomIcon().name());
             }
+            if (group.getCategoryId() != null) {
+                config.set(basePath + ".categoryId", group.getCategoryId().toString());
+            }
             
             List<Location> locations = group.getLocations();
             for (int i = 0; i < locations.size(); i++) {
@@ -298,6 +301,11 @@ public class LinkedBulbManager {
                 try {
                     group.setCustomIcon(org.bukkit.Material.valueOf(customIconStr));
                 } catch (IllegalArgumentException ignored) {}
+            }
+            
+            String categoryIdStr = config.getString(basePath + ".categoryId");
+            if (categoryIdStr != null) {
+                group.setCategoryId(UUID.fromString(categoryIdStr));
             }
 
             var locationsSection = config.getConfigurationSection(basePath + ".locations");

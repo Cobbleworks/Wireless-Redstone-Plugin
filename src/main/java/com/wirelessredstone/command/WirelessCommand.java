@@ -1,10 +1,12 @@
 package com.wirelessredstone.command;
 
 import com.wirelessredstone.gui.BulbManagerGUI;
+import com.wirelessredstone.gui.CategorySelectionGUI;
 import com.wirelessredstone.item.BulbVariant;
 import com.wirelessredstone.item.ChestVariant;
 import com.wirelessredstone.item.WirelessBulbFactory;
 import com.wirelessredstone.item.WirelessChestFactory;
+import com.wirelessredstone.manager.CategoryManager;
 import com.wirelessredstone.manager.DebugManager;
 import com.wirelessredstone.manager.LinkedBulbManager;
 import com.wirelessredstone.manager.LinkedChestManager;
@@ -24,12 +26,15 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
 
     private final LinkedBulbManager bulbManager;
     private final LinkedChestManager chestManager;
+    private final CategoryManager categoryManager;
     private final WireViewManager wireViewManager;
     private final DebugManager debugManager;
 
-    public WirelessCommand(LinkedBulbManager bulbManager, LinkedChestManager chestManager, WireViewManager wireViewManager, DebugManager debugManager) {
+    public WirelessCommand(LinkedBulbManager bulbManager, LinkedChestManager chestManager, CategoryManager categoryManager, 
+                           WireViewManager wireViewManager, DebugManager debugManager) {
         this.bulbManager = bulbManager;
         this.chestManager = chestManager;
+        this.categoryManager = categoryManager;
         this.wireViewManager = wireViewManager;
         this.debugManager = debugManager;
     }
@@ -184,7 +189,15 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
 
     private void handleGUICommand(Player player, String[] args) {
         boolean showAll = args.length >= 2 && args[1].equalsIgnoreCase("--all");
-        new BulbManagerGUI(bulbManager, chestManager, player, showAll).open();
+        boolean skipCategories = args.length >= 2 && args[1].equalsIgnoreCase("--nocategory");
+        
+        if (skipCategories) {
+            // Open the old-style GUI without categories (useful if user doesn't want to use categories)
+            new BulbManagerGUI(bulbManager, chestManager, player, showAll).open();
+        } else {
+            // Open the category selection GUI first
+            new CategorySelectionGUI(categoryManager, bulbManager, chestManager, player, showAll).open();
+        }
     }
 
     private void handleWireViewCommand(Player player) {
@@ -301,6 +314,9 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
             } else if (subCommand.equals("gui") || subCommand.equals("manage") || subCommand.equals("list")) {
                 if ("--all".startsWith(input) && sender.hasPermission("wirelessredstone.admin")) {
                     completions.add("--all");
+                }
+                if ("--nocategory".startsWith(input)) {
+                    completions.add("--nocategory");
                 }
             } else if (subCommand.equals("debug")) {
                 for (String opt : List.of("on", "off")) {

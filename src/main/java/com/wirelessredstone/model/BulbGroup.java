@@ -16,6 +16,7 @@ public class BulbGroup {
     private BulbVariant.BulbType bulbType;
     private String customName;
     private Material customIcon;
+    private UUID categoryId;
 
     public BulbGroup(UUID groupId, int maxSize) {
         this.groupId = groupId;
@@ -153,6 +154,14 @@ public class BulbGroup {
 
     public void setCustomIcon(Material customIcon) {
         this.customIcon = customIcon;
+    }
+
+    public UUID getCategoryId() {
+        return categoryId;
+    }
+
+    public void setCategoryId(UUID categoryId) {
+        this.categoryId = categoryId;
     }
 
     public static String getIndexLabel(int index) {

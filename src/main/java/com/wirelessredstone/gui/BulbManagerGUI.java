@@ -1,8 +1,10 @@
 package com.wirelessredstone.gui;
 
+import com.wirelessredstone.manager.CategoryManager;
 import com.wirelessredstone.manager.LinkedBulbManager;
 import com.wirelessredstone.manager.LinkedChestManager;
 import com.wirelessredstone.model.BulbGroup;
+import com.wirelessredstone.model.Category;
 import com.wirelessredstone.model.ChestGroup;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -25,22 +27,44 @@ public class BulbManagerGUI implements InventoryHolder {
     private static final int ITEMS_PER_PAGE = 28;
     
     private static final Map<UUID, GroupEntry> pendingRenames = new HashMap<>();
+    private static final Map<UUID, GroupEntry> pendingCategoryChanges = new HashMap<>();
 
     private final LinkedBulbManager bulbManager;
     private final LinkedChestManager chestManager;
+    private final CategoryManager categoryManager;
     private final Player player;
     private final Inventory inventory;
+    private final UUID categoryId;
     private int currentPage = 0;
     private List<GroupEntry> groups;
     private boolean showAllGroups;
 
     public BulbManagerGUI(LinkedBulbManager bulbManager, LinkedChestManager chestManager, Player player, boolean showAllGroups) {
+        this(bulbManager, chestManager, null, player, showAllGroups, null);
+    }
+
+    public BulbManagerGUI(LinkedBulbManager bulbManager, LinkedChestManager chestManager, CategoryManager categoryManager, 
+                          Player player, boolean showAllGroups, UUID categoryId) {
         this.bulbManager = bulbManager;
         this.chestManager = chestManager;
+        this.categoryManager = categoryManager;
         this.player = player;
         this.showAllGroups = showAllGroups;
+        this.categoryId = categoryId;
+        
+        String title = "Wireless Redstone Manager";
+        if (categoryManager != null) {
+            if (categoryId == null) {
+                title = "Uncategorized Groups";
+            } else {
+                title = categoryManager.getCategoryById(categoryId)
+                        .map(cat -> "Category: " + cat.getDisplayName())
+                        .orElse("Wireless Redstone Manager");
+            }
+        }
+        
         this.inventory = Bukkit.createInventory(this, SIZE, 
-            Component.text("Wireless Redstone Manager", NamedTextColor.DARK_AQUA).decoration(TextDecoration.BOLD, true));
+            Component.text(title, NamedTextColor.DARK_AQUA).decoration(TextDecoration.BOLD, true));
         refreshGroups();
         populateInventory();
     }
@@ -57,6 +81,16 @@ public class BulbManagerGUI implements InventoryHolder {
         } else {
             bulbGroups = bulbManager.getGroupsByOwner(player.getUniqueId());
             chestGroups = chestManager != null ? chestManager.getGroupsByOwner(player.getUniqueId()) : Collections.emptyList();
+        }
+        
+        // Filter by category if categoryManager is active
+        if (categoryManager != null) {
+            bulbGroups = bulbGroups.stream()
+                    .filter(g -> Objects.equals(g.getCategoryId(), categoryId))
+                    .toList();
+            chestGroups = chestGroups.stream()
+                    .filter(g -> Objects.equals(g.getCategoryId(), categoryId))
+                    .toList();
         }
         
         for (BulbGroup bg : bulbGroups) {
@@ -98,6 +132,11 @@ public class BulbManagerGUI implements InventoryHolder {
 
         if (player.hasPermission("wirelessredstone.admin")) {
             inventory.setItem(45, createToggleViewItem());
+        }
+
+        // Back to categories button when in category mode
+        if (categoryManager != null) {
+            inventory.setItem(47, createBackToCategoriesItem());
         }
 
         inventory.setItem(53, createCloseItem());
@@ -194,6 +233,11 @@ public class BulbManagerGUI implements InventoryHolder {
         lore.add(Component.text("Shift+Right: ", NamedTextColor.LIGHT_PURPLE)
                 .append(Component.text("Set icon to held item", NamedTextColor.WHITE))
                 .decoration(TextDecoration.ITALIC, false));
+        if (categoryManager != null) {
+            lore.add(Component.text("Drop key (Q): ", NamedTextColor.GOLD)
+                    .append(Component.text("Change category", NamedTextColor.WHITE))
+                    .decoration(TextDecoration.ITALIC, false));
+        }
         lore.add(Component.text("Shift+Left: ", NamedTextColor.RED)
                 .append(Component.text("Remove group", NamedTextColor.WHITE))
                 .decoration(TextDecoration.ITALIC, false));
@@ -249,6 +293,18 @@ public class BulbManagerGUI implements InventoryHolder {
         return item;
     }
 
+    private ItemStack createBackToCategoriesItem() {
+        ItemStack item = new ItemStack(Material.DARK_OAK_DOOR);
+        ItemMeta meta = item.getItemMeta();
+        meta.displayName(Component.text("Back to Categories", NamedTextColor.YELLOW).decoration(TextDecoration.ITALIC, false));
+        meta.lore(List.of(
+                Component.text("Click to return to category selection", NamedTextColor.GRAY)
+                        .decoration(TextDecoration.ITALIC, false)
+        ));
+        item.setItemMeta(meta);
+        return item;
+    }
+
     private String formatLocation(Location loc) {
         return String.format("%s: %d, %d, %d", 
             loc.getWorld().getName(), 
@@ -258,6 +314,10 @@ public class BulbManagerGUI implements InventoryHolder {
     }
 
     public void handleClick(int slot, boolean isRightClick, boolean isShiftClick, boolean isMiddleClick) {
+        handleClick(slot, isRightClick, isShiftClick, isMiddleClick, false);
+    }
+
+    public void handleClick(int slot, boolean isRightClick, boolean isShiftClick, boolean isMiddleClick, boolean isDrop) {
         if (slot == 48 && currentPage > 0) {
             currentPage--;
             populateInventory();
@@ -279,6 +339,14 @@ public class BulbManagerGUI implements InventoryHolder {
             return;
         }
 
+        // Back to categories
+        if (slot == 47 && categoryManager != null) {
+            CategorySelectionGUI categoryGUI = new CategorySelectionGUI(categoryManager, bulbManager, chestManager, player, showAllGroups);
+            player.closeInventory();
+            categoryGUI.open();
+            return;
+        }
+
         if (slot == 53) {
             player.closeInventory();
             return;
@@ -291,7 +359,9 @@ public class BulbManagerGUI implements InventoryHolder {
 
         GroupEntry group = groups.get(groupIndex);
 
-        if (isShiftClick && isRightClick) {
+        if (isDrop && categoryManager != null) {
+            handleChangeCategory(group);
+        } else if (isShiftClick && isRightClick) {
             handleSetIcon(group);
         } else if (isShiftClick) {
             handleRemoveGroup(group);
@@ -321,6 +391,30 @@ public class BulbManagerGUI implements InventoryHolder {
         player.sendMessage(Component.text("Current name: " + group.getDisplayName(), NamedTextColor.GRAY));
     }
 
+    private void handleChangeCategory(GroupEntry group) {
+        pendingCategoryChanges.put(player.getUniqueId(), group);
+        player.closeInventory();
+        
+        List<Category> playerCategories = categoryManager.getCategoriesByOwner(player.getUniqueId());
+        
+        player.sendMessage(Component.text("Enter a category name or number (or 'cancel' to abort, 'none' for uncategorized):", NamedTextColor.YELLOW));
+        player.sendMessage(Component.text("Current category: " + 
+                (group.getCategoryId() != null ? 
+                        categoryManager.getCategoryById(group.getCategoryId()).map(Category::getDisplayName).orElse("Unknown") : 
+                        "Uncategorized"), NamedTextColor.GRAY));
+        player.sendMessage(Component.text("Your categories:", NamedTextColor.AQUA));
+        
+        int index = 1;
+        for (Category cat : playerCategories) {
+            player.sendMessage(Component.text("  " + index + ". " + cat.getDisplayName(), NamedTextColor.WHITE));
+            index++;
+        }
+        
+        if (playerCategories.isEmpty()) {
+            player.sendMessage(Component.text("  (No categories - create one first)", NamedTextColor.DARK_GRAY));
+        }
+    }
+
     private void handleSetIcon(GroupEntry group) {
         ItemStack heldItem = player.getInventory().getItemInMainHand();
         if (heldItem.getType() == Material.AIR || heldItem.getType() == null) {
@@ -345,12 +439,14 @@ public class BulbManagerGUI implements InventoryHolder {
         return pendingRenames.containsKey(playerUuid);
     }
 
-    public static void processRename(Player player, String newName, LinkedBulbManager bulbManager, LinkedChestManager chestManager) {
+    public static void processRename(Player player, String newName, LinkedBulbManager bulbManager, 
+                                       LinkedChestManager chestManager, CategoryManager categoryManager) {
         GroupEntry group = pendingRenames.remove(player.getUniqueId());
         if (group == null) return;
 
         if (newName.equalsIgnoreCase("cancel")) {
             player.sendMessage(Component.text("Rename cancelled.", NamedTextColor.GRAY));
+            reopenCategoryGUI(player, bulbManager, chestManager, categoryManager);
             return;
         }
 
@@ -371,10 +467,84 @@ public class BulbManagerGUI implements InventoryHolder {
         } else if (chestManager != null) {
             chestManager.saveData();
         }
+        
+        reopenCategoryGUI(player, bulbManager, chestManager, categoryManager);
     }
 
     public static void cancelPendingRename(UUID playerUuid) {
         pendingRenames.remove(playerUuid);
+    }
+
+    public static boolean hasPendingCategoryChange(UUID playerUuid) {
+        return pendingCategoryChanges.containsKey(playerUuid);
+    }
+
+    public static void processCategoryChange(Player player, String input, LinkedBulbManager bulbManager, 
+                                              LinkedChestManager chestManager, CategoryManager categoryManager) {
+        GroupEntry group = pendingCategoryChanges.remove(player.getUniqueId());
+        if (group == null) return;
+
+        if (input.equalsIgnoreCase("cancel")) {
+            player.sendMessage(Component.text("Category change cancelled.", NamedTextColor.GRAY));
+            reopenCategoryGUI(player, bulbManager, chestManager, categoryManager);
+            return;
+        }
+
+        if (input.equalsIgnoreCase("none") || input.equalsIgnoreCase("uncategorized")) {
+            group.setCategoryId(null);
+            player.sendMessage(Component.text("Group moved to Uncategorized.", NamedTextColor.GREEN));
+        } else {
+            List<Category> playerCategories = categoryManager.getCategoriesByOwner(player.getUniqueId());
+            Category targetCategory = null;
+            
+            // Try to parse as number
+            try {
+                int index = Integer.parseInt(input);
+                if (index >= 1 && index <= playerCategories.size()) {
+                    targetCategory = playerCategories.get(index - 1);
+                }
+            } catch (NumberFormatException ignored) {}
+            
+            // Try to find by name
+            if (targetCategory == null) {
+                for (Category cat : playerCategories) {
+                    if (cat.getName().equalsIgnoreCase(input) || cat.getDisplayName().equalsIgnoreCase(input)) {
+                        targetCategory = cat;
+                        break;
+                    }
+                }
+            }
+            
+            if (targetCategory == null) {
+                player.sendMessage(Component.text("Category not found: " + input, NamedTextColor.RED));
+                reopenCategoryGUI(player, bulbManager, chestManager, categoryManager);
+                return;
+            }
+            
+            group.setCategoryId(targetCategory.getCategoryId());
+            player.sendMessage(Component.text("Group moved to category: " + targetCategory.getDisplayName(), NamedTextColor.GREEN));
+        }
+        
+        if (group.getType() == GroupEntry.GroupType.BULB) {
+            bulbManager.saveData();
+        } else if (chestManager != null) {
+            chestManager.saveData();
+        }
+        
+        reopenCategoryGUI(player, bulbManager, chestManager, categoryManager);
+    }
+
+    private static void reopenCategoryGUI(Player player, LinkedBulbManager bulbManager, 
+                                           LinkedChestManager chestManager, CategoryManager categoryManager) {
+        // Schedule to run on next tick to avoid issues with chat event handling
+        player.getServer().getScheduler().runTask(
+            player.getServer().getPluginManager().getPlugin("WirelessRedstone"),
+            () -> new CategorySelectionGUI(categoryManager, bulbManager, chestManager, player, false).open()
+        );
+    }
+
+    public static void cancelPendingCategoryChange(UUID playerUuid) {
+        pendingCategoryChanges.remove(playerUuid);
     }
 
     private int getGroupIndexFromSlot(int slot) {
