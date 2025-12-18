@@ -11,6 +11,8 @@ import com.wirelessredstone.manager.DebugManager;
 import com.wirelessredstone.manager.LinkedBulbManager;
 import com.wirelessredstone.manager.LinkedChestManager;
 import com.wirelessredstone.manager.WireViewManager;
+import com.wirelessredstone.model.BulbGroup;
+import com.wirelessredstone.model.ChestGroup;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.command.Command;
@@ -21,6 +23,8 @@ import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 public class WirelessCommand implements CommandExecutor, TabCompleter {
 
@@ -62,6 +66,7 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
             case "bulbs" -> handleBulbsCommand(player, args);
             case "lamps" -> handleLampsCommand(player, args);
             case "chests" -> handleChestsCommand(player, args);
+            case "append", "extend" -> handleAppendCommand(player, args);
             case "gui", "manage", "list" -> handleGUICommand(player, args);
             case "wireview" -> handleWireViewCommand(player);
             case "debug" -> handleDebugCommand(player, args);
@@ -158,6 +163,141 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
         giveWirelessContainers(player, variant, count);
     }
 
+    private void handleAppendCommand(Player player, String[] args) {
+        if (args.length < 2) {
+            player.sendMessage(Component.text("Usage: /wireless append <groupname> [count]", NamedTextColor.RED));
+            player.sendMessage(Component.text("Example: /wireless append MyLamps 3", NamedTextColor.GRAY));
+            return;
+        }
+
+        String groupName = args[1];
+        int extraCount = 1;
+        
+        if (args.length >= 3) {
+            try {
+                extraCount = Integer.parseInt(args[2]);
+                if (extraCount < 1 || extraCount > 24) {
+                    player.sendMessage(Component.text("Extra count must be between 1 and 24!", NamedTextColor.RED));
+                    return;
+                }
+            } catch (NumberFormatException e) {
+                player.sendMessage(Component.text("Invalid number: " + args[2], NamedTextColor.RED));
+                return;
+            }
+        }
+
+        // Search for bulb group first
+        Optional<BulbGroup> bulbGroupOpt = findBulbGroupByName(player, groupName);
+        Optional<ChestGroup> chestGroupOpt = findChestGroupByName(player, groupName);
+
+        if (bulbGroupOpt.isPresent()) {
+            extendBulbGroup(player, bulbGroupOpt.get(), extraCount);
+        } else if (chestGroupOpt.isPresent()) {
+            extendChestGroup(player, chestGroupOpt.get(), extraCount);
+        } else {
+            player.sendMessage(Component.text("No group found with name: " + groupName, NamedTextColor.RED));
+            player.sendMessage(Component.text("Use /wireless gui to see your groups.", NamedTextColor.GRAY));
+        }
+    }
+
+    private Optional<BulbGroup> findBulbGroupByName(Player player, String name) {
+        UUID playerUuid = player.getUniqueId();
+        boolean isAdmin = player.hasPermission("wirelessredstone.admin");
+        
+        return bulbManager.getAllGroups().stream()
+                .filter(g -> isAdmin || playerUuid.equals(g.getOwnerUuid()))
+                .filter(g -> matchesGroupName(g.getCustomName(), g.getGroupId(), name))
+                .findFirst();
+    }
+
+    private Optional<ChestGroup> findChestGroupByName(Player player, String name) {
+        if (chestManager == null) return Optional.empty();
+        
+        UUID playerUuid = player.getUniqueId();
+        boolean isAdmin = player.hasPermission("wirelessredstone.admin");
+        
+        return chestManager.getAllGroups().stream()
+                .filter(g -> isAdmin || playerUuid.equals(g.getOwnerUuid()))
+                .filter(g -> matchesGroupName(g.getCustomName(), g.getGroupId(), name))
+                .findFirst();
+    }
+
+    private boolean matchesGroupName(String customName, UUID groupId, String searchName) {
+        // Match by custom name (case-insensitive)
+        if (customName != null && customName.equalsIgnoreCase(searchName)) {
+            return true;
+        }
+        // Match by partial group ID
+        String shortId = groupId.toString().substring(0, 8);
+        return shortId.equalsIgnoreCase(searchName) || groupId.toString().startsWith(searchName.toLowerCase());
+    }
+
+    private void extendBulbGroup(Player player, BulbGroup group, int extraCount) {
+        int currentSize = group.getMaxSize();
+        int newSize = currentSize + extraCount;
+        
+        if (newSize > 26) {
+            player.sendMessage(Component.text("Cannot extend beyond 26 blocks! Current size: " + currentSize, NamedTextColor.RED));
+            return;
+        }
+
+        // Extend the group's internal storage
+        group.extendGroup(extraCount);
+        
+        // Create the new bulb items starting from the current max index
+        BulbVariant variant = BulbVariant.fromBulbType(group.getBulbType());
+        var newBulbs = WirelessBulbFactory.createExtensionBulbs(
+                group.getGroupId(), variant, group.getOwnerUuid(), currentSize, extraCount, newSize);
+        
+        var inventory = player.getInventory();
+        for (var bulb : newBulbs) {
+            if (inventory.firstEmpty() != -1) {
+                inventory.addItem(bulb);
+            } else {
+                player.getWorld().dropItemNaturally(player.getLocation(), bulb);
+            }
+        }
+
+        bulbManager.saveData();
+        
+        player.sendMessage(Component.text("Extended group ", NamedTextColor.GREEN)
+                .append(Component.text(group.getDisplayName(), NamedTextColor.AQUA))
+                .append(Component.text(" with " + extraCount + " new block(s)! New size: " + newSize, NamedTextColor.GREEN)));
+    }
+
+    private void extendChestGroup(Player player, ChestGroup group, int extraCount) {
+        int currentSize = group.getMaxSize();
+        int newSize = currentSize + extraCount;
+        
+        if (newSize > 26) {
+            player.sendMessage(Component.text("Cannot extend beyond 26 blocks! Current size: " + currentSize, NamedTextColor.RED));
+            return;
+        }
+
+        // Extend the group's internal storage
+        group.extendGroup(extraCount);
+        
+        // Create the new chest items
+        ChestVariant variant = ChestVariant.fromContainerType(group.getContainerType());
+        var newChests = WirelessChestFactory.createExtensionContainers(
+                group.getGroupId(), variant, group.getOwnerUuid(), currentSize, extraCount, newSize);
+        
+        var inventory = player.getInventory();
+        for (var chest : newChests) {
+            if (inventory.firstEmpty() != -1) {
+                inventory.addItem(chest);
+            } else {
+                player.getWorld().dropItemNaturally(player.getLocation(), chest);
+            }
+        }
+
+        chestManager.saveData();
+        
+        player.sendMessage(Component.text("Extended group ", NamedTextColor.GREEN)
+                .append(Component.text(group.getDisplayName(), NamedTextColor.GOLD))
+                .append(Component.text(" with " + extraCount + " new container(s)! New size: " + newSize, NamedTextColor.GREEN)));
+    }
+
     private void handleDebugCommand(Player player, String[] args) {
         if (args.length < 2) {
             boolean current = debugManager.isDebugEnabled(player);
@@ -223,6 +363,8 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
                 .append(Component.text(" - Get linked wireless containers", NamedTextColor.GRAY)));
         player.sendMessage(Component.text("  Variants: --chest, --shulker, --white, --orange, etc.", NamedTextColor.DARK_GRAY));
         player.sendMessage(Component.text("  Copper: --copper, --copper-exposed, --copper-weathered, --copper-oxidized", NamedTextColor.DARK_GRAY));
+        player.sendMessage(Component.text("/wireless append <name> [count]", NamedTextColor.YELLOW)
+                .append(Component.text(" - Add more blocks to an existing group", NamedTextColor.GRAY)));
         player.sendMessage(Component.text("/wireless gui [--all]", NamedTextColor.YELLOW)
                 .append(Component.text(" - Open management GUI", NamedTextColor.GRAY)));
         player.sendMessage(Component.text("/wireless wireview", NamedTextColor.YELLOW)
@@ -271,7 +413,7 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
 
         if (args.length == 1) {
             String input = args[0].toLowerCase();
-            for (String sub : List.of("bulbs", "lamps", "chests", "gui", "manage", "list", "wireview", "debug")) {
+            for (String sub : List.of("bulbs", "lamps", "chests", "append", "extend", "gui", "manage", "list", "wireview", "debug")) {
                 if (sub.startsWith(input)) {
                     completions.add(sub);
                 }
@@ -317,6 +459,40 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
                 }
                 if ("--nocategory".startsWith(input)) {
                     completions.add("--nocategory");
+                }
+            } else if (subCommand.equals("append") || subCommand.equals("extend")) {
+                if (args.length == 2 && sender instanceof Player player) {
+                    // Suggest group names
+                    UUID playerUuid = player.getUniqueId();
+                    boolean isAdmin = player.hasPermission("wirelessredstone.admin");
+                    
+                    bulbManager.getAllGroups().stream()
+                            .filter(g -> isAdmin || playerUuid.equals(g.getOwnerUuid()))
+                            .forEach(g -> {
+                                String name = g.getCustomName() != null ? g.getCustomName() : g.getGroupId().toString().substring(0, 8);
+                                if (name.toLowerCase().startsWith(input)) {
+                                    completions.add(name.contains(" ") ? "\"" + name + "\"" : name);
+                                }
+                            });
+                    
+                    if (chestManager != null) {
+                        chestManager.getAllGroups().stream()
+                                .filter(g -> isAdmin || playerUuid.equals(g.getOwnerUuid()))
+                                .forEach(g -> {
+                                    String name = g.getCustomName() != null ? g.getCustomName() : g.getGroupId().toString().substring(0, 8);
+                                    if (name.toLowerCase().startsWith(input)) {
+                                        completions.add(name.contains(" ") ? "\"" + name + "\"" : name);
+                                    }
+                                });
+                    }
+                } else if (args.length == 3) {
+                    // Suggest counts
+                    for (int i = 1; i <= 5; i++) {
+                        String num = String.valueOf(i);
+                        if (num.startsWith(input)) {
+                            completions.add(num);
+                        }
+                    }
                 }
             } else if (subCommand.equals("debug")) {
                 for (String opt : List.of("on", "off")) {

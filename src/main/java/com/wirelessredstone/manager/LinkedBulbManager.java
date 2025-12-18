@@ -106,6 +106,12 @@ public class LinkedBulbManager {
     public void registerPlacedBulb(Location location, UUID groupId, int bulbIndex, UUID ownerUuid, BulbVariant.BulbType bulbType, int groupSize) {
         Location normalizedLoc = normalizeLocation(location);
         BulbGroup group = bulbGroups.computeIfAbsent(groupId, id -> new BulbGroup(id, groupSize, ownerUuid, bulbType));
+        
+        // If the item indicates a larger group size (from extension), expand the group
+        if (groupSize > group.getMaxSize()) {
+            group.extendGroup(groupSize - group.getMaxSize());
+        }
+        
         group.setLocation(bulbIndex, normalizedLoc);
         if (ownerUuid != null && group.getOwnerUuid() == null) {
             group.setOwnerUuid(ownerUuid);

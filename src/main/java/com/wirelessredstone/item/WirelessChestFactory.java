@@ -30,6 +30,17 @@ public class WirelessChestFactory {
         return containers;
     }
 
+    public static ItemStack[] createExtensionContainers(UUID groupId, ChestVariant variant, UUID ownerUuid,
+                                                         int startIndex, int count, int newGroupSize) {
+        ItemStack[] containers = new ItemStack[count];
+        for (int i = 0; i < count; i++) {
+            int index = startIndex + i;
+            String label = ChestGroup.getIndexLabel(index);
+            containers[i] = createContainer(groupId, index, variant.getDisplayName() + " " + label, variant, ownerUuid, newGroupSize);
+        }
+        return containers;
+    }
+
     private static ItemStack createContainer(UUID groupId, int index, String name, ChestVariant variant, UUID ownerUuid, int groupSize) {
         ItemStack container = new ItemStack(variant.getMaterial());
         ItemMeta meta = container.getItemMeta();

@@ -107,6 +107,12 @@ public class LinkedChestManager {
     public void registerPlacedChest(Location location, UUID groupId, int chestIndex, UUID ownerUuid, int groupSize, ChestVariant.ContainerType containerType) {
         Location normalizedLoc = normalizeLocation(location);
         ChestGroup group = chestGroups.computeIfAbsent(groupId, id -> new ChestGroup(id, groupSize, ownerUuid, containerType));
+        
+        // If the item indicates a larger group size (from extension), expand the group
+        if (groupSize > group.getMaxSize()) {
+            group.extendGroup(groupSize - group.getMaxSize());
+        }
+        
         group.setLocation(chestIndex, normalizedLoc);
         if (ownerUuid != null && group.getOwnerUuid() == null) {
             group.setOwnerUuid(ownerUuid);

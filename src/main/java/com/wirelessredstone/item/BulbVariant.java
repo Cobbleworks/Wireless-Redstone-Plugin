@@ -62,6 +62,13 @@ public enum BulbVariant {
         };
     }
 
+    public static BulbVariant fromBulbType(BulbType bulbType) {
+        return switch (bulbType) {
+            case REDSTONE_LAMP -> REDSTONE_LAMP;
+            case COPPER_BULB -> COPPER;
+        };
+    }
+
     public enum BulbType {
         COPPER_BULB,
         REDSTONE_LAMP

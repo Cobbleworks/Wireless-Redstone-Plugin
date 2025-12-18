@@ -10,7 +10,7 @@ public class BulbGroup {
 
     private final UUID groupId;
     private final List<Location> locations;
-    private final int maxSize;
+    private int maxSize;
     private boolean lit;
     private UUID ownerUuid;
     private BulbVariant.BulbType bulbType;
@@ -162,6 +162,13 @@ public class BulbGroup {
 
     public void setCategoryId(UUID categoryId) {
         this.categoryId = categoryId;
+    }
+
+    public void extendGroup(int extraSlots) {
+        for (int i = 0; i < extraSlots; i++) {
+            locations.add(null);
+        }
+        maxSize += extraSlots;
     }
 
     public static String getIndexLabel(int index) {

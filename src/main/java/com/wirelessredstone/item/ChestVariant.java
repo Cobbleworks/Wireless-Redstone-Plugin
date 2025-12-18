@@ -113,6 +113,14 @@ public enum ChestVariant {
                material == Material.WAXED_OXIDIZED_COPPER_CHEST;
     }
 
+    public static ChestVariant fromContainerType(ContainerType containerType) {
+        return switch (containerType) {
+            case CHEST -> CHEST;
+            case SHULKER -> SHULKER;
+            case COPPER_CHEST -> COPPER_CHEST;
+        };
+    }
+
     public enum ContainerType {
         CHEST,
         SHULKER,

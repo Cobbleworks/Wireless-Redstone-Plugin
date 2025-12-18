@@ -29,6 +29,17 @@ public class WirelessBulbFactory {
         return bulbs;
     }
 
+    public static ItemStack[] createExtensionBulbs(UUID groupId, BulbVariant variant, UUID ownerUuid, 
+                                                    int startIndex, int count, int newGroupSize) {
+        ItemStack[] bulbs = new ItemStack[count];
+        for (int i = 0; i < count; i++) {
+            int index = startIndex + i;
+            String label = BulbGroup.getIndexLabel(index);
+            bulbs[i] = createBulb(groupId, index, "Wireless Bulb " + label, variant, ownerUuid, newGroupSize);
+        }
+        return bulbs;
+    }
+
     private static ItemStack createBulb(UUID groupId, int index, String name, BulbVariant variant, UUID ownerUuid, int groupSize) {
         ItemStack bulb = new ItemStack(variant.getMaterial());
         ItemMeta meta = bulb.getItemMeta();

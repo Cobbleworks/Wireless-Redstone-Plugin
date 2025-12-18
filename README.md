@@ -83,15 +83,16 @@ The compiled JAR will be in `target/WirelessRedstone-1.0.0.jar`
 
 All commands use `/wireless` (or `/wr` alias).
 
-| Command                              | Description                    |
-| ------------------------------------ | ------------------------------ |
-| `/wireless bulbs [count] [variant]`  | Get linked copper bulbs        |
-| `/wireless lamps [count]`            | Get linked redstone lamps      |
-| `/wireless chests [count] [variant]` | Get linked containers          |
-| `/wireless gui [--all]`              | Open category selection GUI    |
-| `/wireless gui --nocategory`         | Open GUI without categories    |
-| `/wireless wireview`                 | Toggle connection highlighting |
-| `/wireless debug on\|off`            | Toggle sync debug messages     |
+| Command                              | Description                       |
+| ------------------------------------ | --------------------------------- |
+| `/wireless bulbs [count] [variant]`  | Get linked copper bulbs           |
+| `/wireless lamps [count]`            | Get linked redstone lamps         |
+| `/wireless chests [count] [variant]` | Get linked containers             |
+| `/wireless append <group> [count]`   | Add more blocks to existing group |
+| `/wireless gui [--all]`              | Open category selection GUI       |
+| `/wireless gui --nocategory`         | Open GUI without categories       |
+| `/wireless wireview`                 | Toggle connection highlighting    |
+| `/wireless debug on\|off`            | Toggle sync debug messages        |
 
 ### Bulb Variants
 
@@ -138,6 +139,12 @@ All commands use `/wireless` (or `/wr` alias).
 
 # Get 2 linked copper chests
 /wireless chests 2 --copper
+
+# Add 3 more bulbs to an existing group named "Kitchen"
+/wireless append Kitchen 3
+
+# Add 2 more blocks to a group (defaults to 2 if no count specified)
+/wireless append "My Group"
 ```
 
 ---
