@@ -20,6 +20,7 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -241,23 +242,13 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
             return;
         }
 
-        // Extend the group's internal storage
         group.extendGroup(extraCount);
         
-        // Create the new bulb items starting from the current max index
         BulbVariant variant = BulbVariant.fromBulbType(group.getBulbType());
         var newBulbs = WirelessBulbFactory.createExtensionBulbs(
                 group.getGroupId(), variant, group.getOwnerUuid(), currentSize, extraCount, newSize);
         
-        var inventory = player.getInventory();
-        for (var bulb : newBulbs) {
-            if (inventory.firstEmpty() != -1) {
-                inventory.addItem(bulb);
-            } else {
-                player.getWorld().dropItemNaturally(player.getLocation(), bulb);
-            }
-        }
-
+        distributeItems(player, newBulbs);
         bulbManager.saveData();
         
         player.sendMessage(Component.text("Extended group ", NamedTextColor.GREEN)
@@ -274,23 +265,13 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
             return;
         }
 
-        // Extend the group's internal storage
         group.extendGroup(extraCount);
         
-        // Create the new chest items
         ChestVariant variant = ChestVariant.fromContainerType(group.getContainerType());
         var newChests = WirelessChestFactory.createExtensionContainers(
                 group.getGroupId(), variant, group.getOwnerUuid(), currentSize, extraCount, newSize);
         
-        var inventory = player.getInventory();
-        for (var chest : newChests) {
-            if (inventory.firstEmpty() != -1) {
-                inventory.addItem(chest);
-            } else {
-                player.getWorld().dropItemNaturally(player.getLocation(), chest);
-            }
-        }
-
+        distributeItems(player, newChests);
         chestManager.saveData();
         
         player.sendMessage(Component.text("Extended group ", NamedTextColor.GREEN)
@@ -376,16 +357,7 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
     private void giveWirelessBulbs(Player player, BulbVariant variant, int count) {
         var groupId = bulbManager.createNewGroupId();
         var bulbs = WirelessBulbFactory.createLinkedGroup(groupId, variant, player.getUniqueId(), count);
-
-        var inventory = player.getInventory();
-        for (var bulb : bulbs) {
-            if (inventory.firstEmpty() != -1) {
-                inventory.addItem(bulb);
-            } else {
-                player.getWorld().dropItemNaturally(player.getLocation(), bulb);
-            }
-        }
-
+        distributeItems(player, bulbs);
         player.sendMessage(Component.text("You received " + count + " linked " + variant.getDisplayName() + "s!", NamedTextColor.GREEN));
         player.sendMessage(Component.text("Place them and they will sync their state!", NamedTextColor.GRAY));
     }
@@ -393,18 +365,23 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
     private void giveWirelessContainers(Player player, ChestVariant variant, int count) {
         var groupId = chestManager.createNewGroupId();
         var containers = WirelessChestFactory.createLinkedContainers(groupId, variant, player.getUniqueId(), count);
-
-        var inventory = player.getInventory();
-        for (var container : containers) {
-            if (inventory.firstEmpty() != -1) {
-                inventory.addItem(container);
-            } else {
-                player.getWorld().dropItemNaturally(player.getLocation(), container);
-            }
-        }
-
+        distributeItems(player, containers);
         player.sendMessage(Component.text("You received " + count + " linked " + variant.getDisplayName() + "s!", NamedTextColor.GREEN));
         player.sendMessage(Component.text("Place them and they will sync their contents!", NamedTextColor.GRAY));
+    }
+
+    /**
+     * Distributes items to a player's inventory, dropping any that don't fit.
+     */
+    private void distributeItems(Player player, ItemStack[] items) {
+        var inventory = player.getInventory();
+        for (var item : items) {
+            if (inventory.firstEmpty() != -1) {
+                inventory.addItem(item);
+            } else {
+                player.getWorld().dropItemNaturally(player.getLocation(), item);
+            }
+        }
     }
 
     @Override

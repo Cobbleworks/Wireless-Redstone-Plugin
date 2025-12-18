@@ -3,6 +3,7 @@ package com.wirelessredstone.manager;
 import com.wirelessredstone.WirelessRedstonePlugin;
 import com.wirelessredstone.item.ChestVariant;
 import com.wirelessredstone.model.ChestGroup;
+import com.wirelessredstone.util.LocationUtils;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -43,15 +44,6 @@ public class LinkedChestManager {
     public LinkedChestManager(WirelessRedstonePlugin plugin) {
         this.plugin = plugin;
         loadData();
-    }
-
-    /**
-     * Normalizes a location to block coordinates only (removes yaw, pitch, and decimal parts).
-     * This ensures consistent map key lookups regardless of how the Location was obtained.
-     */
-    private Location normalizeLocation(Location loc) {
-        if (loc == null || loc.getWorld() == null) return null;
-        return new Location(loc.getWorld(), loc.getBlockX(), loc.getBlockY(), loc.getBlockZ());
     }
 
     public UUID createNewGroupId() {
@@ -105,7 +97,7 @@ public class LinkedChestManager {
     }
 
     public void registerPlacedChest(Location location, UUID groupId, int chestIndex, UUID ownerUuid, int groupSize, ChestVariant.ContainerType containerType) {
-        Location normalizedLoc = normalizeLocation(location);
+        Location normalizedLoc = LocationUtils.normalize(location);
         ChestGroup group = chestGroups.computeIfAbsent(groupId, id -> new ChestGroup(id, groupSize, ownerUuid, containerType));
         
         // If the item indicates a larger group size (from extension), expand the group
@@ -125,7 +117,7 @@ public class LinkedChestManager {
     }
 
     public void unregisterChest(Location location) {
-        Location normalizedLoc = normalizeLocation(location);
+        Location normalizedLoc = LocationUtils.normalize(location);
         UUID groupId = locationToGroupId.remove(normalizedLoc);
         if (groupId != null) {
             ChestGroup group = chestGroups.get(groupId);
@@ -140,7 +132,7 @@ public class LinkedChestManager {
     }
 
     public UUID unregisterChestAndCheckGroupRemoval(Location location) {
-        Location normalizedLoc = normalizeLocation(location);
+        Location normalizedLoc = LocationUtils.normalize(location);
         UUID groupId = locationToGroupId.remove(normalizedLoc);
         if (groupId != null) {
             ChestGroup group = chestGroups.get(groupId);
@@ -166,7 +158,7 @@ public class LinkedChestManager {
         if (group != null) {
             for (Location loc : group.getLocations()) {
                 if (loc != null) {
-                    locationToGroupId.remove(normalizeLocation(loc));
+                    locationToGroupId.remove(LocationUtils.normalize(loc));
                     if (removeBlocks && loc.isChunkLoaded()) {
                         loc.getBlock().setType(Material.AIR);
                     }
@@ -181,12 +173,12 @@ public class LinkedChestManager {
     }
 
     public Optional<ChestGroup> getGroupByLocation(Location location) {
-        UUID groupId = locationToGroupId.get(normalizeLocation(location));
+        UUID groupId = locationToGroupId.get(LocationUtils.normalize(location));
         return groupId != null ? Optional.ofNullable(chestGroups.get(groupId)) : Optional.empty();
     }
 
     public boolean isWirelessChestLocation(Location location) {
-        return locationToGroupId.containsKey(normalizeLocation(location));
+        return locationToGroupId.containsKey(LocationUtils.normalize(location));
     }
 
     public Collection<ChestGroup> getAllGroups() {

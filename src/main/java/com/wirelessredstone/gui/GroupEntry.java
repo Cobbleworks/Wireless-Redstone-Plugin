@@ -1,7 +1,6 @@
 package com.wirelessredstone.gui;
 
-import com.wirelessredstone.item.BulbVariant;
-import com.wirelessredstone.item.ChestVariant;
+import com.wirelessredstone.model.BaseGroup;
 import com.wirelessredstone.model.BulbGroup;
 import com.wirelessredstone.model.ChestGroup;
 import org.bukkit.Location;
@@ -10,6 +9,10 @@ import org.bukkit.Material;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Wrapper class for displaying both BulbGroup and ChestGroup in GUIs.
+ * Provides a unified interface for accessing common group properties.
+ */
 public class GroupEntry {
 
     public enum GroupType {
@@ -18,19 +21,16 @@ public class GroupEntry {
     }
 
     private final GroupType type;
-    private final BulbGroup bulbGroup;
-    private final ChestGroup chestGroup;
+    private final BaseGroup group;
 
     public GroupEntry(BulbGroup bulbGroup) {
         this.type = GroupType.BULB;
-        this.bulbGroup = bulbGroup;
-        this.chestGroup = null;
+        this.group = bulbGroup;
     }
 
     public GroupEntry(ChestGroup chestGroup) {
         this.type = GroupType.CHEST;
-        this.bulbGroup = null;
-        this.chestGroup = chestGroup;
+        this.group = chestGroup;
     }
 
     public GroupType getType() {
@@ -38,119 +38,99 @@ public class GroupEntry {
     }
 
     public BulbGroup getBulbGroup() {
-        return bulbGroup;
+        return type == GroupType.BULB ? (BulbGroup) group : null;
     }
 
     public ChestGroup getChestGroup() {
-        return chestGroup;
+        return type == GroupType.CHEST ? (ChestGroup) group : null;
     }
 
+    // Delegated methods to BaseGroup - now much simpler!
+    
     public UUID getGroupId() {
-        return type == GroupType.BULB ? bulbGroup.getGroupId() : chestGroup.getGroupId();
+        return group.getGroupId();
     }
 
     public UUID getOwnerUuid() {
-        return type == GroupType.BULB ? bulbGroup.getOwnerUuid() : chestGroup.getOwnerUuid();
+        return group.getOwnerUuid();
     }
 
     public String getDisplayName() {
-        return type == GroupType.BULB ? bulbGroup.getDisplayName() : chestGroup.getDisplayName();
+        return group.getDisplayName();
     }
 
     public String getCustomName() {
-        return type == GroupType.BULB ? bulbGroup.getCustomName() : chestGroup.getCustomName();
+        return group.getCustomName();
     }
 
     public void setCustomName(String name) {
-        if (type == GroupType.BULB) {
-            bulbGroup.setCustomName(name);
-        } else {
-            chestGroup.setCustomName(name);
-        }
+        group.setCustomName(name);
     }
 
     public Material getCustomIcon() {
-        return type == GroupType.BULB ? bulbGroup.getCustomIcon() : chestGroup.getCustomIcon();
+        return group.getCustomIcon();
     }
 
     public void setCustomIcon(Material icon) {
-        if (type == GroupType.BULB) {
-            bulbGroup.setCustomIcon(icon);
-        } else {
-            chestGroup.setCustomIcon(icon);
-        }
+        group.setCustomIcon(icon);
     }
 
     public Material getDefaultIcon() {
-        if (type == GroupType.BULB) {
-            return bulbGroup.getBulbType() == BulbVariant.BulbType.REDSTONE_LAMP
-                    ? Material.REDSTONE_LAMP
-                    : Material.COPPER_BULB;
-        } else {
-            ChestVariant.ContainerType containerType = chestGroup.getContainerType();
-            if (containerType == ChestVariant.ContainerType.CHEST) {
-                return Material.CHEST;
-            } else {
-                return Material.SHULKER_BOX;
-            }
-        }
+        return group.getDefaultIcon();
     }
+
+    public int getPlacedCount() {
+        return group.getPlacedCount();
+    }
+
+    public int getMaxSize() {
+        return group.getMaxSize();
+    }
+
+    public List<Location> getLocations() {
+        return group.getLocations();
+    }
+
+    public List<Location> getPlacedLocations() {
+        return group.getPlacedLocations();
+    }
+
+    public int getLocationIndex(Location location) {
+        return group.getLocationIndex(location);
+    }
+
+    public UUID getCategoryId() {
+        return group.getCategoryId();
+    }
+
+    public void setCategoryId(UUID categoryId) {
+        group.setCategoryId(categoryId);
+    }
+
+    // Type-specific methods that need special handling
 
     public String getTypeDisplayName() {
         if (type == GroupType.BULB) {
-            return bulbGroup.getBulbType().name();
+            return ((BulbGroup) group).getBulbType().name();
         } else {
-            ChestVariant.ContainerType containerType = chestGroup.getContainerType();
-            return containerType == ChestVariant.ContainerType.CHEST ? "CHEST" : "SHULKER_BOX";
+            var containerType = ((ChestGroup) group).getContainerType();
+            return containerType.name();
         }
     }
 
     public String getStatusDisplay() {
         if (type == GroupType.BULB) {
-            return bulbGroup.isLit() ? "ON" : "OFF";
+            return ((BulbGroup) group).isLit() ? "ON" : "OFF";
         } else {
             return "SYNCED";
         }
     }
 
     public boolean isLit() {
-        return type == GroupType.BULB && bulbGroup.isLit();
-    }
-
-    public int getPlacedCount() {
-        return type == GroupType.BULB ? bulbGroup.getPlacedCount() : chestGroup.getPlacedCount();
-    }
-
-    public int getMaxSize() {
-        return type == GroupType.BULB ? bulbGroup.getMaxSize() : chestGroup.getMaxSize();
-    }
-
-    public List<Location> getLocations() {
-        return type == GroupType.BULB ? bulbGroup.getLocations() : chestGroup.getLocations();
-    }
-
-    public List<Location> getPlacedLocations() {
-        return type == GroupType.BULB ? bulbGroup.getPlacedLocations() : chestGroup.getPlacedLocations();
-    }
-
-    public int getLocationIndex(Location location) {
-        return type == GroupType.BULB ? bulbGroup.getLocationIndex(location) : chestGroup.getLocationIndex(location);
-    }
-
-    public UUID getCategoryId() {
-        return type == GroupType.BULB ? bulbGroup.getCategoryId() : chestGroup.getCategoryId();
-    }
-
-    public void setCategoryId(UUID categoryId) {
-        if (type == GroupType.BULB) {
-            bulbGroup.setCategoryId(categoryId);
-        } else {
-            chestGroup.setCategoryId(categoryId);
-        }
+        return type == GroupType.BULB && ((BulbGroup) group).isLit();
     }
 
     public static String getIndexLabel(int index) {
-        if (index < 0 || index > 25) return String.valueOf(index);
-        return String.valueOf((char) ('A' + index));
+        return BaseGroup.getIndexLabel(index);
     }
 }
