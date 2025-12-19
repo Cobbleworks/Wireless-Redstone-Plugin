@@ -7,6 +7,7 @@ import com.wirelessredstone.listener.ChestBreakListener;
 import com.wirelessredstone.listener.ChestInventoryListener;
 import com.wirelessredstone.listener.ChestPlaceListener;
 import com.wirelessredstone.listener.ChunkLoadListener;
+import com.wirelessredstone.listener.CircuitAnalyserListener;
 import com.wirelessredstone.listener.GUIListener;
 import com.wirelessredstone.listener.WireViewListener;
 import com.wirelessredstone.manager.CategoryManager;
@@ -83,6 +84,7 @@ public class WirelessRedstonePlugin extends JavaPlugin {
         pluginManager.registerEvents(new ChunkLoadListener(bulbManager, chestManager), this);
         pluginManager.registerEvents(new GUIListener(bulbManager, chestManager, categoryManager), this);
         pluginManager.registerEvents(new WireViewListener(wireViewManager), this);
+        pluginManager.registerEvents(new CircuitAnalyserListener(bulbManager, chestManager, categoryManager), this);
     }
 
     private void startSyncTask() {

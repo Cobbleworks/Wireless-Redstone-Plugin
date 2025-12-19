@@ -41,6 +41,21 @@ public class WirelessChestFactory {
         return containers;
     }
 
+    /**
+     * Creates recovery containers for specific unplaced indices in an existing group.
+     * Used to recover lost or missing wireless containers.
+     */
+    public static ItemStack[] createRecoveryContainers(UUID groupId, ChestVariant variant, UUID ownerUuid,
+                                                        List<Integer> unplacedIndices, int groupSize) {
+        ItemStack[] containers = new ItemStack[unplacedIndices.size()];
+        for (int i = 0; i < unplacedIndices.size(); i++) {
+            int index = unplacedIndices.get(i);
+            String label = ChestGroup.getIndexLabel(index);
+            containers[i] = createContainer(groupId, index, variant.getDisplayName() + " " + label, variant, ownerUuid, groupSize);
+        }
+        return containers;
+    }
+
     private static ItemStack createContainer(UUID groupId, int index, String name, ChestVariant variant, UUID ownerUuid, int groupSize) {
         ItemStack container = new ItemStack(variant.getMaterial());
         ItemMeta meta = container.getItemMeta();

@@ -40,6 +40,21 @@ public class WirelessBulbFactory {
         return bulbs;
     }
 
+    /**
+     * Creates recovery bulbs for specific unplaced indices in an existing group.
+     * Used to recover lost or missing wireless blocks.
+     */
+    public static ItemStack[] createRecoveryBulbs(UUID groupId, BulbVariant variant, UUID ownerUuid, 
+                                                   List<Integer> unplacedIndices, int groupSize) {
+        ItemStack[] bulbs = new ItemStack[unplacedIndices.size()];
+        for (int i = 0; i < unplacedIndices.size(); i++) {
+            int index = unplacedIndices.get(i);
+            String label = BulbGroup.getIndexLabel(index);
+            bulbs[i] = createBulb(groupId, index, "Wireless Bulb " + label, variant, ownerUuid, groupSize);
+        }
+        return bulbs;
+    }
+
     private static ItemStack createBulb(UUID groupId, int index, String name, BulbVariant variant, UUID ownerUuid, int groupSize) {
         ItemStack bulb = new ItemStack(variant.getMaterial());
         ItemMeta meta = bulb.getItemMeta();

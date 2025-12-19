@@ -44,6 +44,24 @@
 - Set custom icons for groups and categories
 - Remove groups with one click (also removes all placed blocks)
 
+### 🔍 Circuit Analyser
+
+- Diagnostic tool for inspecting wireless blocks
+- Get one with `/wireless inspect`
+- Right-click any wireless block to see:
+  - Group name, ID, and category
+  - Owner information
+  - All associated block locations (clickable to teleport)
+  - Placed/total count status
+  - Block-specific info (bulb state, container type)
+
+### 🔄 Block Recovery
+
+- Recover lost or broken wireless blocks with `/wireless recover <group>`
+- If you placed blocks and later broke some, they show as "not placed" in the group
+- The recover command regenerates items for those missing slots
+- Maintains the same group ID and slot labels (A, B, C, etc.)
+
 ### 💾 Persistence
 
 - All data saved automatically to YAML files
@@ -83,16 +101,18 @@ The compiled JAR will be in `target/WirelessRedstone-1.0.0.jar`
 
 All commands use `/wireless` (or `/wr` alias).
 
-| Command                              | Description                       |
-| ------------------------------------ | --------------------------------- |
-| `/wireless bulbs [count] [variant]`  | Get linked copper bulbs           |
-| `/wireless lamps [count]`            | Get linked redstone lamps         |
-| `/wireless chests [count] [variant]` | Get linked containers             |
-| `/wireless append <group> [count]`   | Add more blocks to existing group |
-| `/wireless gui [--all]`              | Open category selection GUI       |
-| `/wireless gui --nocategory`         | Open GUI without categories       |
-| `/wireless wireview`                 | Toggle connection highlighting    |
-| `/wireless debug on\|off`            | Toggle sync debug messages        |
+| Command                              | Description                            |
+| ------------------------------------ | -------------------------------------- |
+| `/wireless bulbs [count] [variant]`  | Get linked copper bulbs                |
+| `/wireless lamps [count]`            | Get linked redstone lamps              |
+| `/wireless chests [count] [variant]` | Get linked containers                  |
+| `/wireless append <group> [count]`   | Add more blocks to existing group      |
+| `/wireless recover <group>`          | Recover lost/missing blocks in group   |
+| `/wireless inspect [player]`         | Get a Circuit Analyser diagnostic tool |
+| `/wireless gui [--all]`              | Open category selection GUI            |
+| `/wireless gui --nocategory`         | Open GUI without categories            |
+| `/wireless wireview`                 | Toggle connection highlighting         |
+| `/wireless debug on\|off`            | Toggle sync debug messages             |
 
 ### Bulb Variants
 
@@ -145,6 +165,15 @@ All commands use `/wireless` (or `/wr` alias).
 
 # Add 2 more blocks to a group (defaults to 2 if no count specified)
 /wireless append "My Group"
+
+# Recover lost blocks (e.g., if you placed 4, broke 2, they show as "not placed")
+/wireless recover MyGroup
+
+# Get a Circuit Analyser to inspect wireless blocks
+/wireless inspect
+
+# Give a Circuit Analyser to another player (admin only)
+/wireless inspect Steve
 ```
 
 ---
@@ -234,13 +263,15 @@ Data includes group IDs, locations, ownership, custom names/icons, categories, a
 
 ## 🐛 Troubleshooting
 
-| Issue                  | Solution                                            |
-| ---------------------- | --------------------------------------------------- |
-| Bulbs not syncing      | Ensure all bulbs are placed, check debug mode       |
-| Containers not syncing | Verify group exists in GUI, try reopening container |
-| GUI not working        | Check console for errors on startup                 |
-| Rename not working     | Chat plugins may intercept; type `cancel` to abort  |
-| Groups disappeared     | Check if world was renamed/removed                  |
+| Issue                      | Solution                                            |
+| -------------------------- | --------------------------------------------------- |
+| Bulbs not syncing          | Ensure all bulbs are placed, check debug mode       |
+| Containers not syncing     | Verify group exists in GUI, try reopening container |
+| GUI not working            | Check console for errors on startup                 |
+| Rename not working         | Chat plugins may intercept; type `cancel` to abort  |
+| Groups disappeared         | Check if world was renamed/removed                  |
+| Lost blocks after breaking | Use `/wireless recover <group>` to get them back    |
+| Analyser not working       | Right-click directly on the wireless block          |
 
 ---
 
