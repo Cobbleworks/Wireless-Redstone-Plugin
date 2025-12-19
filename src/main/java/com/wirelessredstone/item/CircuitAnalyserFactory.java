@@ -27,7 +27,8 @@ public class CircuitAnalyserFactory {
         ItemMeta meta = item.getItemMeta();
 
         meta.displayName(Component.text("Circuit Analyser", NamedTextColor.LIGHT_PURPLE)
-                .decoration(TextDecoration.ITALIC, false));
+                .decoration(TextDecoration.ITALIC, false)
+                .decoration(TextDecoration.BOLD, true));
 
         meta.lore(List.of(
                 Component.text("A diagnostic tool for wireless circuits", NamedTextColor.GRAY)
