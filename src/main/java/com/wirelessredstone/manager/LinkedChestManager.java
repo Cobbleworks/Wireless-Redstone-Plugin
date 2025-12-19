@@ -46,6 +46,15 @@ public class LinkedChestManager {
         loadData();
     }
 
+    /**
+     * Reloads all chest data from disk, clearing existing data first.
+     */
+    public void reloadData() {
+        chestGroups.clear();
+        locationToGroupId.clear();
+        loadData();
+    }
+
     public UUID createNewGroupId() {
         return UUID.randomUUID();
     }
@@ -165,6 +174,23 @@ public class LinkedChestManager {
                 }
             }
         }
+        saveData();
+    }
+
+    /**
+     * Pre-registers a group with custom name and category before any chests are placed.
+     * This ensures the group has these properties when the first chest is placed.
+     */
+    public void preRegisterGroup(UUID groupId, int maxSize, UUID ownerUuid, ChestVariant.ContainerType containerType,
+                                  String customName, UUID categoryId) {
+        ChestGroup group = new ChestGroup(groupId, maxSize, ownerUuid, containerType);
+        if (customName != null) {
+            group.setCustomName(customName);
+        }
+        if (categoryId != null) {
+            group.setCategoryId(categoryId);
+        }
+        chestGroups.put(groupId, group);
         saveData();
     }
 

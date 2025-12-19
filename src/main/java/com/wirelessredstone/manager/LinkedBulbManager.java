@@ -45,6 +45,15 @@ public class LinkedBulbManager {
         loadData();
     }
 
+    /**
+     * Reloads all bulb data from disk, clearing existing data first.
+     */
+    public void reloadData() {
+        bulbGroups.clear();
+        locationToGroupId.clear();
+        loadData();
+    }
+
     public UUID createNewGroupId() {
         return UUID.randomUUID();
     }
@@ -167,6 +176,23 @@ public class LinkedBulbManager {
                 }
             }
         }
+        saveData();
+    }
+
+    /**
+     * Pre-registers a group with custom name and category before any bulbs are placed.
+     * This ensures the group has these properties when the first bulb is placed.
+     */
+    public void preRegisterGroup(UUID groupId, int maxSize, UUID ownerUuid, BulbVariant.BulbType bulbType, 
+                                  String customName, UUID categoryId) {
+        BulbGroup group = new BulbGroup(groupId, maxSize, ownerUuid, bulbType);
+        if (customName != null) {
+            group.setCustomName(customName);
+        }
+        if (categoryId != null) {
+            group.setCategoryId(categoryId);
+        }
+        bulbGroups.put(groupId, group);
         saveData();
     }
 

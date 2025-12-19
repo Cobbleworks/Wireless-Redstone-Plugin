@@ -99,17 +99,35 @@ The compiled JAR will be in `target/WirelessRedstone-1.0.0.jar`
 
 All commands use `/wireless` (or `/wr` alias).
 
-| Command                              | Description                            |
-| ------------------------------------ | -------------------------------------- |
-| `/wireless bulbs [count] [variant]`  | Get linked copper bulbs                |
-| `/wireless lamps [count]`            | Get linked redstone lamps              |
-| `/wireless chests [count] [variant]` | Get linked containers                  |
-| `/wireless append <group> [count]`   | Add more blocks to existing group      |
-| `/wireless recover <group>`          | Recover lost/missing blocks in group   |
-| `/wireless inspect [player]`         | Get a Circuit Analyser diagnostic tool |
-| `/wireless gui [--all]`              | Open category selection GUI            |
-| `/wireless gui --nocategory`         | Open GUI without categories            |
-| `/wireless debug on\|off`            | Toggle sync debug messages             |
+| Command                               | Description                             |
+| ------------------------------------- | --------------------------------------- |
+| `/wireless bulbs [count] [variant]`   | Get linked copper bulbs                 |
+| `/wireless lamps [count]`             | Get linked redstone lamps               |
+| `/wireless chests [count] [variant]`  | Get linked containers                   |
+| `/wireless append <group> [count]`    | Add more blocks to existing group       |
+| `/wireless recover <group>`           | Recover lost/missing blocks in group    |
+| `/wireless setname <group> <newName>` | Rename a group                          |
+| `/wireless setcategory <group> <cat>` | Assign group to a category (or 'none')  |
+| `/wireless inspect [player]`          | Get a Circuit Analyser diagnostic tool  |
+| `/wireless gui [--all]`               | Open category selection GUI             |
+| `/wireless gui --nocategory`          | Open GUI without categories             |
+| `/wireless debug on\|off`             | Toggle sync debug messages              |
+| `/wireless reload`                    | Reload configuration files (admin only) |
+
+### Optional Name & Category on Creation
+
+When creating bulbs, lamps, or chests, you can optionally specify a name and category:
+
+```bash
+# Create bulbs with a custom name
+/wireless bulbs 4 --name=Kitchen
+
+# Create lamps with name and assign to a category
+/wireless lamps 3 --name="Living Room" --category=Lights
+
+# Create chests with a category (category must exist)
+/wireless chests 4 --shulker --category=Storage
+```
 
 ### Bulb Variants
 
@@ -166,11 +184,23 @@ All commands use `/wireless` (or `/wr` alias).
 # Recover lost blocks (e.g., if you placed 4, broke 2, they show as "not placed")
 /wireless recover MyGroup
 
+# Rename a group
+/wireless setname MyGroup "Living Room Lights"
+
+# Assign a group to a category
+/wireless setcategory MyGroup Lighting
+
+# Remove a group from its category
+/wireless setcategory MyGroup none
+
 # Get a Circuit Analyser to inspect wireless blocks
 /wireless inspect
 
 # Give a Circuit Analyser to another player (admin only)
 /wireless inspect Steve
+
+# Reload all configuration files (admin only)
+/wireless reload
 ```
 
 ---

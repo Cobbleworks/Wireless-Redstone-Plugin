@@ -74,7 +74,7 @@ public class WirelessRedstonePlugin extends JavaPlugin {
     private void registerCommands() {
         var command = getCommand("wireless");
         if (command != null) {
-            var wirelessCommand = new WirelessCommand(bulbManager, chestManager, categoryManager, debugManager);
+            var wirelessCommand = new WirelessCommand(this, bulbManager, chestManager, categoryManager, debugManager);
             command.setExecutor(wirelessCommand);
             command.setTabCompleter(wirelessCommand);
         }
@@ -125,5 +125,17 @@ public class WirelessRedstonePlugin extends JavaPlugin {
 
     public AnalyserWireViewTask getAnalyserWireViewTask() {
         return analyserWireViewTask;
+    }
+
+    /**
+     * Reloads all configuration data (bulbs, chests, categories).
+     * This clears existing data and reloads from disk.
+     */
+    public void reloadData() {
+        bulbManager.reloadData();
+        chestManager.reloadData();
+        categoryManager.reloadData();
+        wireViewManager.cleanupAll();
+        getLogger().info("WirelessRedstone configuration reloaded!");
     }
 }

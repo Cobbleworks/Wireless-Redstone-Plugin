@@ -24,6 +24,14 @@ public class CategoryManager {
         loadData();
     }
 
+    /**
+     * Reloads all category data from disk, clearing existing data first.
+     */
+    public void reloadData() {
+        categories.clear();
+        loadData();
+    }
+
     public UUID createCategory(UUID ownerUuid, String name) {
         UUID categoryId = UUID.randomUUID();
         Category category = new Category(categoryId, ownerUuid, name);
