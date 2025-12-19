@@ -54,6 +54,9 @@
   - All associated block locations (clickable to teleport)
   - Placed/total count status
   - Block-specific info (bulb state, container type)
+- **Mini WireView**: While held, nearby wireless blocks within 8 blocks glow with color-coded outlines
+  - Each group has a unique color for easy identification
+  - Works in both main hand and off hand
 
 ### 🔄 Block Recovery
 

@@ -16,6 +16,7 @@ import com.wirelessredstone.manager.LinkedBulbManager;
 import com.wirelessredstone.manager.LinkedChestManager;
 import com.wirelessredstone.manager.WireViewManager;
 import com.wirelessredstone.task.BulbSyncTask;
+import com.wirelessredstone.task.CircuitAnalyserTask;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
 
@@ -28,6 +29,7 @@ public class WirelessRedstonePlugin extends JavaPlugin {
     private WireViewManager wireViewManager;
     private DebugManager debugManager;
     private BukkitTask syncTask;
+    private CircuitAnalyserTask analyserTask;
 
     @Override
     public void onEnable() {
@@ -40,7 +42,7 @@ public class WirelessRedstonePlugin extends JavaPlugin {
 
         registerCommands();
         registerListeners();
-        startSyncTask();
+        startTasks();
 
         getLogger().info("WirelessRedstone has been enabled!");
     }
@@ -49,6 +51,10 @@ public class WirelessRedstonePlugin extends JavaPlugin {
     public void onDisable() {
         if (syncTask != null) {
             syncTask.cancel();
+        }
+        if (analyserTask != null) {
+            analyserTask.cleanupAll();
+            analyserTask.cancel();
         }
         if (wireViewManager != null) {
             wireViewManager.cleanupAll();
@@ -87,8 +93,10 @@ public class WirelessRedstonePlugin extends JavaPlugin {
         pluginManager.registerEvents(new CircuitAnalyserListener(bulbManager, chestManager, categoryManager), this);
     }
 
-    private void startSyncTask() {
+    private void startTasks() {
         syncTask = new BulbSyncTask(bulbManager, debugManager).runTaskTimer(this, 1L, 1L);
+        analyserTask = new CircuitAnalyserTask(this, bulbManager, chestManager);
+        analyserTask.runTaskTimer(this, 10L, 10L); // Run every 10 ticks (0.5 seconds)
     }
 
     public static WirelessRedstonePlugin getInstance() {
@@ -113,5 +121,9 @@ public class WirelessRedstonePlugin extends JavaPlugin {
 
     public DebugManager getDebugManager() {
         return debugManager;
+    }
+
+    public CircuitAnalyserTask getAnalyserTask() {
+        return analyserTask;
     }
 }

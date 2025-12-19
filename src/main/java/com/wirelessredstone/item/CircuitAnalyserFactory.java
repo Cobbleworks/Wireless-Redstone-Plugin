@@ -38,6 +38,12 @@ public class CircuitAnalyserFactory {
                         .append(Component.text("a wireless block to inspect it", NamedTextColor.GRAY))
                         .decoration(TextDecoration.ITALIC, false),
                 Component.empty(),
+                Component.text("While held: ", NamedTextColor.YELLOW)
+                        .append(Component.text("highlights nearby wireless", NamedTextColor.GRAY))
+                        .decoration(TextDecoration.ITALIC, false),
+                Component.text("blocks within 8 blocks", NamedTextColor.GRAY)
+                        .decoration(TextDecoration.ITALIC, false),
+                Component.empty(),
                 Component.text("Shows group info, category, and", NamedTextColor.DARK_GRAY)
                         .decoration(TextDecoration.ITALIC, false),
                 Component.text("all associated block locations", NamedTextColor.DARK_GRAY)

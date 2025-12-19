@@ -1,5 +1,6 @@
 package com.wirelessredstone.listener;
 
+import com.wirelessredstone.WirelessRedstonePlugin;
 import com.wirelessredstone.item.CircuitAnalyserFactory;
 import com.wirelessredstone.manager.CategoryManager;
 import com.wirelessredstone.manager.LinkedBulbManager;
@@ -24,6 +25,7 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.EquipmentSlot;
 
 import java.util.List;
@@ -200,5 +202,14 @@ public class CircuitAnalyserListener implements Listener {
         player.sendMessage(Component.empty());
         player.sendMessage(Component.text("═══════════════════════════════", NamedTextColor.DARK_GRAY));
         player.sendMessage(Component.empty());
+    }
+
+    @EventHandler
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        // Clean up analyser glow entities when player leaves
+        var analyserTask = WirelessRedstonePlugin.getInstance().getAnalyserTask();
+        if (analyserTask != null) {
+            analyserTask.cleanupPlayer(event.getPlayer());
+        }
     }
 }
