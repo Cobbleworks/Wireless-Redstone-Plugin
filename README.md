@@ -41,7 +41,7 @@
 ### 🔍 Circuit Analyser
 
 - Diagnostic tool for inspecting wireless blocks
-- Get one with `/wireless inspect`
+- Get one with `/wireless tool inspect`
 - Right-click any wireless block to see:
   - Group name, ID, and category
   - Owner information
@@ -52,6 +52,24 @@
   - Each group has a unique color for easy identification
   - Works in both main hand and off hand
   - Effect automatically toggles on/off as you equip/unequip the item
+
+### 🔗 Connector Tool
+
+- Management tool for adding/removing blocks from groups
+- Get one with `/wireless tool connector <groupName>`
+- **Creation Mode**: If the group doesn't exist, creates a tool in "creation mode"
+  - Right-click ANY bulb/lamp/chest to create a new group of that type
+  - The group type is auto-detected from the first block you click
+  - Tool transforms into a regular connector tool after group creation
+- **Regular Mode** (for existing groups):
+  - **Right-click** on a matching bulb/lamp/chest to add it to the group
+  - Prioritizes unclaimed slots (A, B, C...) in the group
+  - Auto-extends the group if full (up to 26 max)
+  - Block type must match the group type (bulb group → bulbs/lamps only)
+- **Left-click** on a block belonging to the selected group to remove it
+  - Shrinks the group size automatically
+- Tool display name shows: `Connector Tool (GroupName)`
+- Particle effects provide visual feedback for add/remove actions
 
 ### 🔄 Block Recovery
 
@@ -99,20 +117,21 @@ The compiled JAR will be in `target/WirelessRedstone-1.0.0.jar`
 
 All commands use `/wireless` (or `/wr` alias).
 
-| Command                               | Description                             |
-| ------------------------------------- | --------------------------------------- |
-| `/wireless bulbs [count] [variant]`   | Get linked copper bulbs                 |
-| `/wireless lamps [count]`             | Get linked redstone lamps               |
-| `/wireless chests [count] [variant]`  | Get linked containers                   |
-| `/wireless append <group> [count]`    | Add more blocks to existing group       |
-| `/wireless recover <group>`           | Recover lost/missing blocks in group    |
-| `/wireless setname <group> <newName>` | Rename a group                          |
-| `/wireless setcategory <group> <cat>` | Assign group to a category (or 'none')  |
-| `/wireless inspect [player]`          | Get a Circuit Analyser diagnostic tool  |
-| `/wireless gui [--all]`               | Open category selection GUI             |
-| `/wireless gui --nocategory`          | Open GUI without categories             |
-| `/wireless debug on\|off`             | Toggle sync debug messages              |
-| `/wireless reload`                    | Reload configuration files (admin only) |
+| Command                               | Description                                 |
+| ------------------------------------- | ------------------------------------------- |
+| `/wireless bulbs [count] [variant]`   | Get linked copper bulbs                     |
+| `/wireless lamps [count]`             | Get linked redstone lamps                   |
+| `/wireless chests [count] [variant]`  | Get linked containers                       |
+| `/wireless append <group> [count]`    | Add more blocks to existing group           |
+| `/wireless recover <group>`           | Recover lost/missing blocks in group        |
+| `/wireless setname <group> <newName>` | Rename a group                              |
+| `/wireless setcategory <group> <cat>` | Assign group to a category (or 'none')      |
+| `/wireless tool inspect [player]`     | Get a Circuit Analyser diagnostic tool      |
+| `/wireless tool connector <group>`    | Get a Connector Tool (creates group if new) |
+| `/wireless gui [--all]`               | Open category selection GUI                 |
+| `/wireless gui --nocategory`          | Open GUI without categories                 |
+| `/wireless debug on\|off`             | Toggle sync debug messages                  |
+| `/wireless reload`                    | Reload configuration files (admin only)     |
 
 ### Optional Name & Category on Creation
 
@@ -194,10 +213,20 @@ When creating bulbs, lamps, or chests, you can optionally specify a name and cat
 /wireless setcategory MyGroup none
 
 # Get a Circuit Analyser to inspect wireless blocks
-/wireless inspect
+/wireless tool inspect
 
 # Give a Circuit Analyser to another player (admin only)
-/wireless inspect Steve
+/wireless tool inspect Steve
+
+# Get a Connector Tool to add/remove blocks from a group
+/wireless tool connector MyGroup
+
+# Connector tool with quoted group name (for names with spaces)
+/wireless tool connector "Living Room Lights"
+
+# Get a Connector Tool in creation mode (group doesn't exist yet)
+# First block you right-click will determine the group type and create it
+/wireless tool connector "New Kitchen Lights"
 
 # Reload all configuration files (admin only)
 /wireless reload

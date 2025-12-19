@@ -1,5 +1,6 @@
 package com.wirelessredstone.util;
 
+import com.wirelessredstone.item.BulbVariant;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 
@@ -34,5 +35,20 @@ public class BulbUtils {
 
     public static boolean isWirelessCompatibleBlock(Material type) {
         return isCopperBulb(type) || isRedstoneLamp(type);
+    }
+
+    /**
+     * Gets the BulbType for a given material.
+     * @return The BulbType, or null if the material is not a valid bulb/lamp.
+     */
+    public static BulbVariant.BulbType getBulbTypeFromMaterial(Material material) {
+        return switch (material) {
+            case COPPER_BULB, WAXED_COPPER_BULB,
+                 EXPOSED_COPPER_BULB, WAXED_EXPOSED_COPPER_BULB,
+                 WEATHERED_COPPER_BULB, WAXED_WEATHERED_COPPER_BULB,
+                 OXIDIZED_COPPER_BULB, WAXED_OXIDIZED_COPPER_BULB -> BulbVariant.BulbType.COPPER_BULB;
+            case REDSTONE_LAMP -> BulbVariant.BulbType.REDSTONE_LAMP;
+            default -> null;
+        };
     }
 }

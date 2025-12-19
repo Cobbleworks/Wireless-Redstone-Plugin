@@ -6,6 +6,7 @@ import com.wirelessredstone.gui.CategorySelectionGUI;
 import com.wirelessredstone.item.BulbVariant;
 import com.wirelessredstone.item.ChestVariant;
 import com.wirelessredstone.item.CircuitAnalyserFactory;
+import com.wirelessredstone.item.ConnectorToolFactory;
 import com.wirelessredstone.item.WirelessBulbFactory;
 import com.wirelessredstone.item.WirelessChestFactory;
 import com.wirelessredstone.manager.CategoryManager;
@@ -148,7 +149,7 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
             case "chests" -> handleChestsCommand(player, parsedArgs);
             case "append", "extend" -> handleAppendCommand(player, parsedArgs);
             case "recover", "reclaim" -> handleRecoverCommand(player, parsedArgs);
-            case "inspect" -> handleInspectCommand(player, parsedArgs);
+            case "tool" -> handleToolCommand(player, parsedArgs);
             case "gui", "manage", "list" -> handleGUICommand(player, parsedArgs);
             case "debug" -> handleDebugCommand(player, parsedArgs);
             case "reload" -> handleReloadCommand(player);
@@ -426,6 +427,29 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
         }
     }
 
+    private void handleToolCommand(Player player, String[] args) {
+        if (args.length < 2) {
+            player.sendMessage(Component.text("Usage: /wireless tool <inspect|connector>", NamedTextColor.RED));
+            player.sendMessage(Component.text("/wireless tool inspect [player]", NamedTextColor.GRAY)
+                    .append(Component.text(" - Get a Circuit Analyser", NamedTextColor.DARK_GRAY)));
+            player.sendMessage(Component.text("/wireless tool connector <groupName>", NamedTextColor.GRAY)
+                    .append(Component.text(" - Get a Connector Tool", NamedTextColor.DARK_GRAY)));
+            return;
+        }
+
+        String toolType = args[1].toLowerCase();
+        String[] subArgs = java.util.Arrays.copyOfRange(args, 1, args.length);
+
+        switch (toolType) {
+            case "inspect", "analyser", "analyzer" -> handleInspectCommand(player, subArgs);
+            case "connector", "connect" -> handleConnectorCommand(player, subArgs);
+            default -> {
+                player.sendMessage(Component.text("Unknown tool type: " + toolType, NamedTextColor.RED));
+                player.sendMessage(Component.text("Available tools: inspect, connector", NamedTextColor.GRAY));
+            }
+        }
+    }
+
     private void handleInspectCommand(Player player, String[] args) {
         Player target = player;
         
@@ -462,6 +486,68 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
                     .append(Component.text("Circuit Analyser", NamedTextColor.LIGHT_PURPLE))
                     .append(Component.text(" from ", NamedTextColor.GREEN))
                     .append(Component.text(player.getName(), NamedTextColor.AQUA)));
+        }
+    }
+
+    private void handleConnectorCommand(Player player, String[] args) {
+        if (args.length < 2) {
+            player.sendMessage(Component.text("Usage: /wireless tool connector <groupName>", NamedTextColor.RED));
+            player.sendMessage(Component.text("Example: /wireless tool connector \"My Lamps\"", NamedTextColor.GRAY));
+            player.sendMessage(Component.text("If the group doesn't exist, a creation-mode tool will be given.", NamedTextColor.GRAY));
+            return;
+        }
+
+        String groupName = args[1];
+
+        // Search for bulb group first, then chest group
+        Optional<BulbGroup> bulbGroupOpt = findBulbGroupByName(player, groupName);
+        Optional<ChestGroup> chestGroupOpt = findChestGroupByName(player, groupName);
+
+        if (bulbGroupOpt.isPresent()) {
+            BulbGroup group = bulbGroupOpt.get();
+            ItemStack tool = ConnectorToolFactory.createConnectorTool(
+                    group.getGroupId(), 
+                    group.getDisplayName(), 
+                    ConnectorToolFactory.GroupType.BULB
+            );
+            giveItemToPlayer(player, tool);
+            player.sendMessage(Component.text("You received a ", NamedTextColor.GREEN)
+                    .append(Component.text("Connector Tool", NamedTextColor.GREEN).decorate(net.kyori.adventure.text.format.TextDecoration.BOLD))
+                    .append(Component.text(" for group ", NamedTextColor.GREEN))
+                    .append(Component.text(group.getDisplayName(), NamedTextColor.AQUA)));
+            player.sendMessage(Component.text("Right-click bulbs/lamps to add, Left-click to remove.", NamedTextColor.GRAY));
+        } else if (chestGroupOpt.isPresent()) {
+            ChestGroup group = chestGroupOpt.get();
+            ItemStack tool = ConnectorToolFactory.createConnectorTool(
+                    group.getGroupId(), 
+                    group.getDisplayName(), 
+                    ConnectorToolFactory.GroupType.CHEST
+            );
+            giveItemToPlayer(player, tool);
+            player.sendMessage(Component.text("You received a ", NamedTextColor.GREEN)
+                    .append(Component.text("Connector Tool", NamedTextColor.GREEN).decorate(net.kyori.adventure.text.format.TextDecoration.BOLD))
+                    .append(Component.text(" for group ", NamedTextColor.GREEN))
+                    .append(Component.text(group.getDisplayName(), NamedTextColor.GOLD)));
+            player.sendMessage(Component.text("Right-click containers to add, Left-click to remove.", NamedTextColor.GRAY));
+        } else {
+            // No group found - create a creation-mode tool
+            ItemStack tool = ConnectorToolFactory.createCreationModeConnectorTool(groupName);
+            giveItemToPlayer(player, tool);
+            player.sendMessage(Component.text("You received a ", NamedTextColor.GREEN)
+                    .append(Component.text("Connector Tool", NamedTextColor.GREEN).decorate(net.kyori.adventure.text.format.TextDecoration.BOLD))
+                    .append(Component.text(" in ", NamedTextColor.GREEN))
+                    .append(Component.text("creation mode", NamedTextColor.LIGHT_PURPLE)));
+            player.sendMessage(Component.text("Right-click a bulb, lamp, or chest to create group \"", NamedTextColor.GRAY)
+                    .append(Component.text(groupName, NamedTextColor.LIGHT_PURPLE))
+                    .append(Component.text("\".", NamedTextColor.GRAY)));
+        }
+    }
+
+    private void giveItemToPlayer(Player player, ItemStack item) {
+        if (player.getInventory().firstEmpty() != -1) {
+            player.getInventory().addItem(item);
+        } else {
+            player.getWorld().dropItemNaturally(player.getLocation(), item);
         }
     }
 
@@ -699,8 +785,10 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
                 .append(Component.text(" - Rename a group", NamedTextColor.GRAY)));
         player.sendMessage(Component.text("/wireless setcategory <groupName> <categoryName>", NamedTextColor.YELLOW)
                 .append(Component.text(" - Assign a group to a category", NamedTextColor.GRAY)));
-        player.sendMessage(Component.text("/wireless inspect [player]", NamedTextColor.YELLOW)
+        player.sendMessage(Component.text("/wireless tool inspect [player]", NamedTextColor.YELLOW)
                 .append(Component.text(" - Get a Circuit Analyser tool", NamedTextColor.GRAY)));
+        player.sendMessage(Component.text("/wireless tool connector <groupName>", NamedTextColor.YELLOW)
+                .append(Component.text(" - Get a Connector Tool (creates group if new)", NamedTextColor.GRAY)));
         player.sendMessage(Component.text("/wireless gui [--all]", NamedTextColor.YELLOW)
                 .append(Component.text(" - Open management GUI", NamedTextColor.GRAY)));
         player.sendMessage(Component.text("/wireless debug on|off", NamedTextColor.YELLOW)
@@ -769,7 +857,7 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
 
         if (args.length == 1) {
             String input = args[0].toLowerCase();
-            List<String> subCommands = new ArrayList<>(List.of("bulbs", "lamps", "chests", "append", "extend", "recover", "reclaim", "inspect", "gui", "manage", "list", "debug", "setname", "rename", "setcategory"));
+            List<String> subCommands = new ArrayList<>(List.of("bulbs", "lamps", "chests", "append", "extend", "recover", "reclaim", "tool", "gui", "manage", "list", "debug", "setname", "rename", "setcategory"));
             if (sender.hasPermission("wirelessredstone.admin")) {
                 subCommands.add("reload");
             }
@@ -885,13 +973,28 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
                         completions.add("none");
                     }
                 }
-            } else if (subCommand.equals("inspect")) {
-                if (args.length == 2 && sender.hasPermission("wirelessredstone.admin")) {
-                    // Suggest online player names
-                    for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
-                        if (onlinePlayer.getName().toLowerCase().startsWith(input)) {
-                            completions.add(onlinePlayer.getName());
+            } else if (subCommand.equals("tool")) {
+                if (args.length == 2) {
+                    // Suggest tool types
+                    for (String toolType : List.of("inspect", "connector")) {
+                        if (toolType.startsWith(input)) {
+                            completions.add(toolType);
                         }
+                    }
+                } else if (args.length == 3) {
+                    String toolType = args[1].toLowerCase();
+                    if (toolType.equals("inspect") || toolType.equals("analyser") || toolType.equals("analyzer")) {
+                        // Suggest online player names for inspect (admin only)
+                        if (sender.hasPermission("wirelessredstone.admin")) {
+                            for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
+                                if (onlinePlayer.getName().toLowerCase().startsWith(input)) {
+                                    completions.add(onlinePlayer.getName());
+                                }
+                            }
+                        }
+                    } else if ((toolType.equals("connector") || toolType.equals("connect")) && sender instanceof Player player) {
+                        // Suggest group names for connector
+                        addGroupNameCompletions(player, input, completions);
                     }
                 }
             } else if (subCommand.equals("debug")) {

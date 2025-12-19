@@ -152,6 +152,20 @@ public abstract class BaseGroup {
     }
 
     /**
+     * Removes an empty slot from the group, compacting it.
+     * If the slot at the given index is empty, it removes that slot.
+     * If the slot is not empty, it clears it first, then removes it.
+     * @param index The index of the slot to remove
+     * @return true if the slot was removed, false if index is invalid
+     */
+    public boolean removeSlot(int index) {
+        if (index < 0 || index >= maxSize || maxSize <= 1) return false;
+        locations.remove(index);
+        maxSize--;
+        return true;
+    }
+
+    /**
      * Gets the display label for a group index (A-Z).
      */
     public static String getIndexLabel(int index) {
