@@ -5,12 +5,13 @@ import com.wirelessredstone.gui.CategorySelectionGUI;
 import com.wirelessredstone.manager.CategoryManager;
 import com.wirelessredstone.manager.LinkedBulbManager;
 import com.wirelessredstone.manager.LinkedChestManager;
+import io.papermc.paper.event.player.AsyncChatEvent;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 
 public class GUIListener implements Listener {
@@ -55,12 +56,12 @@ public class GUIListener implements Listener {
     }
 
     @EventHandler
-    public void onPlayerChat(AsyncPlayerChatEvent event) {
+    public void onPlayerChat(AsyncChatEvent event) {
         Player player = event.getPlayer();
         
         if (BulbManagerGUI.hasPendingRename(player.getUniqueId())) {
             event.setCancelled(true);
-            String message = event.getMessage();
+            String message = PlainTextComponentSerializer.plainText().serialize(event.message());
             
             player.getServer().getScheduler().runTask(
                 player.getServer().getPluginManager().getPlugin("WirelessRedstone"),
@@ -71,7 +72,7 @@ public class GUIListener implements Listener {
 
         if (BulbManagerGUI.hasPendingCategoryChange(player.getUniqueId())) {
             event.setCancelled(true);
-            String message = event.getMessage();
+            String message = PlainTextComponentSerializer.plainText().serialize(event.message());
             
             player.getServer().getScheduler().runTask(
                 player.getServer().getPluginManager().getPlugin("WirelessRedstone"),
@@ -82,7 +83,7 @@ public class GUIListener implements Listener {
 
         if (CategorySelectionGUI.hasPendingAction(player.getUniqueId())) {
             event.setCancelled(true);
-            String message = event.getMessage();
+            String message = PlainTextComponentSerializer.plainText().serialize(event.message());
             
             player.getServer().getScheduler().runTask(
                 player.getServer().getPluginManager().getPlugin("WirelessRedstone"),

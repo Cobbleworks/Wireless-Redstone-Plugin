@@ -9,6 +9,7 @@ import com.wirelessredstone.item.CircuitAnalyserFactory;
 import com.wirelessredstone.item.ConnectorToolFactory;
 import com.wirelessredstone.item.WirelessBulbFactory;
 import com.wirelessredstone.item.WirelessChestFactory;
+import com.wirelessredstone.listener.CircuitAnalyserListener;
 import com.wirelessredstone.manager.CategoryManager;
 import com.wirelessredstone.manager.DebugManager;
 import com.wirelessredstone.manager.LinkedBulbManager;
@@ -155,6 +156,8 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
             case "reload" -> handleReloadCommand(player);
             case "setname", "rename" -> handleSetNameCommand(player, parsedArgs);
             case "setcategory" -> handleSetCategoryCommand(player, parsedArgs);
+            case "analyser-rename" -> handleAnalyserRenameCommand(player, parsedArgs);
+            case "analyser-category" -> handleAnalyserCategoryCommand(player, parsedArgs);
             default -> {
                 player.sendMessage(Component.text("Unknown subcommand.", NamedTextColor.RED));
                 sendUsage(player);
@@ -744,6 +747,42 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
                 .append(Component.text(group.getDisplayName(), NamedTextColor.AQUA))
                 .append(Component.text(" to category ", NamedTextColor.GREEN))
                 .append(Component.text(category.getName(), NamedTextColor.YELLOW)));
+    }
+
+    /**
+     * Handles the analyser-rename command triggered from the circuit analyser report.
+     * This initiates a chat input capture for renaming a group.
+     */
+    private void handleAnalyserRenameCommand(Player player, String[] args) {
+        if (args.length < 3) {
+            return; // Silent fail - this is an internal command
+        }
+
+        try {
+            UUID groupId = UUID.fromString(args[1]);
+            boolean isBulbGroup = args[2].equalsIgnoreCase("bulb");
+            CircuitAnalyserListener.initiateRename(player, groupId, isBulbGroup);
+        } catch (IllegalArgumentException e) {
+            // Invalid UUID - silent fail
+        }
+    }
+
+    /**
+     * Handles the analyser-category command triggered from the circuit analyser report.
+     * This initiates a chat input capture for changing a group's category.
+     */
+    private void handleAnalyserCategoryCommand(Player player, String[] args) {
+        if (args.length < 3) {
+            return; // Silent fail - this is an internal command
+        }
+
+        try {
+            UUID groupId = UUID.fromString(args[1]);
+            boolean isBulbGroup = args[2].equalsIgnoreCase("bulb");
+            CircuitAnalyserListener.initiateCategoryChange(player, groupId, isBulbGroup, categoryManager);
+        } catch (IllegalArgumentException e) {
+            // Invalid UUID - silent fail
+        }
     }
 
     private Optional<Category> findCategoryByName(Player player, String name) {

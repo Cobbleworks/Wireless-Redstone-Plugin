@@ -1,6 +1,7 @@
 package com.wirelessredstone.manager;
 
 import com.wirelessredstone.WirelessRedstonePlugin;
+import com.wirelessredstone.model.BaseGroup;
 import com.wirelessredstone.model.BulbGroup;
 import com.wirelessredstone.model.ChestGroup;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -24,9 +25,11 @@ public class WireViewManager {
     private final LinkedChestManager chestManager;
     private final Set<UUID> playersWithWireView = ConcurrentHashMap.newKeySet();
     private final Map<UUID, Set<UUID>> playerGlowEntities = new ConcurrentHashMap<>();
+    private final Map<UUID, UUID> playerSingleGroupView = new ConcurrentHashMap<>();
 
     private static final String WIREVIEW_TEAM_PREFIX = "wv_";
     private static final String WIREVIEW_CHEST_TEAM_PREFIX = "wvc_";
+    private static final String WIREVIEW_SINGLE_TEAM = "wv_single";
 
     public WireViewManager(WirelessRedstonePlugin plugin, LinkedBulbManager bulbManager, LinkedChestManager chestManager) {
         this.plugin = plugin;
@@ -186,18 +189,21 @@ public class WireViewManager {
 
     public void cleanupPlayer(Player player) {
         disableWireView(player);
+        disableSingleGroupView(player);
     }
 
     public void cleanupAll() {
         for (var world : plugin.getServer().getWorlds()) {
             for (Entity entity : world.getEntities()) {
-                if (entity.getScoreboardTags().contains("wireview_glow")) {
+                if (entity.getScoreboardTags().contains("wireview_glow") 
+                        || entity.getScoreboardTags().contains("wireview_single_glow")) {
                     entity.remove();
                 }
             }
         }
         playersWithWireView.clear();
         playerGlowEntities.clear();
+        playerSingleGroupView.clear();
     }
 
     public void refreshAllPlayers() {
@@ -205,6 +211,146 @@ public class WireViewManager {
             Player player = plugin.getServer().getPlayer(playerId);
             if (player != null && player.isOnline()) {
                 refreshGlowingEntities(player);
+            }
+        }
+    }
+
+    /**
+     * Enables wire view for a single specific group.
+     * Used by the Connector Tool to show only the group being edited.
+     */
+    public void enableSingleGroupView(Player player, UUID groupId, boolean isBulbGroup) {
+        UUID playerId = player.getUniqueId();
+        UUID existingGroupId = playerSingleGroupView.get(playerId);
+        
+        if (groupId.equals(existingGroupId)) {
+            return;
+        }
+        
+        disableSingleGroupView(player);
+        playerSingleGroupView.put(playerId, groupId);
+        refreshSingleGroupGlow(player, groupId, isBulbGroup);
+    }
+
+    /**
+     * Disables the single group wire view for a player.
+     */
+    public void disableSingleGroupView(Player player) {
+        UUID playerId = player.getUniqueId();
+        if (!playerSingleGroupView.containsKey(playerId)) return;
+        
+        playerSingleGroupView.remove(playerId);
+        removeSingleGroupGlowEntities(player);
+    }
+
+    /**
+     * Checks if a player has single group view enabled.
+     */
+    public boolean hasSingleGroupViewEnabled(Player player) {
+        return playerSingleGroupView.containsKey(player.getUniqueId());
+    }
+
+    /**
+     * Gets the group ID of the single group view for a player.
+     */
+    public UUID getSingleGroupViewId(Player player) {
+        return playerSingleGroupView.get(player.getUniqueId());
+    }
+
+    private void refreshSingleGroupGlow(Player player, UUID groupId, boolean isBulbGroup) {
+        Set<UUID> entityIds = ConcurrentHashMap.newKeySet();
+        String tagSuffix = "_single_" + player.getUniqueId();
+        
+        Scoreboard scoreboard = player.getScoreboard();
+        String teamName = WIREVIEW_SINGLE_TEAM + "_" + player.getUniqueId().toString().substring(0, 8);
+        Team team = scoreboard.getTeam(teamName);
+        if (team == null) {
+            team = scoreboard.registerNewTeam(teamName);
+        }
+        team.color(isBulbGroup ? NamedTextColor.AQUA : NamedTextColor.GOLD);
+
+        BaseGroup group = isBulbGroup 
+            ? bulbManager.getGroupById(groupId).orElse(null)
+            : chestManager.getGroupById(groupId).orElse(null);
+        
+        if (group == null) return;
+
+        for (Location loc : group.getPlacedLocations()) {
+            Entity entity = spawnSingleGroupGlowEntity(loc, player, team, tagSuffix);
+            if (entity != null) {
+                entityIds.add(entity.getUniqueId());
+            }
+        }
+    }
+
+    private Entity spawnSingleGroupGlowEntity(Location blockLocation, Player player, Team team, String tagSuffix) {
+        if (blockLocation.getWorld() == null) return null;
+
+        Location spawnLoc = blockLocation.clone().add(0.5, 0, 0.5);
+
+        Shulker shulker = (Shulker) blockLocation.getWorld().spawnEntity(spawnLoc, EntityType.SHULKER);
+        shulker.setAI(false);
+        shulker.setInvulnerable(true);
+        shulker.setSilent(true);
+        shulker.setGravity(false);
+        shulker.setInvisible(true);
+        shulker.setGlowing(true);
+        shulker.setPersistent(false);
+        shulker.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, Integer.MAX_VALUE, 0, false, false));
+
+        shulker.addScoreboardTag("wireview_single_glow");
+        shulker.addScoreboardTag("wireview_single" + tagSuffix);
+
+        if (team != null) {
+            team.addEntity(shulker);
+        }
+
+        return shulker;
+    }
+
+    private void removeSingleGroupGlowEntities(Player player) {
+        UUID playerId = player.getUniqueId();
+        String tagSuffix = "_single_" + playerId;
+
+        for (var world : plugin.getServer().getWorlds()) {
+            for (Entity entity : world.getEntities()) {
+                if (entity.getScoreboardTags().contains("wireview_single" + tagSuffix)) {
+                    entity.remove();
+                }
+            }
+        }
+
+        Scoreboard scoreboard = player.getScoreboard();
+        String teamName = WIREVIEW_SINGLE_TEAM + "_" + playerId.toString().substring(0, 8);
+        Team team = scoreboard.getTeam(teamName);
+        if (team != null) {
+            team.unregister();
+        }
+    }
+
+    /**
+     * Refreshes the single group view for a player (e.g., after a block is added/removed).
+     */
+    public void refreshSingleGroupView(Player player) {
+        UUID playerId = player.getUniqueId();
+        UUID groupId = playerSingleGroupView.get(playerId);
+        if (groupId == null) return;
+        
+        boolean isBulbGroup = bulbManager.getGroupById(groupId).isPresent();
+        removeSingleGroupGlowEntities(player);
+        refreshSingleGroupGlow(player, groupId, isBulbGroup);
+    }
+
+    /**
+     * Refreshes single group view for all players viewing a specific group.
+     */
+    public void refreshSingleGroupViewForGroup(UUID groupId) {
+        for (Map.Entry<UUID, UUID> entry : playerSingleGroupView.entrySet()) {
+            if (groupId.equals(entry.getValue())) {
+                Player player = plugin.getServer().getPlayer(entry.getKey());
+                if (player != null && player.isOnline()) {
+                    refreshSingleGroupView(player);
+                }
             }
         }
     }

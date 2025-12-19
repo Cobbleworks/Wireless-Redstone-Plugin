@@ -1,5 +1,6 @@
 package com.wirelessredstone.listener;
 
+import com.wirelessredstone.WirelessRedstonePlugin;
 import com.wirelessredstone.item.BulbVariant;
 import com.wirelessredstone.item.ChestVariant;
 import com.wirelessredstone.item.ConnectorToolFactory;
@@ -254,6 +255,9 @@ public class ConnectorToolListener implements Listener {
                 .append(Component.text(" at slot ", NamedTextColor.GREEN))
                 .append(Component.text(String.valueOf(slotLabel), NamedTextColor.YELLOW))
                 .append(Component.text(" (" + group.getPlacedCount() + "/" + group.getMaxSize() + ")", NamedTextColor.GRAY)));
+
+        // Refresh wire view for players viewing this group
+        WirelessRedstonePlugin.getInstance().getWireViewManager().refreshSingleGroupViewForGroup(groupId);
     }
 
     private void addChestToGroup(Player player, Location location, Block block, UUID groupId) {
@@ -334,6 +338,9 @@ public class ConnectorToolListener implements Listener {
                 .append(Component.text(" at slot ", NamedTextColor.GREEN))
                 .append(Component.text(String.valueOf(slotLabel), NamedTextColor.YELLOW))
                 .append(Component.text(" (" + group.getPlacedCount() + "/" + group.getMaxSize() + ")", NamedTextColor.GRAY)));
+
+        // Refresh wire view for players viewing this group
+        WirelessRedstonePlugin.getInstance().getWireViewManager().refreshSingleGroupViewForGroup(groupId);
     }
 
     private void removeBulbFromGroup(Player player, Location location, UUID groupId) {
@@ -369,6 +376,9 @@ public class ConnectorToolListener implements Listener {
                 .append(Component.text(" (was slot ", NamedTextColor.GREEN))
                 .append(Component.text(String.valueOf(slotLabel), NamedTextColor.YELLOW))
                 .append(Component.text(", group now has " + group.getMaxSize() + " slots)", NamedTextColor.GRAY)));
+
+        // Refresh wire view for players viewing this group
+        WirelessRedstonePlugin.getInstance().getWireViewManager().refreshSingleGroupViewForGroup(groupId);
     }
 
     private void removeChestFromGroup(Player player, Location location, UUID groupId) {
@@ -404,6 +414,9 @@ public class ConnectorToolListener implements Listener {
                 .append(Component.text(" (was slot ", NamedTextColor.GREEN))
                 .append(Component.text(String.valueOf(slotLabel), NamedTextColor.YELLOW))
                 .append(Component.text(", group now has " + group.getMaxSize() + " slots)", NamedTextColor.GRAY)));
+
+        // Refresh wire view for players viewing this group
+        WirelessRedstonePlugin.getInstance().getWireViewManager().refreshSingleGroupViewForGroup(groupId);
     }
 
     private ChestVariant.ContainerType getContainerTypeFromMaterial(Material material) {
