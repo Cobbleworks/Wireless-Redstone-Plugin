@@ -206,8 +206,8 @@ public class CircuitAnalyserListener implements Listener {
 
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
-        // Clean up analyser glow entities when player leaves
-        var analyserTask = WirelessRedstonePlugin.getInstance().getAnalyserTask();
+        // Clean up analyser wireview when player leaves
+        var analyserTask = WirelessRedstonePlugin.getInstance().getAnalyserWireViewTask();
         if (analyserTask != null) {
             analyserTask.cleanupPlayer(event.getPlayer());
         }

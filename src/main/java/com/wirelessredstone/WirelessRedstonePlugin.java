@@ -15,8 +15,8 @@ import com.wirelessredstone.manager.DebugManager;
 import com.wirelessredstone.manager.LinkedBulbManager;
 import com.wirelessredstone.manager.LinkedChestManager;
 import com.wirelessredstone.manager.WireViewManager;
+import com.wirelessredstone.task.AnalyserWireViewTask;
 import com.wirelessredstone.task.BulbSyncTask;
-import com.wirelessredstone.task.CircuitAnalyserTask;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
 
@@ -29,7 +29,7 @@ public class WirelessRedstonePlugin extends JavaPlugin {
     private WireViewManager wireViewManager;
     private DebugManager debugManager;
     private BukkitTask syncTask;
-    private CircuitAnalyserTask analyserTask;
+    private AnalyserWireViewTask analyserWireViewTask;
 
     @Override
     public void onEnable() {
@@ -52,9 +52,9 @@ public class WirelessRedstonePlugin extends JavaPlugin {
         if (syncTask != null) {
             syncTask.cancel();
         }
-        if (analyserTask != null) {
-            analyserTask.cleanupAll();
-            analyserTask.cancel();
+        if (analyserWireViewTask != null) {
+            analyserWireViewTask.cleanupAll();
+            analyserWireViewTask.cancel();
         }
         if (wireViewManager != null) {
             wireViewManager.cleanupAll();
@@ -74,7 +74,7 @@ public class WirelessRedstonePlugin extends JavaPlugin {
     private void registerCommands() {
         var command = getCommand("wireless");
         if (command != null) {
-            var wirelessCommand = new WirelessCommand(bulbManager, chestManager, categoryManager, wireViewManager, debugManager);
+            var wirelessCommand = new WirelessCommand(bulbManager, chestManager, categoryManager, debugManager);
             command.setExecutor(wirelessCommand);
             command.setTabCompleter(wirelessCommand);
         }
@@ -95,8 +95,8 @@ public class WirelessRedstonePlugin extends JavaPlugin {
 
     private void startTasks() {
         syncTask = new BulbSyncTask(bulbManager, debugManager).runTaskTimer(this, 1L, 1L);
-        analyserTask = new CircuitAnalyserTask(this, bulbManager, chestManager);
-        analyserTask.runTaskTimer(this, 10L, 10L); // Run every 10 ticks (0.5 seconds)
+        analyserWireViewTask = new AnalyserWireViewTask(this, wireViewManager);
+        analyserWireViewTask.runTaskTimer(this, 10L, 10L); // Run every 10 ticks (0.5 seconds)
     }
 
     public static WirelessRedstonePlugin getInstance() {
@@ -123,7 +123,7 @@ public class WirelessRedstonePlugin extends JavaPlugin {
         return debugManager;
     }
 
-    public CircuitAnalyserTask getAnalyserTask() {
-        return analyserTask;
+    public AnalyserWireViewTask getAnalyserWireViewTask() {
+        return analyserWireViewTask;
     }
 }

@@ -29,12 +29,6 @@
 - Real-time inventory synchronization across unlimited distance
 - Hopper-compatible for automation
 
-### 🎛️ WireView Mode
-
-- Toggle visual highlighting of all your wireless connections
-- Placed bulbs and containers glow with color-coded outlines
-- Each group has a unique color for easy identification
-
 ### 🖥️ Management GUI
 
 - Visual interface to manage all your wireless groups
@@ -54,9 +48,10 @@
   - All associated block locations (clickable to teleport)
   - Placed/total count status
   - Block-specific info (bulb state, container type)
-- **Mini WireView**: While held, nearby wireless blocks within 8 blocks glow with color-coded outlines
+- **WireView Mode**: While held, ALL wireless blocks glow with color-coded outlines
   - Each group has a unique color for easy identification
   - Works in both main hand and off hand
+  - Effect automatically toggles on/off as you equip/unequip the item
 
 ### 🔄 Block Recovery
 
@@ -114,7 +109,6 @@ All commands use `/wireless` (or `/wr` alias).
 | `/wireless inspect [player]`         | Get a Circuit Analyser diagnostic tool |
 | `/wireless gui [--all]`              | Open category selection GUI            |
 | `/wireless gui --nocategory`         | Open GUI without categories            |
-| `/wireless wireview`                 | Toggle connection highlighting         |
 | `/wireless debug on\|off`            | Toggle sync debug messages             |
 
 ### Bulb Variants
