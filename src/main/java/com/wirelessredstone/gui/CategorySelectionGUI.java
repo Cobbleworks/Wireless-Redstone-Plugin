@@ -128,8 +128,9 @@ public class CategorySelectionGUI implements InventoryHolder {
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
 
-        meta.displayName(Component.text("Category: " + category.getDisplayName(), NamedTextColor.GREEN)
-                .decoration(TextDecoration.ITALIC, false));
+        meta.displayName(Component.text(category.getDisplayName(), NamedTextColor.GREEN)
+                .decoration(TextDecoration.ITALIC, false)
+                .decoration(TextDecoration.BOLD, true));
 
         int bulbCount = countGroupsInCategory(category.getCategoryId(), true);
         int chestCount = countGroupsInCategory(category.getCategoryId(), false);

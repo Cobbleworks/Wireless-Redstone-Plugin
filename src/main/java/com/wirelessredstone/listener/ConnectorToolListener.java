@@ -25,6 +25,8 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -36,6 +38,10 @@ public class ConnectorToolListener implements Listener {
 
     private final LinkedBulbManager bulbManager;
     private final LinkedChestManager chestManager;
+    
+    // Cooldown to prevent duplicate event triggers
+    private final Map<UUID, Long> creationCooldowns = new HashMap<>();
+    private static final long COOLDOWN_MS = 250;
 
     public ConnectorToolListener(LinkedBulbManager bulbManager, LinkedChestManager chestManager) {
         this.bulbManager = bulbManager;
@@ -61,6 +67,14 @@ public class ConnectorToolListener implements Listener {
         // Check if this is a creation mode tool
         if (ConnectorToolFactory.isCreationMode(item)) {
             if (event.getAction() == Action.RIGHT_CLICK_BLOCK) {
+                // Check cooldown to prevent duplicate creation
+                long now = System.currentTimeMillis();
+                Long lastUse = creationCooldowns.get(player.getUniqueId());
+                if (lastUse != null && (now - lastUse) < COOLDOWN_MS) {
+                    return;
+                }
+                creationCooldowns.put(player.getUniqueId(), now);
+                
                 handleCreationModeAdd(player, location, block, item);
             } else if (event.getAction() == Action.LEFT_CLICK_BLOCK) {
                 player.sendMessage(Component.text("This tool is in creation mode. Right-click a block to create the group first.", NamedTextColor.YELLOW));

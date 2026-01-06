@@ -55,10 +55,10 @@ public class BulbManagerGUI implements InventoryHolder {
         String title = "Wireless Redstone Manager";
         if (categoryManager != null) {
             if (categoryId == null) {
-                title = "Uncategorized Groups";
+                title = "Uncategorized";
             } else {
                 title = categoryManager.getCategoryById(categoryId)
-                        .map(cat -> "Category: " + cat.getDisplayName())
+                        .map(Category::getDisplayName)
                         .orElse("Wireless Redstone Manager");
             }
         }
@@ -168,9 +168,9 @@ public class BulbManagerGUI implements InventoryHolder {
 
         String displayName = group.getDisplayName();
         NamedTextColor typeColor = group.getType() == GroupEntry.GroupType.BULB ? NamedTextColor.AQUA : NamedTextColor.GOLD;
-        String typePrefix = group.getType() == GroupEntry.GroupType.BULB ? "Bulb" : "Container";
-        meta.displayName(Component.text(typePrefix + " Group: " + displayName, typeColor)
-                .decoration(TextDecoration.ITALIC, false));
+        meta.displayName(Component.text(displayName, typeColor)
+                .decoration(TextDecoration.ITALIC, false)
+                .decoration(TextDecoration.BOLD, true));
 
         List<Component> lore = new ArrayList<>();
         lore.add(Component.empty());
@@ -392,27 +392,9 @@ public class BulbManagerGUI implements InventoryHolder {
     }
 
     private void handleChangeCategory(GroupEntry group) {
-        pendingCategoryChanges.put(player.getUniqueId(), group);
+        // Open the CategoryAssignmentGUI instead of using chat input
         player.closeInventory();
-        
-        List<Category> playerCategories = categoryManager.getCategoriesByOwner(player.getUniqueId());
-        
-        player.sendMessage(Component.text("Enter a category name or number (or 'cancel' to abort, 'none' for uncategorized):", NamedTextColor.YELLOW));
-        player.sendMessage(Component.text("Current category: " + 
-                (group.getCategoryId() != null ? 
-                        categoryManager.getCategoryById(group.getCategoryId()).map(Category::getDisplayName).orElse("Unknown") : 
-                        "Uncategorized"), NamedTextColor.GRAY));
-        player.sendMessage(Component.text("Your categories:", NamedTextColor.AQUA));
-        
-        int index = 1;
-        for (Category cat : playerCategories) {
-            player.sendMessage(Component.text("  " + index + ". " + cat.getDisplayName(), NamedTextColor.WHITE));
-            index++;
-        }
-        
-        if (playerCategories.isEmpty()) {
-            player.sendMessage(Component.text("  (No categories - create one first)", NamedTextColor.DARK_GRAY));
-        }
+        new CategoryAssignmentGUI(categoryManager, bulbManager, chestManager, player, group, categoryId).open();
     }
 
     private void handleSetIcon(GroupEntry group) {

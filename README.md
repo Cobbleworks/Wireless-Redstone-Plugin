@@ -41,7 +41,7 @@
 ### 🔍 Circuit Analyser
 
 - Diagnostic tool for inspecting wireless blocks
-- Get one with `/wireless tool inspect`
+- Get one with `/wireless inspect`
 - Right-click any wireless block to see:
   - Group name, ID, and category
   - Owner information
@@ -56,10 +56,11 @@
 ### 🔗 Connector Tool
 
 - Management tool for adding/removing blocks from groups
-- Get one with `/wireless tool connector <groupName>`
+- Get one with `/wireless create <groupName> [categoryName]`
 - **Creation Mode**: If the group doesn't exist, creates a tool in "creation mode"
   - Right-click ANY bulb/lamp/chest to create a new group of that type
   - The group type is auto-detected from the first block you click
+  - Optionally specify a category at creation time
   - Tool transforms into a regular connector tool after group creation
 - **Regular Mode** (for existing groups):
   - **Right-click** on a matching bulb/lamp/chest to add it to the group
@@ -117,21 +118,38 @@ The compiled JAR will be in `target/WirelessRedstone-1.0.0.jar`
 
 All commands use `/wireless` (or `/wr` alias).
 
+### Give Commands
+
+| Command                                   | Description               |
+| ----------------------------------------- | ------------------------- |
+| `/wireless give bulb [amount] [variant]`  | Get linked copper bulbs   |
+| `/wireless give lamp [amount]`            | Get linked redstone lamps |
+| `/wireless give chest [amount] [variant]` | Get linked containers     |
+
+### Tool Commands
+
 | Command                               | Description                                 |
 | ------------------------------------- | ------------------------------------------- |
-| `/wireless bulbs [count] [variant]`   | Get linked copper bulbs                     |
-| `/wireless lamps [count]`             | Get linked redstone lamps                   |
-| `/wireless chests [count] [variant]`  | Get linked containers                       |
-| `/wireless append <group> [count]`    | Add more blocks to existing group           |
-| `/wireless recover <group>`           | Recover lost/missing blocks in group        |
-| `/wireless setname <group> <newName>` | Rename a group                              |
-| `/wireless setcategory <group> <cat>` | Assign group to a category (or 'none')      |
-| `/wireless tool inspect [player]`     | Get a Circuit Analyser diagnostic tool      |
-| `/wireless tool connector <group>`    | Get a Connector Tool (creates group if new) |
-| `/wireless gui [--all]`               | Open category selection GUI                 |
-| `/wireless gui --nocategory`          | Open GUI without categories                 |
-| `/wireless debug on\|off`             | Toggle sync debug messages                  |
-| `/wireless reload`                    | Reload configuration files (admin only)     |
+| `/wireless create <group> [category]` | Get a Connector Tool (creates group if new) |
+| `/wireless inspect [player]`          | Get a Circuit Analyser diagnostic tool      |
+
+### Group Management
+
+| Command                                   | Description                            |
+| ----------------------------------------- | -------------------------------------- |
+| `/wireless modify name <group> <newName>` | Rename a group                         |
+| `/wireless modify category <group> <cat>` | Assign group to a category (or 'none') |
+| `/wireless append <group> [count]`        | Add more blocks to existing group      |
+| `/wireless recover <group>`               | Recover lost/missing blocks in group   |
+
+### Other Commands
+
+| Command                      | Description                             |
+| ---------------------------- | --------------------------------------- |
+| `/wireless gui [--all]`      | Open category selection GUI             |
+| `/wireless gui --nocategory` | Open GUI without categories             |
+| `/wireless debug on\|off`    | Toggle sync debug messages              |
+| `/wireless reload`           | Reload configuration files (admin only) |
 
 ### Optional Name & Category on Creation
 
@@ -139,13 +157,13 @@ When creating bulbs, lamps, or chests, you can optionally specify a name and cat
 
 ```bash
 # Create bulbs with a custom name
-/wireless bulbs 4 --name=Kitchen
+/wireless give bulb 4 --name=Kitchen
 
 # Create lamps with name and assign to a category
-/wireless lamps 3 --name="Living Room" --category=Lights
+/wireless give lamp 3 --name="Living Room" --category=Lights
 
 # Create chests with a category (category must exist)
-/wireless chests 4 --shulker --category=Storage
+/wireless give chest 4 --shulker --category=Storage
 ```
 
 ### Bulb Variants
@@ -177,56 +195,55 @@ When creating bulbs, lamps, or chests, you can optionally specify a name and cat
 
 ```bash
 # Get 2 linked copper bulbs
-/wireless bulbs
+/wireless give bulb
 
 # Get 4 linked oxidized copper bulbs
-/wireless bulbs 4 --oxidized
+/wireless give bulb 4 --oxidized
 
 # Get 3 linked redstone lamps
-/wireless lamps 3
+/wireless give lamp 3
 
 # Get 2 linked regular chests
-/wireless chests
+/wireless give chest
 
 # Get 4 linked cyan shulker boxes
-/wireless chests 4 --cyan
+/wireless give chest 4 --cyan
 
 # Get 2 linked copper chests
-/wireless chests 2 --copper
+/wireless give chest 2 --copper
 
 # Add 3 more bulbs to an existing group named "Kitchen"
 /wireless append Kitchen 3
 
-# Add 2 more blocks to a group (defaults to 2 if no count specified)
+# Add 2 more blocks to a group (defaults to 1 if no count specified)
 /wireless append "My Group"
 
 # Recover lost blocks (e.g., if you placed 4, broke 2, they show as "not placed")
 /wireless recover MyGroup
 
 # Rename a group
-/wireless setname MyGroup "Living Room Lights"
+/wireless modify name MyGroup "Living Room Lights"
 
 # Assign a group to a category
-/wireless setcategory MyGroup Lighting
+/wireless modify category MyGroup Lighting
 
 # Remove a group from its category
-/wireless setcategory MyGroup none
+/wireless modify category MyGroup none
 
 # Get a Circuit Analyser to inspect wireless blocks
-/wireless tool inspect
+/wireless inspect
 
 # Give a Circuit Analyser to another player (admin only)
-/wireless tool inspect Steve
+/wireless inspect Steve
 
 # Get a Connector Tool to add/remove blocks from a group
-/wireless tool connector MyGroup
+/wireless create MyGroup
+
+# Get a Connector Tool with a category pre-set (for new groups)
+/wireless create "New Kitchen Lights" Lighting
 
 # Connector tool with quoted group name (for names with spaces)
-/wireless tool connector "Living Room Lights"
-
-# Get a Connector Tool in creation mode (group doesn't exist yet)
-# First block you right-click will determine the group type and create it
-/wireless tool connector "New Kitchen Lights"
+/wireless create "Living Room Lights"
 
 # Reload all configuration files (admin only)
 /wireless reload
@@ -262,14 +279,14 @@ Open the GUI with `/wireless gui` to access the category selection screen.
 
 ### Group Management
 
-| Action                | Function                           |
-| --------------------- | ---------------------------------- |
-| **Left-click**        | Teleport to first placed block     |
-| **Right-click**       | Teleport to last placed block      |
-| **Middle-click**      | Rename the group                   |
-| **Q (Drop key)**      | Change group category              |
-| **Shift+Right-click** | Set custom icon (with held item)   |
-| **Shift+Left-click**  | Remove group and all placed blocks |
+| Action                | Function                              |
+| --------------------- | ------------------------------------- |
+| **Left-click**        | Teleport to first placed block        |
+| **Right-click**       | Teleport to last placed block         |
+| **Middle-click**      | Rename the group                      |
+| **Q (Drop key)**      | Open category selection GUI to assign |
+| **Shift+Right-click** | Set custom icon (with held item)      |
+| **Shift+Left-click**  | Remove group and all placed blocks    |
 
 Use the arrow buttons to navigate pages if you have many groups.
 

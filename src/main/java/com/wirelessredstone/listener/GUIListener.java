@@ -1,6 +1,7 @@
 package com.wirelessredstone.listener;
 
 import com.wirelessredstone.gui.BulbManagerGUI;
+import com.wirelessredstone.gui.CategoryAssignmentGUI;
 import com.wirelessredstone.gui.CategorySelectionGUI;
 import com.wirelessredstone.manager.CategoryManager;
 import com.wirelessredstone.manager.LinkedBulbManager;
@@ -52,6 +53,17 @@ public class GUIListener implements Listener {
             boolean isMiddleClick = event.getClick() == ClickType.MIDDLE;
 
             gui.handleClick(event.getSlot(), event.isRightClick(), event.isShiftClick(), isMiddleClick);
+            return;
+        }
+
+        if (event.getInventory().getHolder() instanceof CategoryAssignmentGUI gui) {
+            event.setCancelled(true);
+
+            if (event.getClickedInventory() != event.getInventory()) {
+                return;
+            }
+
+            gui.handleClick(event.getSlot());
         }
     }
 
