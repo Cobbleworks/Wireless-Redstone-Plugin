@@ -1,378 +1,91 @@
 # 📡 Wireless Redstone
 
-<p align="center">
-  <img src="assets/icon.png" alt="Wireless Redstone Banner" width="600">
+**Wirelessly link copper bulbs, redstone lamps, chests, and shulker boxes.** Syncs states and inventories across any distance.
+
+[![Paper](https://img.shields.io/badge/Paper-1.21.10+-blue)](https://papermc.io/) [![Java](https://img.shields.io/badge/Java-21+-orange)](https://adoptium.net/)
+
+<p align="left">
+  <img src="assets/icon.png" alt="Wireless Redstone Banner" width="200">
 </p>
 
-**Wireless Redstone** is a powerful Minecraft plugin for Paper servers that enables players to create groups of wirelessly linked blocks that synchronize their states across any distance. Link copper bulbs, redstone lamps, chests, shulker boxes, and even the new copper chests!
+---
 
-[![Paper](https://img.shields.io/badge/Paper-1.21.10+-blue)](https://papermc.io/)
-[![Java](https://img.shields.io/badge/Java-21+-orange)](https://adoptium.net/)
-[![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
+## 🚀 Quick Start
+
+1. Download from [Releases](../../releases) and place in `plugins/` folder
+2. Restart server
+3. Run `/wireless give bulb` or `/wireless give chest` to create your first group
+4. Place the items anywhere - they sync automatically!
 
 ---
 
-## ✨ Features
-
-### 🔆 Wireless Bulbs & Lamps
-
-- Create linked groups of **copper bulbs** or **redstone lamps** that sync their lit/unlit state
-- Support for **2-26 bulbs per group** (labeled A through Z)
-- All copper bulb oxidation stages: normal, exposed, weathered, and oxidized
-- Ambient particle effects show when bulbs are active
-
-### 📦 Wireless Containers
-
-- Create linked groups of **chests**, **shulker boxes**, or **copper chests** that share inventory
-- Support for **all 17 shulker box colors** plus regular chests
-- **8 copper chest variants**: normal, exposed, weathered, oxidized (+ waxed versions)
-- Real-time inventory synchronization across unlimited distance
-- Hopper-compatible for automation
-
-### 🖥️ Management GUI
-
-- Visual interface to manage all your wireless groups
-- **Category system** to organize groups (bulbs, lamps, containers)
-- Teleport to any placed bulb or container
-- Rename groups and categories with custom names
-- Set custom icons for groups and categories
-- Remove groups with one click (also removes all placed blocks)
+## 🔧 Core Tools
 
 ### 🔍 Circuit Analyser
-
-- Diagnostic tool for inspecting wireless blocks
-- Get one with `/wireless inspect`
-- Right-click any wireless block to see:
-  - Group name, ID, and category
-  - Owner information
-  - All associated block locations (clickable to teleport)
-  - Placed/total count status
-  - Block-specific info (bulb state, container type)
-- **WireView Mode**: While held, ALL wireless blocks glow with color-coded outlines
-  - Each group has a unique color for easy identification
-  - Works in both main hand and off hand
-  - Effect automatically toggles on/off as you equip/unequip the item
+Get with `/wireless inspect` - **Right-click any wireless block** to see group info, locations, and owner. **Hold it to see ALL wireless blocks glow** with color-coded outlines (each group has a unique color).
 
 ### 🔗 Connector Tool
+Get with `/wireless create <groupName>` - **Right-click blocks to add** them to the group, **left-click to remove**. Creates new groups automatically if they don't exist.
 
-- Management tool for adding/removing blocks from groups
-- Get one with `/wireless create <groupName> [categoryName]`
-- **Creation Mode**: If the group doesn't exist, creates a tool in "creation mode"
-  - Right-click ANY bulb/lamp/chest to create a new group of that type
-  - The group type is auto-detected from the first block you click
-  - Optionally specify a category at creation time
-  - Tool transforms into a regular connector tool after group creation
-- **Regular Mode** (for existing groups):
-  - **Right-click** on a matching bulb/lamp/chest to add it to the group
-  - Prioritizes unclaimed slots (A, B, C...) in the group
-  - Auto-extends the group if full (up to 26 max)
-  - Block type must match the group type (bulb group → bulbs/lamps only)
-- **Left-click** on a block belonging to the selected group to remove it
-  - Shrinks the group size automatically
-- Tool display name shows: `Connector Tool (GroupName)`
-- Particle effects provide visual feedback for add/remove actions
-
-### 🔄 Block Recovery
-
-- Recover lost or broken wireless blocks with `/wireless recover <group>`
-- If you placed blocks and later broke some, they show as "not placed" in the group
-- The recover command regenerates items for those missing slots
-- Maintains the same group ID and slot labels (A, B, C, etc.)
-
-### 💾 Persistence
-
-- All data saved automatically to YAML files
-- Survives server restarts and reloads
-- Automatic cleanup when groups are emptied
+### 🖥️ Management GUI
+Open with `/wireless gui` - **Teleport to blocks**, rename groups, organize into categories, set custom icons, and delete groups.
 
 ---
 
-## 📋 Requirements
+## 📋 All Commands
 
-- **Paper Server** 1.21.10 or higher
-- **Java 21** or higher
-- For copper chest support: Minecraft 1.21.10+
-
----
-
-## ⚙️ Installation
-
-1. Download the latest release JAR from [Releases](../../releases)
-2. Place the JAR in your server's `plugins` folder
-3. Restart your server
-4. Done! Use `/wireless` to get started
-
-### Building from Source
-
+### Creating Groups
 ```bash
-git clone https://github.com/yourusername/Wireless-Redstone.git
-cd Wireless-Redstone
-mvn clean package
+/wireless give bulb [amount] [--copper|--exposed|--weathered|--oxidized]
+/wireless give lamp [amount]
+/wireless give chest [amount] [--chest|--shulker|--cyan|--copper|etc.]
 ```
 
-The compiled JAR will be in `target/WirelessRedstone-1.0.0.jar`
+**Optional flags**: `--name="Group Name"` `--category=CategoryName`
 
----
-
-## 🔧 Commands
-
-All commands use `/wireless` (or `/wr` alias).
-
-### Give Commands
-
-| Command                                   | Description               |
-| ----------------------------------------- | ------------------------- |
-| `/wireless give bulb [amount] [variant]`  | Get linked copper bulbs   |
-| `/wireless give lamp [amount]`            | Get linked redstone lamps |
-| `/wireless give chest [amount] [variant]` | Get linked containers     |
-
-### Tool Commands
-
-| Command                               | Description                                 |
-| ------------------------------------- | ------------------------------------------- |
-| `/wireless create <group> [category]` | Get a Connector Tool (creates group if new) |
-| `/wireless inspect [player]`          | Get a Circuit Analyser diagnostic tool      |
-
-### Group Management
-
-| Command                                   | Description                            |
-| ----------------------------------------- | -------------------------------------- |
-| `/wireless modify name <group> <newName>` | Rename a group                         |
-| `/wireless modify category <group> <cat>` | Assign group to a category (or 'none') |
-| `/wireless append <group> [count]`        | Add more blocks to existing group      |
-| `/wireless recover <group>`               | Recover lost/missing blocks in group   |
-
-### Other Commands
-
-| Command                      | Description                             |
-| ---------------------------- | --------------------------------------- |
-| `/wireless gui [--all]`      | Open category selection GUI             |
-| `/wireless gui --nocategory` | Open GUI without categories             |
-| `/wireless debug on\|off`    | Toggle sync debug messages              |
-| `/wireless reload`           | Reload configuration files (admin only) |
-
-### Optional Name & Category on Creation
-
-When creating bulbs, lamps, or chests, you can optionally specify a name and category:
-
+### Tools
 ```bash
-# Create bulbs with a custom name
-/wireless give bulb 4 --name=Kitchen
-
-# Create lamps with name and assign to a category
-/wireless give lamp 3 --name="Living Room" --category=Lights
-
-# Create chests with a category (category must exist)
-/wireless give chest 4 --shulker --category=Storage
+/wireless inspect [player]          # Get Circuit Analyser
+/wireless create <group> [category] # Get Connector Tool
 ```
 
-### Bulb Variants
-
-| Variant       | Description           |
-| ------------- | --------------------- |
-| `--copper`    | Copper bulb (default) |
-| `--exposed`   | Exposed copper bulb   |
-| `--weathered` | Weathered copper bulb |
-| `--oxidized`  | Oxidized copper bulb  |
-
-### Container Variants
-
-| Variant                     | Description                           |
-| --------------------------- | ------------------------------------- |
-| `--chest`                   | Regular chest (default)               |
-| `--shulker`                 | Purple shulker box                    |
-| `--white`, `--orange`, etc. | Colored shulker boxes (all 16 colors) |
-| `--copper`                  | Copper chest                          |
-| `--copper-exposed`          | Exposed copper chest                  |
-| `--copper-weathered`        | Weathered copper chest                |
-| `--copper-oxidized`         | Oxidized copper chest                 |
-| `--copper-waxed`            | Waxed copper chest                    |
-| `--copper-exposed-waxed`    | Waxed exposed copper chest            |
-| `--copper-weathered-waxed`  | Waxed weathered copper chest          |
-| `--copper-oxidized-waxed`   | Waxed oxidized copper chest           |
-
-### Examples
-
+### Managing Groups
 ```bash
-# Get 2 linked copper bulbs
-/wireless give bulb
-
-# Get 4 linked oxidized copper bulbs
-/wireless give bulb 4 --oxidized
-
-# Get 3 linked redstone lamps
-/wireless give lamp 3
-
-# Get 2 linked regular chests
-/wireless give chest
-
-# Get 4 linked cyan shulker boxes
-/wireless give chest 4 --cyan
-
-# Get 2 linked copper chests
-/wireless give chest 2 --copper
-
-# Add 3 more bulbs to an existing group named "Kitchen"
-/wireless append Kitchen 3
-
-# Add 2 more blocks to a group (defaults to 1 if no count specified)
-/wireless append "My Group"
-
-# Recover lost blocks (e.g., if you placed 4, broke 2, they show as "not placed")
-/wireless recover MyGroup
-
-# Rename a group
-/wireless modify name MyGroup "Living Room Lights"
-
-# Assign a group to a category
-/wireless modify category MyGroup Lighting
-
-# Remove a group from its category
-/wireless modify category MyGroup none
-
-# Get a Circuit Analyser to inspect wireless blocks
-/wireless inspect
-
-# Give a Circuit Analyser to another player (admin only)
-/wireless inspect Steve
-
-# Get a Connector Tool to add/remove blocks from a group
-/wireless create MyGroup
-
-# Get a Connector Tool with a category pre-set (for new groups)
-/wireless create "New Kitchen Lights" Lighting
-
-# Connector tool with quoted group name (for names with spaces)
-/wireless create "Living Room Lights"
-
-# Reload all configuration files (admin only)
-/wireless reload
+/wireless gui [--all|--nocategory]           # Open GUI
+/wireless modify name <group> <newName>      # Rename group
+/wireless modify category <group> <category> # Assign to category
+/wireless append <group> [count]             # Add more blocks
+/wireless recover <group>                    # Recover lost blocks
+/wireless debug on|off                       # Toggle sync messages
+/wireless reload                             # Reload config (admin)
 ```
 
 ---
 
-## 🔐 Permissions
+## 🎮 GUI Controls
 
-| Permission                  | Description                    | Default |
-| --------------------------- | ------------------------------ | ------- |
-| `wirelessredstone.use`      | Use `/wireless` commands       | op      |
-| `wirelessredstone.teleport` | Teleport via GUI               | op      |
-| `wirelessredstone.remove`   | Remove groups via GUI          | op      |
-| `wirelessredstone.admin`    | Admin access (view all groups) | op      |
+### Category Screen
+- **Click** category to view groups
+- **Middle-click** to rename
+- **Shift+Right-click** to set icon (hold item)
+- **Shift+Left-click** to delete
 
----
-
-## 🖥️ GUI Controls
-
-Open the GUI with `/wireless gui` to access the category selection screen.
-
-### Category Selection
-
-| Action                   | Function                               |
-| ------------------------ | -------------------------------------- |
-| **Click category**       | View groups in that category           |
-| **Click Uncategorized**  | View groups without a category         |
-| **Click emerald button** | Create a new category                  |
-| **Middle-click**         | Rename the category                    |
-| **Shift+Right-click**    | Set category icon (with held item)     |
-| **Shift+Left-click**     | Delete category (moves groups to none) |
-
-### Group Management
-
-| Action                | Function                              |
-| --------------------- | ------------------------------------- |
-| **Left-click**        | Teleport to first placed block        |
-| **Right-click**       | Teleport to last placed block         |
-| **Middle-click**      | Rename the group                      |
-| **Q (Drop key)**      | Open category selection GUI to assign |
-| **Shift+Right-click** | Set custom icon (with held item)      |
-| **Shift+Left-click**  | Remove group and all placed blocks    |
-
-Use the arrow buttons to navigate pages if you have many groups.
+### Group Screen
+- **Left/Right-click** to teleport to first/last block
+- **Middle-click** to rename
+- **Q (Drop key)** to change category
+- **Shift+Right-click** to set icon (hold item)
+- **Shift+Left-click** to delete group
 
 ---
 
-## 📁 Data Storage
+## ✨ What It Does
 
-Data is stored in the `plugins/WirelessRedstone/` folder:
-
-- `bulbs.yml` - Wireless bulb/lamp group data
-- `chests.yml` - Wireless container group data
-- `categories.yml` - Category organization data
-
-Data includes group IDs, locations, ownership, custom names/icons, categories, and shared inventories.
-
----
-
-## 🔁 How It Works
-
-### Bulb Synchronization
-
-1. Create a group with `/wireless bulbs` or `/wireless lamps`
-2. Place the bulbs anywhere in the world
-3. When one bulb's state changes (powered/unpowered), all others sync automatically
-4. Chunks must be loaded for syncing to occur
-
-### Container Synchronization
-
-1. Create a group with `/wireless chests`
-2. Place the containers anywhere in the world
-3. Items added/removed from one container instantly appear in all others
-4. Breaking a container does NOT drop items (they remain in the shared inventory)
-5. Breaking the last container removes the shared inventory permanently
-
----
-
-## 💡 Tips & Notes
-
-- **Chunk Syncing**: Bulbs and containers automatically sync when their chunks are loaded - no manual intervention needed!
-- **Cross-Dimension**: Groups work across dimensions (Overworld, Nether, End)
-- **Waxed Bulbs**: Copper bulbs are automatically waxed to prevent oxidation changes
-- **Container Breaking**: Items stay in shared inventory when containers are broken
-- **Hopper Support**: Hoppers can interact with wireless containers and trigger syncs
-- **Debug Mode**: Use `/wireless debug on` to see sync messages near you
-
----
-
-## 🐛 Troubleshooting
-
-| Issue                      | Solution                                            |
-| -------------------------- | --------------------------------------------------- |
-| Bulbs not syncing          | Ensure all bulbs are placed, check debug mode       |
-| Containers not syncing     | Verify group exists in GUI, try reopening container |
-| GUI not working            | Check console for errors on startup                 |
-| Rename not working         | Chat plugins may intercept; type `cancel` to abort  |
-| Groups disappeared         | Check if world was renamed/removed                  |
-| Lost blocks after breaking | Use `/wireless recover <group>` to get them back    |
-| Analyser not working       | Right-click directly on the wireless block          |
-
----
-
-## 🛠️ For Developers
-
-### Building
-
-```bash
-mvn clean package
-```
-
-### Key Classes
-
-- `LinkedBulbManager` - Manages bulb groups and synchronization
-- `LinkedChestManager` - Manages container groups and inventory sync
-- `CategoryManager` - Manages category creation, renaming, and persistence
-- `WireViewManager` - Handles glowing entity visualization
-- `BulbSyncTask` - Tick-based bulb state synchronization
-
-### PDC Keys
-
-Items use `PersistentDataContainer` for metadata storage:
-
-- `wireless:wireless_bulb` / `wireless:wireless_chest` - Identifier
-- `wireless:group_id` - UUID string
-- `wireless:bulb_index` / `wireless:chest_index` - Position in group
-- `wireless:owner` - Owner UUID
-- `wireless:group_size` - Total group size
+- **Bulbs & Lamps**: All linked bulbs sync their lit/unlit state instantly
+- **Containers**: All linked chests/shulkers share the same inventory in real-time
+- **Cross-dimension**: Works across Overworld, Nether, End
+- **Hopper-compatible**: Automation works normally
+- **Categories**: Organize your groups however you want
 
 ---
 
@@ -380,49 +93,45 @@ Items use `PersistentDataContainer` for metadata storage:
 
 <p align="center">
   <img src="assets/screenshots/bulbs.png" alt="Wireless Bulbs" width="400">
-  <br>
-  <em>Linked copper bulbs syncing their lit state</em>
+  <br><em>Linked copper bulbs syncing their lit state</em>
 </p>
 
 <p align="center">
   <img src="assets/screenshots/chests.png" alt="Wireless Chests" width="400">
-  <br>
-  <em>Linked chests (or shulker boxes) sharing inventory. Works with hoppers and golems too!</em>
+  <br><em>Linked chests sharing inventory</em>
 </p>
 
 <p align="center">
   <img src="assets/screenshots/gui.png" alt="Management GUI" width="400">
-  <br>
-  <em>Management GUI for all your wireless groups</em>
+  <br><em>Management GUI with categories</em>
 </p>
+
+---
+
+## 🔐 Permissions
+
+| Permission                  | Description            | Default |
+|-----------------------------|------------------------|---------|
+| `wirelessredstone.use`      | Use commands           | op      |
+| `wirelessredstone.teleport` | Teleport via GUI       | op      |
+| `wirelessredstone.remove`   | Remove groups via GUI  | op      |
+| `wirelessredstone.admin`    | View all groups        | op      |
+
+---
+
+## 💡 Tips
+
+- **Lost blocks?** Use `/wireless recover <group>` to get items back
+- **Chunks must be loaded** for syncing to work
+- **Breaking containers** doesn't drop items - they stay in shared inventory
+- **WireView mode** automatically toggles when holding the Circuit Analyser
 
 ---
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT License - see [LICENSE](LICENSE) file
 
 ---
 
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit issues and pull requests.
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
----
-
-## 📞 Support
-
-- Open an [Issue](../../issues) for bug reports or feature requests
-- Check the [Wiki](../../wiki) for additional documentation
-
----
-
-<p align="center">
-  Made with ❤️ for the Minecraft community
-</p>
+<p align="center">Made with ❤️ for the Minecraft community</p>
