@@ -121,7 +121,7 @@ public class ConnectorToolListener implements Listener {
             createChestGroupFromTool(player, location, block, groupName, containerType, tool);
         } else {
             player.sendMessage(Component.text("This block cannot be used to create a wireless group!", NamedTextColor.RED));
-            player.sendMessage(Component.text("Valid blocks: Copper Bulbs, Redstone Lamps, Chests, Shulker Boxes", NamedTextColor.GRAY));
+            player.sendMessage(Component.text("Valid blocks: Copper Bulbs, Redstone Lamps, Chests, Copper Chests, Shulker Boxes, Barrels", NamedTextColor.GRAY));
         }
     }
 
@@ -133,9 +133,20 @@ public class ConnectorToolListener implements Listener {
             return;
         }
 
+        // Get category from tool if present
+        String categoryName = ConnectorToolFactory.getCategoryName(tool);
+        UUID categoryId = null;
+        if (categoryName != null && !categoryName.isEmpty()) {
+            var categoryManager = WirelessRedstonePlugin.getInstance().getCategoryManager();
+            var category = categoryManager.getCategoryByName(categoryName);
+            if (category.isPresent()) {
+                categoryId = category.get().getCategoryId();
+            }
+        }
+
         // Create a new group
         UUID groupId = bulbManager.createNewGroupId();
-        bulbManager.preRegisterGroup(groupId, 1, player.getUniqueId(), bulbType, groupName, null);
+        bulbManager.preRegisterGroup(groupId, 1, player.getUniqueId(), bulbType, groupName, categoryId);
         
         // Register the bulb at slot 0
         bulbManager.registerPlacedBulb(location, groupId, 0, player.getUniqueId(), bulbType, 1);
@@ -160,23 +171,78 @@ public class ConnectorToolListener implements Listener {
             return;
         }
 
-        // Create a new group
-        UUID groupId = chestManager.createNewGroupId();
-        chestManager.preRegisterGroup(groupId, 1, player.getUniqueId(), containerType, groupName, null);
+        // For copper chests, convert to waxed variant to prevent oxidation changes
+        if (containerType == ChestVariant.ContainerType.COPPER_CHEST) {
+            Material originalMaterial = block.getType();
+            Material waxedMaterial = convertToWaxedCopperIfNeeded(block);
+            if (waxedMaterial != originalMaterial) {
+                player.sendMessage(Component.text("Converted copper chest to waxed variant to prevent oxidation.", NamedTextColor.GRAY));
+            }
+        }
+
+        // Check for large (double) chest and handle both halves
+        Location otherHalfLocation = getDoubleChestOtherHalf(block);
+        boolean isLargeChest = otherHalfLocation != null;
         
-        // Register the chest at slot 0
-        chestManager.registerPlacedChest(location, groupId, 0, player.getUniqueId(), 1, containerType);
+        if (isLargeChest) {
+            // Check if the other half is already in a group
+            if (chestManager.isWirelessChestLocation(otherHalfLocation)) {
+                player.sendMessage(Component.text("The other half of this large chest is already part of a wireless group!", NamedTextColor.RED));
+                return;
+            }
+        }
+
+        // Create a new group - large chests start with 2 slots
+        UUID groupId = chestManager.createNewGroupId();
+        int initialSize = isLargeChest ? 2 : 1;
+        
+        // Get category from tool if present
+        String categoryName = ConnectorToolFactory.getCategoryName(tool);
+        UUID categoryId = null;
+        if (categoryName != null && !categoryName.isEmpty()) {
+            var categoryManager = WirelessRedstonePlugin.getInstance().getCategoryManager();
+            var category = categoryManager.getCategoryByName(categoryName);
+            if (category.isPresent()) {
+                categoryId = category.get().getCategoryId();
+            }
+        }
+        
+        chestManager.preRegisterGroup(groupId, initialSize, player.getUniqueId(), containerType, groupName, categoryId);
+        
+        // Register the chest(s)
+        chestManager.registerPlacedChest(location, groupId, 0, player.getUniqueId(), initialSize, containerType);
+        
+        if (isLargeChest) {
+            chestManager.registerPlacedChest(otherHalfLocation, groupId, 1, player.getUniqueId(), initialSize, containerType);
+            ParticleEffects.spawnConnectParticles(otherHalfLocation);
+        }
 
         // Transform the tool from creation mode to regular mode
         ItemStack newTool = ConnectorToolFactory.createConnectorTool(groupId, groupName, ConnectorToolFactory.GroupType.CHEST);
         player.getInventory().setItemInMainHand(newTool);
 
         ParticleEffects.spawnConnectParticles(location);
+        
+        String containerLabel = getContainerLabel(containerType);
+        String sizeText = isLargeChest ? " (large chest with slots A & B)" : " at slot A (1/1)";
+        
         player.sendMessage(Component.text("✓ Created group ", NamedTextColor.GREEN)
                 .append(Component.text(groupName, NamedTextColor.GOLD))
                 .append(Component.text(" with first ", NamedTextColor.GREEN))
-                .append(Component.text("container", NamedTextColor.YELLOW))
-                .append(Component.text(" at slot A (1/1)", NamedTextColor.GRAY)));
+                .append(Component.text(containerLabel, NamedTextColor.YELLOW))
+                .append(Component.text(sizeText, NamedTextColor.GRAY)));
+    }
+
+    /**
+     * Gets a friendly label for the container type.
+     */
+    private String getContainerLabel(ChestVariant.ContainerType containerType) {
+        return switch (containerType) {
+            case CHEST -> "chest";
+            case SHULKER -> "shulker box";
+            case COPPER_CHEST -> "copper chest";
+            case BARREL -> "barrel";
+        };
     }
 
     private void handleAddBlock(Player player, Location location, Block block, UUID groupId, ConnectorToolFactory.GroupType groupType) {
@@ -286,7 +352,7 @@ public class ConnectorToolListener implements Listener {
         ChestVariant.ContainerType containerType = getContainerTypeFromMaterial(material);
         if (containerType == null) {
             player.sendMessage(Component.text("This block cannot be added to a container group!", NamedTextColor.RED));
-            player.sendMessage(Component.text("Valid blocks: Chests, Shulker Boxes, Copper Chests", NamedTextColor.GRAY));
+            player.sendMessage(Component.text("Valid blocks: Chests, Shulker Boxes, Copper Chests, Barrels", NamedTextColor.GRAY));
             return;
         }
 
@@ -306,28 +372,76 @@ public class ConnectorToolListener implements Listener {
             return;
         }
 
-        // Find the first available slot
-        int slot = -1;
-        for (int i = 0; i < group.getMaxSize(); i++) {
-            if (group.getLocation(i) == null) {
-                slot = i;
-                break;
+        // For copper chests, convert to waxed variant to prevent oxidation changes
+        if (containerType == ChestVariant.ContainerType.COPPER_CHEST) {
+            Material originalMaterial = block.getType();
+            Material waxedMaterial = convertToWaxedCopperIfNeeded(block);
+            if (waxedMaterial != originalMaterial) {
+                player.sendMessage(Component.text("Converted copper chest to waxed variant to prevent oxidation.", NamedTextColor.GRAY));
             }
         }
 
-        // If group is full, auto-extend it
-        if (slot == -1) {
-            if (group.getMaxSize() >= 26) {
+        // Check for large (double) chest and handle both halves
+        Location otherHalfLocation = getDoubleChestOtherHalf(block);
+        boolean isLargeChest = otherHalfLocation != null;
+        
+        if (isLargeChest) {
+            // Check if the other half is already in a group
+            if (chestManager.isWirelessChestLocation(otherHalfLocation)) {
+                player.sendMessage(Component.text("The other half of this large chest is already part of a wireless group!", NamedTextColor.RED));
+                return;
+            }
+        }
+
+        // Calculate how many slots we need (1 or 2 for large chest)
+        int slotsNeeded = isLargeChest ? 2 : 1;
+        
+        // Find available slots
+        int slot = -1;
+        int slot2 = -1;
+        for (int i = 0; i < group.getMaxSize(); i++) {
+            if (group.getLocation(i) == null) {
+                if (slot == -1) {
+                    slot = i;
+                    if (!isLargeChest) break;
+                } else if (slot2 == -1) {
+                    slot2 = i;
+                    break;
+                }
+            }
+        }
+
+        // Count available slots
+        int availableSlots = (slot != -1 ? 1 : 0) + (slot2 != -1 ? 1 : 0);
+        int slotsToExtend = slotsNeeded - availableSlots;
+        
+        // If we need more slots, auto-extend
+        if (slotsToExtend > 0) {
+            if (group.getMaxSize() + slotsToExtend > 26) {
                 player.sendMessage(Component.text("This group has reached the maximum size (26)!", NamedTextColor.RED));
                 return;
             }
-            group.extendGroup(1);
-            slot = group.getMaxSize() - 1;
+            int oldSize = group.getMaxSize();
+            group.extendGroup(slotsToExtend);
+            
+            // Fill in the newly created slots
+            if (slot == -1) {
+                slot = oldSize;
+            }
+            if (isLargeChest && slot2 == -1) {
+                slot2 = (slot == oldSize) ? oldSize + 1 : oldSize;
+            }
+            
             player.sendMessage(Component.text("Group extended to " + group.getMaxSize() + " slots.", NamedTextColor.GRAY));
         }
 
-        // Register the chest
+        // Register the chest(s)
         chestManager.registerPlacedChest(location, groupId, slot, player.getUniqueId(), group.getMaxSize(), containerType);
+        
+        if (isLargeChest && slot2 != -1) {
+            chestManager.registerPlacedChest(otherHalfLocation, groupId, slot2, player.getUniqueId(), group.getMaxSize(), containerType);
+            ParticleEffects.spawnConnectParticles(otherHalfLocation);
+        }
 
         // Sync the inventory
         var blockState = block.getState();
@@ -336,6 +450,8 @@ public class ConnectorToolListener implements Listener {
             inventory = chest.getInventory();
         } else if (blockState instanceof org.bukkit.block.ShulkerBox shulker) {
             inventory = shulker.getInventory();
+        } else if (blockState instanceof org.bukkit.block.Barrel barrel) {
+            inventory = barrel.getInventory();
         }
 
         if (inventory != null) {
@@ -347,11 +463,21 @@ public class ConnectorToolListener implements Listener {
 
         char slotLabel = (char) ('A' + slot);
         ParticleEffects.spawnConnectParticles(location);
-        player.sendMessage(Component.text("✓ Added container to group ", NamedTextColor.GREEN)
-                .append(Component.text(group.getDisplayName(), NamedTextColor.GOLD))
-                .append(Component.text(" at slot ", NamedTextColor.GREEN))
-                .append(Component.text(String.valueOf(slotLabel), NamedTextColor.YELLOW))
-                .append(Component.text(" (" + group.getPlacedCount() + "/" + group.getMaxSize() + ")", NamedTextColor.GRAY)));
+        
+        if (isLargeChest && slot2 != -1) {
+            char slot2Label = (char) ('A' + slot2);
+            player.sendMessage(Component.text("✓ Added large chest to group ", NamedTextColor.GREEN)
+                    .append(Component.text(group.getDisplayName(), NamedTextColor.GOLD))
+                    .append(Component.text(" at slots ", NamedTextColor.GREEN))
+                    .append(Component.text(slotLabel + " & " + slot2Label, NamedTextColor.YELLOW))
+                    .append(Component.text(" (" + group.getPlacedCount() + "/" + group.getMaxSize() + ")", NamedTextColor.GRAY)));
+        } else {
+            player.sendMessage(Component.text("✓ Added container to group ", NamedTextColor.GREEN)
+                    .append(Component.text(group.getDisplayName(), NamedTextColor.GOLD))
+                    .append(Component.text(" at slot ", NamedTextColor.GREEN))
+                    .append(Component.text(String.valueOf(slotLabel), NamedTextColor.YELLOW))
+                    .append(Component.text(" (" + group.getPlacedCount() + "/" + group.getMaxSize() + ")", NamedTextColor.GRAY)));
+        }
 
         // Refresh wire view for players viewing this group
         WirelessRedstonePlugin.getInstance().getWireViewManager().refreshSingleGroupViewForGroup(groupId);
@@ -441,7 +567,65 @@ public class ConnectorToolListener implements Listener {
                  GRAY_SHULKER_BOX, LIGHT_GRAY_SHULKER_BOX, CYAN_SHULKER_BOX, PURPLE_SHULKER_BOX,
                  BLUE_SHULKER_BOX, BROWN_SHULKER_BOX, GREEN_SHULKER_BOX, RED_SHULKER_BOX,
                  BLACK_SHULKER_BOX -> ChestVariant.ContainerType.SHULKER;
+            case COPPER_CHEST, EXPOSED_COPPER_CHEST, WEATHERED_COPPER_CHEST, OXIDIZED_COPPER_CHEST,
+                 WAXED_COPPER_CHEST, WAXED_EXPOSED_COPPER_CHEST, WAXED_WEATHERED_COPPER_CHEST,
+                 WAXED_OXIDIZED_COPPER_CHEST -> ChestVariant.ContainerType.COPPER_CHEST;
+            case BARREL -> ChestVariant.ContainerType.BARREL;
             default -> null;
         };
+    }
+
+    /**
+     * Converts regular copper chest to waxed variant and returns the waxed Material.
+     * Returns the original material if already waxed or not a copper chest.
+     */
+    private Material convertToWaxedCopperIfNeeded(Block block) {
+        Material material = block.getType();
+        Material waxedMaterial = ChestVariant.toWaxedCopperChest(material);
+        if (waxedMaterial != material) {
+            // Store any block data we need to preserve
+            var oldBlockData = block.getBlockData();
+            block.setType(waxedMaterial);
+            // Copper chests have facing data we need to preserve
+            if (oldBlockData instanceof org.bukkit.block.data.Directional oldDirectional) {
+                var newBlockData = block.getBlockData();
+                if (newBlockData instanceof org.bukkit.block.data.Directional newDirectional) {
+                    newDirectional.setFacing(oldDirectional.getFacing());
+                    block.setBlockData(newDirectional);
+                }
+            }
+        }
+        return waxedMaterial;
+    }
+
+    /**
+     * Gets the location of the other half of a double chest, if applicable.
+     * Returns null if not a double chest.
+     */
+    private Location getDoubleChestOtherHalf(Block block) {
+        var blockState = block.getState();
+        if (blockState instanceof org.bukkit.block.Chest chest) {
+            var inventory = chest.getInventory();
+            var holder = inventory.getHolder();
+            if (holder instanceof org.bukkit.block.DoubleChest doubleChest) {
+                var leftSide = doubleChest.getLeftSide();
+                var rightSide = doubleChest.getRightSide();
+                
+                if (leftSide instanceof org.bukkit.block.Container leftContainer &&
+                    rightSide instanceof org.bukkit.block.Container rightContainer) {
+                    Location leftLoc = leftContainer.getLocation();
+                    Location rightLoc = rightContainer.getLocation();
+                    Location currentLoc = block.getLocation();
+                    
+                    // Return the other half's location
+                    if (leftLoc.equals(currentLoc)) {
+                        return rightLoc;
+                    } else {
+                        return leftLoc;
+                    }
+                }
+            }
+        }
+        return null;
     }
 }

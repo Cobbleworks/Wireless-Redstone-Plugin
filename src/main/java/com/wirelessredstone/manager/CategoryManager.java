@@ -80,6 +80,17 @@ public class CategoryManager {
         return categories.containsKey(categoryId);
     }
 
+    /**
+     * Finds a category by name (case-insensitive match).
+     * @param name The name to search for
+     * @return Optional containing the category if found
+     */
+    public Optional<Category> getCategoryByName(String name) {
+        return categories.values().stream()
+                .filter(cat -> cat.getName().equalsIgnoreCase(name))
+                .findFirst();
+    }
+
     public void saveData() {
         File dataFile = new File(plugin.getDataFolder(), "categories.yml");
         FileConfiguration config = new YamlConfiguration();

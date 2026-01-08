@@ -63,6 +63,7 @@ public class WirelessChestFactory {
         NamedTextColor nameColor = switch (variant.getContainerType()) {
             case SHULKER -> NamedTextColor.LIGHT_PURPLE;
             case COPPER_CHEST -> NamedTextColor.AQUA;
+            case BARREL -> NamedTextColor.YELLOW;
             default -> NamedTextColor.GOLD;
         };
 
@@ -72,6 +73,7 @@ public class WirelessChestFactory {
         String typeDesc = switch (variant.getContainerType()) {
             case SHULKER -> "Linked Wireless Shulker Box";
             case COPPER_CHEST -> "Linked Wireless Copper Chest";
+            case BARREL -> "Linked Wireless Barrel";
             default -> "Linked Wireless Chest";
         };
 
@@ -123,14 +125,15 @@ public class WirelessChestFactory {
         String containerLabel = ChestGroup.getIndexLabel(chestIndex);
         boolean isShulker = containerType == ChestVariant.ContainerType.SHULKER;
         boolean isCopperChest = containerType == ChestVariant.ContainerType.COPPER_CHEST;
-        String containerName = isShulker ? "Shulker" : (isCopperChest ? "Copper Chest" : "Chest");
+        boolean isBarrel = containerType == ChestVariant.ContainerType.BARREL;
+        String containerName = isShulker ? "Shulker" : (isCopperChest ? "Copper Chest" : (isBarrel ? "Barrel" : "Chest"));
         String displayName = isConnected ? "⚡ Linked " + containerName + " " + containerLabel + " ⚡" : "Wireless " + containerName + " " + containerLabel;
-        NamedTextColor nameColor = isConnected ? NamedTextColor.GREEN : (isShulker ? NamedTextColor.LIGHT_PURPLE : (isCopperChest ? NamedTextColor.AQUA : NamedTextColor.GOLD));
+        NamedTextColor nameColor = isConnected ? NamedTextColor.GREEN : (isShulker ? NamedTextColor.LIGHT_PURPLE : (isCopperChest ? NamedTextColor.AQUA : (isBarrel ? NamedTextColor.YELLOW : NamedTextColor.GOLD)));
         
         meta.displayName(Component.text(displayName, nameColor)
                 .decoration(TextDecoration.ITALIC, false));
         
-        String typeDesc = isShulker ? "Linked Wireless Shulker Box" : (isCopperChest ? "Linked Wireless Copper Chest" : "Linked Wireless Chest");
+        String typeDesc = isShulker ? "Linked Wireless Shulker Box" : (isCopperChest ? "Linked Wireless Copper Chest" : (isBarrel ? "Linked Wireless Barrel" : "Linked Wireless Chest"));
         
         List<Component> lore = new ArrayList<>();
         lore.add(Component.text(typeDesc, NamedTextColor.GRAY)

@@ -13,6 +13,8 @@ public enum ChestVariant {
     WAXED_EXPOSED_COPPER_CHEST("--copper-waxed-exposed", "Wireless Waxed Exposed Copper Chest", Material.WAXED_EXPOSED_COPPER_CHEST, ContainerType.COPPER_CHEST),
     WAXED_WEATHERED_COPPER_CHEST("--copper-waxed-weathered", "Wireless Waxed Weathered Copper Chest", Material.WAXED_WEATHERED_COPPER_CHEST, ContainerType.COPPER_CHEST),
     WAXED_OXIDIZED_COPPER_CHEST("--copper-waxed-oxidized", "Wireless Waxed Oxidized Copper Chest", Material.WAXED_OXIDIZED_COPPER_CHEST, ContainerType.COPPER_CHEST),
+    // Barrels
+    BARREL("--barrel", "Wireless Barrel", Material.BARREL, ContainerType.BARREL),
     // Shulker Boxes
     WHITE_SHULKER("--white", "Wireless White Shulker Box", Material.WHITE_SHULKER_BOX, ContainerType.SHULKER),
     ORANGE_SHULKER("--orange", "Wireless Orange Shulker Box", Material.ORANGE_SHULKER_BOX, ContainerType.SHULKER),
@@ -118,12 +120,59 @@ public enum ChestVariant {
             case CHEST -> CHEST;
             case SHULKER -> SHULKER;
             case COPPER_CHEST -> COPPER_CHEST;
+            case BARREL -> BARREL;
+        };
+    }
+
+    /**
+     * Checks if a material is a barrel.
+     */
+    public static boolean isBarrel(Material material) {
+        return material == Material.BARREL;
+    }
+
+    /**
+     * Converts a non-waxed copper chest material to its waxed equivalent.
+     * Returns the original material if it's already waxed or not a copper chest.
+     */
+    public static Material toWaxedCopperChest(Material material) {
+        return switch (material) {
+            case COPPER_CHEST -> Material.WAXED_COPPER_CHEST;
+            case EXPOSED_COPPER_CHEST -> Material.WAXED_EXPOSED_COPPER_CHEST;
+            case WEATHERED_COPPER_CHEST -> Material.WAXED_WEATHERED_COPPER_CHEST;
+            case OXIDIZED_COPPER_CHEST -> Material.WAXED_OXIDIZED_COPPER_CHEST;
+            default -> material; // Already waxed or not a copper chest
+        };
+    }
+
+    /**
+     * Checks if a copper chest material is waxed.
+     */
+    public static boolean isWaxedCopperChest(Material material) {
+        return material == Material.WAXED_COPPER_CHEST ||
+               material == Material.WAXED_EXPOSED_COPPER_CHEST ||
+               material == Material.WAXED_WEATHERED_COPPER_CHEST ||
+               material == Material.WAXED_OXIDIZED_COPPER_CHEST;
+    }
+
+    /**
+     * Gets the waxed variant for a copper chest ChestVariant.
+     * Returns the same variant if it's already waxed or not a copper chest.
+     */
+    public static ChestVariant toWaxedVariant(ChestVariant variant) {
+        return switch (variant) {
+            case COPPER_CHEST -> WAXED_COPPER_CHEST;
+            case EXPOSED_COPPER_CHEST -> WAXED_EXPOSED_COPPER_CHEST;
+            case WEATHERED_COPPER_CHEST -> WAXED_WEATHERED_COPPER_CHEST;
+            case OXIDIZED_COPPER_CHEST -> WAXED_OXIDIZED_COPPER_CHEST;
+            default -> variant; // Already waxed or not a copper chest
         };
     }
 
     public enum ContainerType {
         CHEST,
         SHULKER,
-        COPPER_CHEST
+        COPPER_CHEST,
+        BARREL
     }
 }

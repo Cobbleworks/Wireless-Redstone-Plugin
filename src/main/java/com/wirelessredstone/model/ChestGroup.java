@@ -65,6 +65,7 @@ public class ChestGroup extends BaseGroup {
             case CHEST -> Material.CHEST;
             case SHULKER -> Material.SHULKER_BOX;
             case COPPER_CHEST -> Material.COPPER_BLOCK;
+            case BARREL -> Material.BARREL;
         };
     }
 }

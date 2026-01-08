@@ -189,6 +189,7 @@ public class CircuitAnalyserListener implements Listener {
                 case CHEST -> "Chest";
                 case SHULKER -> "Shulker Box";
                 case COPPER_CHEST -> "Copper Chest";
+                case BARREL -> "Barrel";
             };
             player.sendMessage(Component.text("  Container: ", NamedTextColor.GRAY)
                     .append(Component.text(containerTypeName, NamedTextColor.WHITE)));
