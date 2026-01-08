@@ -135,8 +135,9 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
+        // No arguments - open GUI by default
         if (args.length < 1) {
-            sendUsage(player);
+            handleGUICommand(player, new String[]{"gui"});
             return true;
         }
 
@@ -145,6 +146,7 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
         String subCommand = parsedArgs[0].toLowerCase();
         
         switch (subCommand) {
+            case "help", "?" -> sendUsage(player);
             case "create" -> handleCreateCommand(player, parsedArgs);
             case "inspect" -> handleInspectCommand(player, parsedArgs);
             case "modify" -> handleModifyCommand(player, parsedArgs);
@@ -157,8 +159,9 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
             case "analyser-rename" -> handleAnalyserRenameCommand(player, parsedArgs);
             case "analyser-category" -> handleAnalyserCategoryCommand(player, parsedArgs);
             default -> {
-                player.sendMessage(Component.text("Unknown subcommand.", NamedTextColor.RED));
-                sendUsage(player);
+                player.sendMessage(Component.text("Unknown subcommand. Use ", NamedTextColor.RED)
+                        .append(Component.text("/wireless help", NamedTextColor.YELLOW))
+                        .append(Component.text(" for commands.", NamedTextColor.RED)));
             }
         }
         
