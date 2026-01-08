@@ -120,31 +120,17 @@ public class CircuitAnalyserListener implements Listener {
         UUID groupId = group.getGroupId();
 
         player.sendMessage(Component.empty());
-        player.sendMessage(Component.text("═══════════════════════════════", NamedTextColor.DARK_GRAY));
-        player.sendMessage(Component.text("  ⚡ Circuit Analysis Report ⚡", NamedTextColor.LIGHT_PURPLE)
+        player.sendMessage(Component.text("═══ ⚡ Circuit Analysis ⚡ ═══", NamedTextColor.LIGHT_PURPLE)
                 .decoration(TextDecoration.BOLD, true));
-        player.sendMessage(Component.text("═══════════════════════════════", NamedTextColor.DARK_GRAY));
-        player.sendMessage(Component.empty());
 
-        // Type
-        player.sendMessage(Component.text("  Type: ", NamedTextColor.GRAY)
-                .append(Component.text(typeName, typeColor)));
-
-        // Group Name (clickable to rename)
+        // Group Name (clickable to rename) - more prominent
         String displayName = group.getDisplayName();
         String renameCommand = "/wireless analyser-rename " + groupId + " " + (isBulbGroup ? "bulb" : "chest");
-        player.sendMessage(Component.text("  Name: ", NamedTextColor.GRAY)
-                .append(Component.text(displayName, NamedTextColor.WHITE)
-                        .hoverEvent(HoverEvent.showText(Component.text("Click to rename this group", NamedTextColor.YELLOW)))
+        player.sendMessage(Component.text("Name: ", NamedTextColor.GRAY)
+                .append(Component.text(displayName, NamedTextColor.WHITE).decoration(TextDecoration.BOLD, true)
+                        .hoverEvent(HoverEvent.showText(Component.text("Click to rename", NamedTextColor.YELLOW)))
                         .clickEvent(ClickEvent.runCommand(renameCommand)))
                 .append(Component.text(" ✎", NamedTextColor.DARK_GRAY)));
-
-        // Group ID (clickable to copy)
-        String fullGroupId = groupId.toString();
-        player.sendMessage(Component.text("  Group ID: ", NamedTextColor.GRAY)
-                .append(Component.text(fullGroupId.substring(0, 8), NamedTextColor.DARK_AQUA)
-                        .hoverEvent(HoverEvent.showText(Component.text("Click to copy full ID", NamedTextColor.YELLOW)))
-                        .clickEvent(ClickEvent.copyToClipboard(fullGroupId))));
 
         // Category (clickable to change)
         String categoryName = "Uncategorized";
@@ -153,78 +139,61 @@ public class CircuitAnalyserListener implements Listener {
             categoryName = categoryOpt.map(Category::getName).orElse("Unknown");
         }
         String setCategoryCommand = "/wireless analyser-category " + groupId + " " + (isBulbGroup ? "bulb" : "chest");
-        player.sendMessage(Component.text("  Category: ", NamedTextColor.GRAY)
+        player.sendMessage(Component.text("Category: ", NamedTextColor.GRAY)
                 .append(Component.text(categoryName, NamedTextColor.YELLOW)
                         .hoverEvent(HoverEvent.showText(Component.text("Click to change category", NamedTextColor.YELLOW)))
                         .clickEvent(ClickEvent.runCommand(setCategoryCommand)))
                 .append(Component.text(" ✎", NamedTextColor.DARK_GRAY)));
 
-        // Owner
-        String ownerName = "Unknown";
-        if (group.getOwnerUuid() != null) {
-            var offlinePlayer = Bukkit.getOfflinePlayer(group.getOwnerUuid());
-            ownerName = offlinePlayer.getName() != null ? offlinePlayer.getName() : group.getOwnerUuid().toString().substring(0, 8);
-        }
-        player.sendMessage(Component.text("  Owner: ", NamedTextColor.GRAY)
-                .append(Component.text(ownerName, NamedTextColor.GREEN)));
-
-        // Placed count
+        // Placed count and state on same line for bulbs
         int placedCount = group.getPlacedCount();
         int maxSize = group.getMaxSize();
         NamedTextColor countColor = placedCount == maxSize ? NamedTextColor.GREEN : NamedTextColor.YELLOW;
-        player.sendMessage(Component.text("  Placed: ", NamedTextColor.GRAY)
-                .append(Component.text(placedCount + "/" + maxSize, countColor)));
-
-        // Additional info for specific types
+        
         if (group instanceof BulbGroup bulbGroup) {
-            String bulbTypeName = bulbGroup.getBulbType() == com.wirelessredstone.item.BulbVariant.BulbType.REDSTONE_LAMP 
-                    ? "Redstone Lamp" : "Copper Bulb";
-            player.sendMessage(Component.text("  Bulb Type: ", NamedTextColor.GRAY)
-                    .append(Component.text(bulbTypeName, NamedTextColor.WHITE)));
-            player.sendMessage(Component.text("  State: ", NamedTextColor.GRAY)
+            player.sendMessage(Component.text("Placed: ", NamedTextColor.GRAY)
+                    .append(Component.text(placedCount + "/" + maxSize, countColor))
+                    .append(Component.text(" | State: ", NamedTextColor.GRAY))
                     .append(Component.text(bulbGroup.isLit() ? "ON" : "OFF", 
                             bulbGroup.isLit() ? NamedTextColor.GREEN : NamedTextColor.RED)));
-        } else if (group instanceof ChestGroup chestGroup) {
-            String containerTypeName = switch (chestGroup.getContainerType()) {
-                case CHEST -> "Chest";
-                case SHULKER -> "Shulker Box";
-                case COPPER_CHEST -> "Copper Chest";
-                case BARREL -> "Barrel";
-            };
-            player.sendMessage(Component.text("  Container: ", NamedTextColor.GRAY)
-                    .append(Component.text(containerTypeName, NamedTextColor.WHITE)));
+        } else {
+            player.sendMessage(Component.text("Placed: ", NamedTextColor.GRAY)
+                    .append(Component.text(placedCount + "/" + maxSize, countColor)));
         }
 
-        player.sendMessage(Component.empty());
-        player.sendMessage(Component.text("  Associated Blocks:", NamedTextColor.GRAY)
+        // Connector Tool button (clickable to get tool)
+        String createToolCommand = "/wireless create " + displayName;
+        player.sendMessage(Component.text("[Get Connector Tool]", NamedTextColor.GREEN)
+                .decoration(TextDecoration.BOLD, true)
+                .hoverEvent(HoverEvent.showText(Component.text("Click to receive a Connector Tool for this group", NamedTextColor.YELLOW)))
+                .clickEvent(ClickEvent.runCommand(createToolCommand)));
+
+        // Collapsible locations section
+        player.sendMessage(Component.text("Blocks:", NamedTextColor.GRAY)
                 .decoration(TextDecoration.UNDERLINED, true));
 
-        // List all block locations
+        // List all block locations in a more compact format
         List<Location> locations = group.getLocations();
         for (int i = 0; i < locations.size(); i++) {
             Location loc = locations.get(i);
             String label = BaseGroup.getIndexLabel(i);
             
             if (loc != null) {
-                String worldName = loc.getWorld() != null ? loc.getWorld().getName() : "Unknown";
-                String coords = loc.getBlockX() + ", " + loc.getBlockY() + ", " + loc.getBlockZ();
+                String coords = loc.getBlockX() + "," + loc.getBlockY() + "," + loc.getBlockZ();
                 
-                Component locationComponent = Component.text("  [" + label + "] ", NamedTextColor.DARK_AQUA)
-                        .append(Component.text(worldName + ": ", NamedTextColor.GRAY))
+                Component locationComponent = Component.text("[" + label + "] ", NamedTextColor.DARK_AQUA)
                         .append(Component.text(coords, NamedTextColor.WHITE)
                                 .hoverEvent(HoverEvent.showText(Component.text("Click to teleport", NamedTextColor.YELLOW)))
                                 .clickEvent(ClickEvent.runCommand("/tp " + loc.getBlockX() + " " + loc.getBlockY() + " " + loc.getBlockZ())));
                 
                 player.sendMessage(locationComponent);
             } else {
-                player.sendMessage(Component.text("  [" + label + "] ", NamedTextColor.DARK_AQUA)
+                player.sendMessage(Component.text("[" + label + "] ", NamedTextColor.DARK_AQUA)
                         .append(Component.text("Not placed", NamedTextColor.RED)));
             }
         }
 
-        player.sendMessage(Component.empty());
         player.sendMessage(Component.text("═══════════════════════════════", NamedTextColor.DARK_GRAY));
-        player.sendMessage(Component.empty());
     }
 
     @EventHandler

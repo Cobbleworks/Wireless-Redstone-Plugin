@@ -144,9 +144,12 @@ public class ConnectorToolListener implements Listener {
             }
         }
 
-        // Create a new group
+        // Get the block material for the variant icon
+        Material variantMaterial = block.getType();
+
+        // Create a new group with the variant material for icon
         UUID groupId = bulbManager.createNewGroupId();
-        bulbManager.preRegisterGroup(groupId, 1, player.getUniqueId(), bulbType, groupName, categoryId);
+        bulbManager.preRegisterGroup(groupId, 1, player.getUniqueId(), bulbType, groupName, categoryId, variantMaterial);
         
         // Register the bulb at slot 0
         bulbManager.registerPlacedBulb(location, groupId, 0, player.getUniqueId(), bulbType, 1);
@@ -180,6 +183,9 @@ public class ConnectorToolListener implements Listener {
             }
         }
 
+        // Get the block material for the variant icon (after potential conversion)
+        Material variantMaterial = block.getType();
+
         // Check for large (double) chest and handle both halves
         Location otherHalfLocation = getDoubleChestOtherHalf(block);
         boolean isLargeChest = otherHalfLocation != null;
@@ -207,7 +213,8 @@ public class ConnectorToolListener implements Listener {
             }
         }
         
-        chestManager.preRegisterGroup(groupId, initialSize, player.getUniqueId(), containerType, groupName, categoryId);
+        // Pre-register with variant material for icon
+        chestManager.preRegisterGroup(groupId, initialSize, player.getUniqueId(), containerType, groupName, categoryId, variantMaterial);
         
         // Register the chest(s)
         chestManager.registerPlacedChest(location, groupId, 0, player.getUniqueId(), initialSize, containerType);

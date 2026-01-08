@@ -906,11 +906,11 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
         var bulbs = WirelessBulbFactory.createLinkedGroup(groupId, variant, player.getUniqueId(), count);
         distributeItems(player, bulbs);
         
-        // Pre-create the group with name and category if specified
+        // Pre-create the group with name, category, and variant material if specified
         if (groupName != null || categoryId != null) {
             // The group will be created when the first bulb is placed, but we can register it now
             // with the custom properties by creating a placeholder that will be updated on placement
-            bulbManager.preRegisterGroup(groupId, count, player.getUniqueId(), variant.getBulbType(), groupName, categoryId);
+            bulbManager.preRegisterGroup(groupId, count, player.getUniqueId(), variant.getBulbType(), groupName, categoryId, variant.getMaterial());
         }
         
         player.sendMessage(Component.text("You received " + count + " linked " + variant.getDisplayName() + "s!", NamedTextColor.GREEN));
@@ -926,9 +926,9 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
         var containers = WirelessChestFactory.createLinkedContainers(groupId, variant, player.getUniqueId(), count);
         distributeItems(player, containers);
         
-        // Pre-create the group with name and category if specified
+        // Pre-create the group with name, category, and variant material if specified
         if (groupName != null || categoryId != null) {
-            chestManager.preRegisterGroup(groupId, count, player.getUniqueId(), variant.getContainerType(), groupName, categoryId);
+            chestManager.preRegisterGroup(groupId, count, player.getUniqueId(), variant.getContainerType(), groupName, categoryId, variant.getMaterial());
         }
         
         player.sendMessage(Component.text("You received " + count + " linked " + variant.getDisplayName() + "s!", NamedTextColor.GREEN));

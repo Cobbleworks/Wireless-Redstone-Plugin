@@ -183,12 +183,24 @@ public class LinkedChestManager {
      */
     public void preRegisterGroup(UUID groupId, int maxSize, UUID ownerUuid, ChestVariant.ContainerType containerType,
                                   String customName, UUID categoryId) {
+        preRegisterGroup(groupId, maxSize, ownerUuid, containerType, customName, categoryId, null);
+    }
+
+    /**
+     * Pre-registers a group with custom name, category, and variant material before any chests are placed.
+     * This ensures the group has these properties when the first chest is placed.
+     */
+    public void preRegisterGroup(UUID groupId, int maxSize, UUID ownerUuid, ChestVariant.ContainerType containerType,
+                                  String customName, UUID categoryId, Material variantMaterial) {
         ChestGroup group = new ChestGroup(groupId, maxSize, ownerUuid, containerType);
         if (customName != null) {
             group.setCustomName(customName);
         }
         if (categoryId != null) {
             group.setCategoryId(categoryId);
+        }
+        if (variantMaterial != null) {
+            group.setVariantMaterial(variantMaterial);
         }
         chestGroups.put(groupId, group);
         saveData();
@@ -278,6 +290,9 @@ public class LinkedChestManager {
             if (group.getCategoryId() != null) {
                 config.set(basePath + ".categoryId", group.getCategoryId().toString());
             }
+            if (group.getVariantMaterial() != null) {
+                config.set(basePath + ".variantMaterial", group.getVariantMaterial().name());
+            }
             
             List<Location> locations = group.getLocations();
             for (int i = 0; i < locations.size(); i++) {
@@ -347,6 +362,13 @@ public class LinkedChestManager {
             String categoryIdStr = config.getString(basePath + ".categoryId");
             if (categoryIdStr != null) {
                 group.setCategoryId(UUID.fromString(categoryIdStr));
+            }
+            
+            String variantMaterialStr = config.getString(basePath + ".variantMaterial");
+            if (variantMaterialStr != null) {
+                try {
+                    group.setVariantMaterial(Material.valueOf(variantMaterialStr));
+                } catch (IllegalArgumentException ignored) {}
             }
 
             var locationsSection = config.getConfigurationSection(basePath + ".locations");
