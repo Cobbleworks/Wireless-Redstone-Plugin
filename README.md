@@ -5,7 +5,7 @@
 [![Paper](https://img.shields.io/badge/Paper-1.21.10+-blue)](https://papermc.io/) [![Java](https://img.shields.io/badge/Java-21+-orange)](https://adoptium.net/)
 
 <p align="left">
-  <img src="assets/icon.png" alt="Wireless Redstone Banner" width="200">
+  <img src="images/plugin-logo.png" alt="Wireless Redstone" width="128" />
 </p>
 # Wireless-Redstone
 
@@ -70,17 +70,17 @@ This project is licensed under the MIT License.
 ## 📸 Screenshots
 
 <p align="center">
-  <img src="assets/screenshots/bulbs.png" alt="Wireless Bulbs" width="400">
+  <img src="images/plugin-logo.png" alt="Wireless Redstone" width="128" />
   <br><em>Linked copper bulbs syncing their lit state</em>
 </p>
 
 <p align="center">
-  <img src="assets/screenshots/chests.png" alt="Wireless Chests" width="400">
+  <img src="images/plugin-logo.png" alt="Wireless Redstone" width="128" />
   <br><em>Linked chests sharing inventory</em>
 </p>
 
 <p align="center">
-  <img src="assets/screenshots/gui.png" alt="Management GUI" width="400">
+  <img src="images/plugin-logo.png" alt="Wireless Redstone" width="128" />
   <br><em>Management GUI with categories</em>
 </p>
 
@@ -113,3 +113,4 @@ MIT License - see [LICENSE](LICENSE) file
 ---
 
 <p align="center">Made with ❤️ for the Minecraft community</p>
+
