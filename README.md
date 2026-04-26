@@ -7,86 +7,64 @@
 <p align="left">
   <img src="assets/icon.png" alt="Wireless Redstone Banner" width="200">
 </p>
+# Wireless-Redstone
 
----
+Wireless-Redstone links copper bulbs, redstone lamps, and supported container blocks into synchronized wireless groups that can be managed from commands and GUI tools.
 
-## 🚀 Quick Start
+## Features
 
-1. Download from [Releases](../../releases) and place in `plugins/` folder
-2. Restart server
-3. Run `/wireless give bulb` or `/wireless give chest` to create your first group
-4. Place the items anywhere - they sync automatically!
+- Create wireless groups that sync states across any distance
+- Support for bulbs, lamps, and container-based linked systems
+- Circuit inspector tool for group diagnostics and ownership lookup
+- Connector tool for rapid add/remove assignment workflows
+- GUI management for categories, naming, icons, recovery, and teleport helpers
+- Administrative controls for all-player group visibility and maintenance
 
----
+## Commands
 
-## 🔧 Core Tools
+Main command:
 
-### 🔍 Circuit Analyser
-Get with `/wireless inspect` - **Right-click any wireless block** to see group info, locations, and owner. **Hold it to see ALL wireless blocks glow** with color-coded outlines (each group has a unique color).
+- `/wireless` (alias: `/wr`)
 
-### 🔗 Connector Tool
-Get with `/wireless create <groupName>` - **Right-click blocks to add** them to the group, **left-click to remove**. Creates new groups automatically if they don't exist.
+| Command | Description |
+| --- | --- |
+| `/wireless give bulb [amount]` | Create wireless bulb items |
+| `/wireless give lamp [amount]` | Create wireless lamp items |
+| `/wireless give chest [amount]` | Create wireless container items |
+| `/wireless inspect [player]` | Get or use the circuit analyzer tool |
+| `/wireless create <group> [category]` | Get connector tool and prepare a group |
+| `/wireless gui [--all|--nocategory]` | Open management interface |
+| `/wireless modify name <group> <newName>` | Rename group |
+| `/wireless modify category <group> <category>` | Change group category |
+| `/wireless append <group> [count]` | Add additional blocks to a group |
+| `/wireless recover <group>` | Recover missing or desynced references |
+| `/wireless debug on|off` | Toggle debug messages |
+| `/wireless reload` | Reload plugin configuration |
 
-### 🖥️ Management GUI
-Open with `/wireless gui` - **Teleport to blocks**, rename groups, organize into categories, set custom icons, and delete groups.
+## Permissions
 
----
+| Permission | Default | Description |
+| --- | --- | --- |
+| `wirelessredstone.use` | op | Use standard wireless commands |
+| `wirelessredstone.teleport` | op | Teleport to managed block locations |
+| `wirelessredstone.remove` | op | Remove groups and managed blocks |
+| `wirelessredstone.admin` | op | Access global and cross-player controls |
 
-## 📋 All Commands
+## Installation
 
-### Creating Groups
-```bash
-/wireless give bulb [amount] [--copper|--exposed|--weathered|--oxidized]
-/wireless give lamp [amount]
-/wireless give chest [amount] [--chest|--shulker|--cyan|--copper|etc.]
-```
+1. Download the latest jar from Releases.
+2. Place the jar in your server `plugins` directory.
+3. Restart the server.
+4. Assign permissions and optionally adjust group policy defaults.
 
-**Optional flags**: `--name="Group Name"` `--category=CategoryName`
+## Compatibility
 
-### Tools
-```bash
-/wireless inspect [player]          # Get Circuit Analyser
-/wireless create <group> [category] # Get Connector Tool
-```
+- API: Paper/Spigot/Bukkit 1.21+
+- Java: 21+
 
-### Managing Groups
-```bash
-/wireless gui [--all|--nocategory]           # Open GUI
-/wireless modify name <group> <newName>      # Rename group
-/wireless modify category <group> <category> # Assign to category
-/wireless append <group> [count]             # Add more blocks
-/wireless recover <group>                    # Recover lost blocks
-/wireless debug on|off                       # Toggle sync messages
-/wireless reload                             # Reload config (admin)
-```
+## License
 
----
-
-## 🎮 GUI Controls
-
-### Category Screen
-- **Click** category to view groups
-- **Middle-click** to rename
-- **Shift+Right-click** to set icon (hold item)
-- **Shift+Left-click** to delete
-
-### Group Screen
-- **Left/Right-click** to teleport to first/last block
-- **Middle-click** to rename
-- **Q (Drop key)** to change category
-- **Shift+Right-click** to set icon (hold item)
-- **Shift+Left-click** to delete group
-
----
-
-## ✨ What It Does
-
-- **Bulbs & Lamps**: All linked bulbs sync their lit/unlit state instantly
-- **Containers**: All linked chests/shulkers share the same inventory in real-time
-- **Cross-dimension**: Works across Overworld, Nether, End
-- **Hopper-compatible**: Automation works normally
-- **Categories**: Organize your groups however you want
-
+This project is licensed under the MIT License.
 ---
 
 ## 📸 Screenshots
