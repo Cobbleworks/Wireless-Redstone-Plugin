@@ -60,3 +60,26 @@ Wireless Redstone is an open-source Minecraft plugin that allows players to crea
 ### **License**
 
 This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
+
+## **Screenshots**
+
+The screenshots below demonstrate the core features of the Wireless Redstone plugin, including wireless bulb synchronization, GUI management, container linking, and the connector tool.
+
+<table>
+  <tr>
+    <th>Wireless Redstone - Wireless Bulbs</th>
+    <th>Wireless Redstone - GUI Management</th>
+  </tr>
+  <tr>
+    <td><a href="https://github.com/Cobbleworks/Wireless-Redstone/raw/main/images/screenshot-bulbs.png" target="_blank" rel="noopener noreferrer"><img src="https://github.com/Cobbleworks/Wireless-Redstone/raw/main/images/screenshot-bulbs.png" alt="Wireless Bulbs" width="450"></a></td>
+    <td><a href="https://github.com/Cobbleworks/Wireless-Redstone/raw/main/images/screenshot-gui.png" target="_blank" rel="noopener noreferrer"><img src="https://github.com/Cobbleworks/Wireless-Redstone/raw/main/images/screenshot-gui.png" alt="GUI Management" width="450"></a></td>
+  </tr>
+  <tr>
+    <th>Wireless Redstone - Container Sync</th>
+    <th>Wireless Redstone - Connector Tool</th>
+  </tr>
+  <tr>
+    <td><a href="https://github.com/Cobbleworks/Wireless-Redstone/raw/main/images/screenshot-containers.png" target="_blank" rel="noopener noreferrer"><img src="https://github.com/Cobbleworks/Wireless-Redstone/raw/main/images/screenshot-containers.png" alt="Container Sync" width="450"></a></td>
+    <td><a href="https://github.com/Cobbleworks/Wireless-Redstone/raw/main/images/screenshot-connector.png" target="_blank" rel="noopener noreferrer"><img src="https://github.com/Cobbleworks/Wireless-Redstone/raw/main/images/screenshot-connector.png" alt="Connector Tool" width="450"></a></td>
+  </tr>
+</table>
