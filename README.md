@@ -20,7 +20,7 @@ Wireless Redstone is an open-source Minecraft plugin that allows players to crea
 - **Circuit Analyser:** Diagnostic tool for inspecting wireless blocks with WireView mode showing color-coded glowing outlines per group
 - **Connector Tool:** Management tool for rapidly adding or removing blocks from existing groups, with creation mode for building new groups in place
 - **Block Recovery:** Recover lost or accidentally broken wireless blocks that still belong to an existing group
-- **All Copper Variants:** Full support for normal, exposed, weathered, and oxidized copper bulbs and chests — including all waxed variants
+- **All Copper Variants:** Full support for normal, exposed, weathered, and oxidized copper bulbs and chests ï¿½ including all waxed variants
 - **All Shulker Colors:** Support for all 17 shulker box colors as wireless container variants
 - **Hopper Compatible:** Wireless containers work seamlessly with hoppers for automated item transfer and sorting systems
 - **Persistent Data:** All group data is saved automatically and survives server restarts
@@ -36,7 +36,7 @@ Wireless Redstone is an open-source Minecraft plugin that allows players to crea
 1. Download the latest `.jar` from the [Releases](https://github.com/Cobbleworks/Wireless-Redstone/releases) page
 2. Stop your Minecraft server
 3. Copy the `.jar` into your server's `plugins/` folder
-4. Start your server — a default configuration folder is generated at `plugins/WirelessRedstone/`
+4. Start your server ï¿½ a default configuration folder is generated at `plugins/WirelessRedstone/`
 
 ### **Player Commands**
 
@@ -96,7 +96,7 @@ Wireless-Redstone persists all runtime data to YAML files under `plugins/Wireles
 
 ### **License**
 
-This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
+This project is licensed under the **MIT License** ï¿½ see the [LICENSE](LICENSE) file for details.
 
 ## **Screenshots**
 
@@ -104,19 +104,11 @@ The screenshots below demonstrate the core features of the Wireless Redstone plu
 
 <table>
   <tr>
-    <th>Wireless Redstone - Wireless Bulbs</th>
+    <th>Wireless Redstone - GUI Management</th>
     <th>Wireless Redstone - Disco Lights</th>
   </tr>
   <tr>
-    <td><a href="https://github.com/Cobbleworks/Wireless-Redstone/raw/main/images/screenshot-bulbs.png" target="_blank" rel="noopener noreferrer"><img src="https://github.com/Cobbleworks/Wireless-Redstone/raw/main/images/screenshot-bulbs.png" alt="Wireless Bulbs" width="450"></a></td>
+    <td><a href="https://github.com/Cobbleworks/Wireless-Redstone/raw/main/images/screenshot-gui.png" target="_blank" rel="noopener noreferrer"><img src="https://github.com/Cobbleworks/Wireless-Redstone/raw/main/images/screenshot-gui.png" alt="GUI Management" width="450"></a></td>
     <td><a href="https://github.com/Cobbleworks/Wireless-Redstone/raw/main/images/screenshot-disco-lights.png" target="_blank" rel="noopener noreferrer"><img src="https://github.com/Cobbleworks/Wireless-Redstone/raw/main/images/screenshot-disco-lights.png" alt="Disco Lights" width="450"></a></td>
-  </tr>
-  <tr>
-    <th>Wireless Redstone - Container Sync</th>
-    <th>Wireless Redstone - Connector Tool</th>
-  </tr>
-  <tr>
-    <td><a href="https://github.com/Cobbleworks/Wireless-Redstone/raw/main/images/screenshot-containers.png" target="_blank" rel="noopener noreferrer"><img src="https://github.com/Cobbleworks/Wireless-Redstone/raw/main/images/screenshot-containers.png" alt="Container Sync" width="450"></a></td>
-    <td><a href="https://github.com/Cobbleworks/Wireless-Redstone/raw/main/images/screenshot-connector.png" target="_blank" rel="noopener noreferrer"><img src="https://github.com/Cobbleworks/Wireless-Redstone/raw/main/images/screenshot-connector.png" alt="Connector Tool" width="450"></a></td>
   </tr>
 </table>
