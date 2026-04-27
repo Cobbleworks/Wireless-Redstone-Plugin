@@ -100,15 +100,15 @@ This project is licensed under the **MIT License** � see the [LICENSE](LICENSE
 
 ## **Screenshots**
 
-The screenshots below demonstrate the core features of the Wireless Redstone plugin, including wireless bulb synchronization, GUI management, container linking, and the connector tool.
+The screenshots below demonstrate the core features of the Wireless Redstone plugin, including a lever activating a lamp without any redstone connection, and the connector tool for linking components.
 
 <table>
   <tr>
-    <th>Wireless Redstone - GUI Management</th>
-    <th>Wireless Redstone - Disco Lights</th>
+    <th>Wireless Redstone - Lever Activating Lamp</th>
+    <th>Wireless Redstone - Connector Tool</th>
   </tr>
   <tr>
-    <td><a href="https://github.com/Cobbleworks/Wireless-Redstone/raw/main/images/screenshot-gui.png" target="_blank" rel="noopener noreferrer"><img src="https://github.com/Cobbleworks/Wireless-Redstone/raw/main/images/screenshot-gui.png" alt="GUI Management" width="450"></a></td>
-    <td><a href="https://github.com/Cobbleworks/Wireless-Redstone/raw/main/images/screenshot-disco-lights.png" target="_blank" rel="noopener noreferrer"><img src="https://github.com/Cobbleworks/Wireless-Redstone/raw/main/images/screenshot-disco-lights.png" alt="Disco Lights" width="450"></a></td>
+    <td><a href="https://github.com/Cobbleworks/Wireless-Redstone/raw/main/images/screenshot-lever-lamp.png" target="_blank" rel="noopener noreferrer"><img src="https://github.com/Cobbleworks/Wireless-Redstone/raw/main/images/screenshot-lever-lamp.png" alt="Lever Activating Lamp" width="450"></a></td>
+    <td><a href="https://github.com/Cobbleworks/Wireless-Redstone/raw/main/images/screenshot-connector.png" target="_blank" rel="noopener noreferrer"><img src="https://github.com/Cobbleworks/Wireless-Redstone/raw/main/images/screenshot-connector.png" alt="Connector Tool" width="450"></a></td>
   </tr>
 </table>
