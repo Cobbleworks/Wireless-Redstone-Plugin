@@ -7,14 +7,14 @@
   <b>State and inventory synchronization across any distance with GUI management.</b>
 </p>
 <p align="center">
-  <a href="https://github.com/Cobbleworks/Wireless-Redstone/releases"><img src="https://img.shields.io/github/v/release/Cobbleworks/Wireless-Redstone?include_prereleases&style=flat-square&color=4CAF50" alt="Latest Release"></a>&nbsp;&nbsp;<a href="https://github.com/Cobbleworks/Wireless-Redstone/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue?style=flat-square" alt="License"></a>&nbsp;&nbsp;<img src="https://img.shields.io/badge/Java-17+-orange?style=flat-square" alt="Java Version">&nbsp;&nbsp;<img src="https://img.shields.io/badge/Minecraft-1.21+-green?style=flat-square" alt="Minecraft Version">&nbsp;&nbsp;<img src="https://img.shields.io/badge/Platform-Spigot%2FPaper-yellow?style=flat-square" alt="Platform">&nbsp;&nbsp;<img src="https://img.shields.io/badge/Status-Active-brightgreen?style=flat-square" alt="Status">&nbsp;&nbsp;<a href="https://github.com/Cobbleworks/Wireless-Redstone/issues"><img src="https://img.shields.io/github/issues/Cobbleworks/Wireless-Redstone?style=flat-square&color=orange" alt="Open Issues"></a>
+  <a href="https://github.com/Cobbleworks/Wireless-Redstone-Plugin/releases"><img src="https://img.shields.io/github/v/release/Cobbleworks/Wireless-Redstone-Plugin?include_prereleases&style=flat-square&color=4CAF50" alt="Latest Release"></a>&nbsp;&nbsp;<a href="https://github.com/Cobbleworks/Wireless-Redstone-Plugin/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue?style=flat-square" alt="License"></a>&nbsp;&nbsp;<img src="https://img.shields.io/badge/Java-21+-orange?style=flat-square" alt="Java Version">&nbsp;&nbsp;<img src="https://img.shields.io/badge/Minecraft-1.21+-green?style=flat-square" alt="Minecraft Version">&nbsp;&nbsp;<img src="https://img.shields.io/badge/Platform-Spigot%2FPaper-yellow?style=flat-square" alt="Platform">&nbsp;&nbsp;<img src="https://img.shields.io/badge/Status-Active-brightgreen?style=flat-square" alt="Status">&nbsp;&nbsp;<a href="https://github.com/Cobbleworks/Wireless-Redstone-Plugin/issues"><img src="https://img.shields.io/github/issues/Cobbleworks/Wireless-Redstone-Plugin?style=flat-square&color=orange" alt="Open Issues"></a>
 </p>
 
 Wireless Redstone is an open-source Minecraft plugin that allows players to create named groups of wirelessly linked blocks that synchronize their states or inventories across any distance. Link copper bulbs and redstone lamps into groups that toggle together, or link chests, shulker boxes, and copper chests into shared inventory groups that update in real time. All group data is saved persistently and survives server restarts, with full GUI-based management, a circuit analyser diagnostic tool, a connector tool for rapid assignment, and hopper-compatible container support.
 
 ### **Core Features**
 
-- **Wireless Bulbs and Lamps:** Create linked groups of copper bulbs or redstone lamps that synchronize state across any distance (2--26 blocks per group)
+- **Wireless Bulbs and Lamps:** Create linked groups of copper bulbs or redstone lamps that synchronize state across any distance (2-26 blocks per group)
 - **Wireless Containers:** Create linked groups of chests, barrels, shulker boxes, or copper chests that share inventory in real time
 - **Management GUI:** Visual interface for managing all wireless groups with category organization, custom naming, and icon assignment
 - **Circuit Analyser:** Diagnostic tool for inspecting wireless blocks with WireView mode showing color-coded glowing outlines per group
@@ -29,7 +29,7 @@ Wireless Redstone is an open-source Minecraft plugin that allows players to crea
 
 - **Server Software:** `Spigot`, `Paper`, `Purpur`, `CraftBukkit`
 - **Minecraft Versions:** `1.21` and higher
-- **Java Requirements:** `Java 17+`
+- **Java Requirements:** `Java 21+`
 - **Dependencies:** None - fully self-contained, no external plugins required
 
 ## **Table of Contents**
@@ -37,7 +37,7 @@ Wireless Redstone is an open-source Minecraft plugin that allows players to crea
 1. [Getting Started](#getting-started)
     - [Prerequisites](#prerequisites)
     - [Installation Steps](#installation-steps)
-    - [First Launch and Configuration](#first-launch-and-configuration)
+    - [First Launch & Configuration](#first-launch--configuration)
     - [Verifying Installation](#verifying-installation)
 2. [Configuration](#configuration)
     - [Data Files](#data-files)
@@ -62,19 +62,19 @@ Before installing Wireless Redstone, confirm the following requirements are met:
 
 - A Minecraft server running **Spigot**, **Paper**, **Purpur**, or any compatible fork
 - Server version **1.21 or higher** (`api-version: 1.21` is the minimum)
-- **Java 17** or newer installed on the machine running the server
+- **Java 21** or newer installed on the machine running the server
 - Operator or console access to install plugin files
 
 No additional plugins or libraries are needed. Wireless Redstone has zero external dependencies.
 
 ### **Installation Steps**
 
-1. Download the latest `WirelessRedstone-x.x.x.jar` from the [Releases](https://github.com/Cobbleworks/Wireless-Redstone/releases) page
+1. Download the latest `WirelessRedstone-x.x.x.jar` from the [Releases](https://github.com/Cobbleworks/Wireless-Redstone-Plugin/releases) page
 2. **Stop your server completely** before placing any files
 3. Copy the `.jar` into your server's `plugins/` directory
 4. Start the server - Wireless Redstone generates its configuration folder automatically on first boot
 
-### **First Launch and Configuration**
+### **First Launch & Configuration**
 
 On the first server start after installation, Wireless Redstone creates the following structure:
 
@@ -86,7 +86,7 @@ plugins/
     └── categories.yml   - Category definitions and icons
 ```
 
-All data files are managed automatically by the plugin. Do not edit them manually - all management is done in-game using the `/wireless` command and GUI.
+All data files are managed automatically by the plugin. Do not edit them manually while the server is running - all management is done in-game using the `/wireless` command and GUI. If you make manual edits while the server is stopped, run `/wireless reload` after restarting.
 
 ### **Verifying Installation**
 
@@ -149,8 +149,8 @@ All commands require the `wirelessredstone.use` permission (operator by default)
 | `/wireless create <groupName> [categoryName]` | Give a Connector Tool for an existing group, or creation-mode tool for a new group |
 | `/wireless inspect [player]` | Give a Circuit Analyser (admin can target another player) |
 | `/wireless modify name <groupName> <newName>` | Rename a group |
-| `/wireless modify category <groupName> <categoryName>` | Assign group to category (use `none` to remove) |
-| `/wireless append <groupName> [count]` | Extend an existing group by 1--24 slots (max 26 total) |
+| `/wireless modify category <groupName> <categoryName>` | Assign group to category (`none` to remove) |
+| `/wireless append <groupName> [count]` | Extend an existing group by 1-24 slots (max 26 total) |
 | `/wireless recover <groupName>` | Recover unplaced/missing items for a group |
 | `/wireless gui [--all] [--nocategory]` | Open management GUI (category view or direct list view) |
 | `/wireless debug on\|off` | Toggle sync debug messages |
@@ -186,15 +186,15 @@ All commands require the `wirelessredstone.use` permission (operator by default)
 Wireless Redstone uses **Apache Maven** as its build system. The plugin is packaged as a standard JAR with no external runtime dependencies.
 
 **Requirements:**
-- Java 17 or newer
+- Java 21 or newer
 - Apache Maven 3.6 or newer
 
 **Steps:**
 
 ```bash
 # Clone the repository
-git clone https://github.com/Cobbleworks/Wireless-Redstone.git
-cd Wireless-Redstone
+git clone https://github.com/Cobbleworks/Wireless-Redstone-Plugin.git
+cd Wireless-Redstone-Plugin
 
 # Compile and package
 mvn clean package
@@ -258,15 +258,31 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 
 ## **Screenshots**
 
-The screenshots below demonstrate the core features of the Wireless Redstone plugin, including a lever activating a lamp without any redstone connection, and the connector tool for linking components.
+The screenshots below demonstrate Wireless Redstone Plugin in action, showcasing wireless activation of factory buttons, disco floor lighting, fence illumination, room machines, bulb command setup, and a lever activating a lamp without any physical connection.
 
 <table>
   <tr>
-    <th>Wireless Redstone - Lever Activating Lamp</th>
-    <th>Wireless Redstone - Connector Tool</th>
+    <th>Wireless Redstone - Factory Button</th>
+    <th>Wireless Redstone - Disco Ground Lightning</th>
   </tr>
   <tr>
-    <td><a href="https://github.com/Cobbleworks/Wireless-Redstone/raw/main/images/screenshot-lever-lamp.png" target="_blank" rel="noopener noreferrer"><img src="https://github.com/Cobbleworks/Wireless-Redstone/raw/main/images/screenshot-lever-lamp.png" alt="Lever Activating Lamp" width="450"></a></td>
-    <td><a href="https://github.com/Cobbleworks/Wireless-Redstone/raw/main/images/screenshot-connector.png" target="_blank" rel="noopener noreferrer"><img src="https://github.com/Cobbleworks/Wireless-Redstone/raw/main/images/screenshot-connector.png" alt="Connector Tool" width="450"></a></td>
+    <td><a href="https://github.com/Cobbleworks/Wireless-Redstone-Plugin/raw/main/images/screenshot-factory-button.png" target="_blank" rel="noopener noreferrer"><img src="https://github.com/Cobbleworks/Wireless-Redstone-Plugin/raw/main/images/screenshot-factory-button.png" alt="Button activating factory production through wireless redstone" width="450"></a></td>
+    <td><a href="https://github.com/Cobbleworks/Wireless-Redstone-Plugin/raw/main/images/screenshot-disco-lightning.png" target="_blank" rel="noopener noreferrer"><img src="https://github.com/Cobbleworks/Wireless-Redstone-Plugin/raw/main/images/screenshot-disco-lightning.png" alt="Wireless redstone activating a full moving disco ground lightning" width="450"></a></td>
+  </tr>
+  <tr>
+    <th>Wireless Redstone - Factory Fence Lighting</th>
+    <th>Wireless Redstone - Room Machines</th>
+  </tr>
+  <tr>
+    <td><a href="https://github.com/Cobbleworks/Wireless-Redstone-Plugin/raw/main/images/screenshot-factory-fence.png" target="_blank" rel="noopener noreferrer"><img src="https://github.com/Cobbleworks/Wireless-Redstone-Plugin/raw/main/images/screenshot-factory-fence.png" alt="Wireless redstone lighting up the fence of a factory" width="450"></a></td>
+    <td><a href="https://github.com/Cobbleworks/Wireless-Redstone-Plugin/raw/main/images/screenshot-room-machines.png" target="_blank" rel="noopener noreferrer"><img src="https://github.com/Cobbleworks/Wireless-Redstone-Plugin/raw/main/images/screenshot-room-machines.png" alt="Wireless redstone enabling all machines and lights in a room" width="450"></a></td>
+  </tr>
+  <tr>
+    <th>Wireless Redstone - Bulb Command</th>
+    <th>Wireless Redstone - Lever Activating Lamp</th>
+  </tr>
+  <tr>
+    <td><a href="https://github.com/Cobbleworks/Wireless-Redstone-Plugin/raw/main/images/screenshot-bulb-command.png" target="_blank" rel="noopener noreferrer"><img src="https://github.com/Cobbleworks/Wireless-Redstone-Plugin/raw/main/images/screenshot-bulb-command.png" alt="Running command to receive bulbs for wireless redstone installation" width="450"></a></td>
+    <td><a href="https://github.com/Cobbleworks/Wireless-Redstone-Plugin/raw/main/images/screenshot-lever-lamp.png" target="_blank" rel="noopener noreferrer"><img src="https://github.com/Cobbleworks/Wireless-Redstone-Plugin/raw/main/images/screenshot-lever-lamp.png" alt="Lever activating a lamp wirelessly without any physical redstone connection" width="450"></a></td>
   </tr>
 </table>
