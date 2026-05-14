@@ -5,6 +5,7 @@ import com.wirelessredstone.model.BaseGroup;
 import com.wirelessredstone.model.BulbGroup;
 import com.wirelessredstone.model.ChestGroup;
 import net.kyori.adventure.text.format.NamedTextColor;
+import org.bukkit.Color;
 import org.bukkit.Location;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
@@ -30,6 +31,16 @@ public class WireViewManager {
     private static final String WIREVIEW_TEAM_PREFIX = "wv_";
     private static final String WIREVIEW_CHEST_TEAM_PREFIX = "wvc_";
     private static final String WIREVIEW_SINGLE_TEAM = "wv_single";
+    private static final NamedTextColor[] BULB_GROUP_COLORS = {
+        NamedTextColor.AQUA,
+        NamedTextColor.GOLD,
+        NamedTextColor.GREEN,
+        NamedTextColor.RED,
+        NamedTextColor.LIGHT_PURPLE,
+        NamedTextColor.YELLOW,
+        NamedTextColor.WHITE,
+        NamedTextColor.BLUE
+    };
 
     public WireViewManager(WirelessRedstonePlugin plugin, LinkedBulbManager bulbManager, LinkedChestManager chestManager) {
         this.plugin = plugin;
@@ -77,20 +88,9 @@ public class WireViewManager {
 
         Scoreboard scoreboard = player.getScoreboard();
         int colorIndex = 0;
-        NamedTextColor[] bulbColors = {
-            NamedTextColor.AQUA,
-            NamedTextColor.GOLD,
-            NamedTextColor.GREEN,
-            NamedTextColor.RED,
-            NamedTextColor.LIGHT_PURPLE,
-            NamedTextColor.YELLOW,
-            NamedTextColor.WHITE,
-            NamedTextColor.BLUE
-        };
-
         // Spawn glow entities for bulb groups
         for (BulbGroup group : bulbManager.getAllPlacedGroups()) {
-            NamedTextColor groupColor = bulbColors[colorIndex % bulbColors.length];
+            NamedTextColor groupColor = BULB_GROUP_COLORS[colorIndex % BULB_GROUP_COLORS.length];
             colorIndex++;
 
             String teamName = WIREVIEW_TEAM_PREFIX + group.getGroupId().toString().substring(0, 8);
@@ -163,6 +163,18 @@ public class WireViewManager {
         }
 
         return shulker;
+    }
+
+    public static Color getBulbGroupParticleColor(UUID groupId, List<BulbGroup> groups) {
+        int colorIndex = 0;
+        for (BulbGroup group : groups) {
+            if (group.getGroupId().equals(groupId)) {
+                NamedTextColor color = BULB_GROUP_COLORS[colorIndex % BULB_GROUP_COLORS.length];
+                return Color.fromRGB(color.value());
+            }
+            colorIndex++;
+        }
+        return Color.fromRGB(NamedTextColor.AQUA.value());
     }
 
     private void removeAllGlowEntities(Player player) {

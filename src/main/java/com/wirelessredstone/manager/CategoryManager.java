@@ -63,6 +63,14 @@ public class CategoryManager {
         }
     }
 
+    public void setCategoryDescription(UUID categoryId, String description) {
+        Category category = categories.get(categoryId);
+        if (category != null) {
+            category.setDescription(description);
+            saveData();
+        }
+    }
+
     public void setCategoryIcon(UUID categoryId, Material icon) {
         Category category = categories.get(categoryId);
         if (category != null) {
@@ -101,6 +109,9 @@ public class CategoryManager {
             String basePath = "categories." + index;
             config.set(basePath + ".id", entry.getKey().toString());
             config.set(basePath + ".name", category.getName());
+            if (category.getDescription() != null) {
+                config.set(basePath + ".description", category.getDescription());
+            }
             
             if (category.getOwnerUuid() != null) {
                 config.set(basePath + ".owner", category.getOwnerUuid().toString());
@@ -140,6 +151,7 @@ public class CategoryManager {
             UUID ownerUuid = ownerStr != null ? UUID.fromString(ownerStr) : null;
             
             Category category = new Category(categoryId, ownerUuid, name);
+            category.setDescription(config.getString(basePath + ".description"));
             
             String iconStr = config.getString(basePath + ".icon");
             if (iconStr != null) {

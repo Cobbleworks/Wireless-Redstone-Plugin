@@ -151,7 +151,7 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
             case "inspect" -> handleInspectCommand(player, parsedArgs);
             case "modify" -> handleModifyCommand(player, parsedArgs);
             case "give" -> handleGiveCommand(player, parsedArgs);
-            case "append", "extend" -> handleAppendCommand(player, parsedArgs);
+            case "extend" -> handleExtendCommand(player, parsedArgs);
             case "recover", "reclaim" -> handleRecoverCommand(player, parsedArgs);
             case "gui", "manage", "list" -> handleGUICommand(player, parsedArgs);
             case "debug" -> handleDebugCommand(player, parsedArgs);
@@ -180,10 +180,10 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
                 .orElse(null);
     }
 
-    private void handleAppendCommand(Player player, String[] args) {
+    private void handleExtendCommand(Player player, String[] args) {
         if (args.length < 2) {
-            player.sendMessage(Component.text("Usage: /wireless append <groupname> [count]", NamedTextColor.RED));
-            player.sendMessage(Component.text("Example: /wireless append MyLamps 3", NamedTextColor.GRAY));
+            player.sendMessage(Component.text("Usage: /wireless extend <groupname> [count]", NamedTextColor.RED));
+            player.sendMessage(Component.text("Example: /wireless extend MyLamps 3", NamedTextColor.GRAY));
             return;
         }
 
@@ -318,7 +318,7 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
         debugManager.setDebugEnabled(player, enabled);
         if (enabled) {
             player.sendMessage(Component.text("Debug mode enabled! ", NamedTextColor.GREEN)
-                    .append(Component.text("You will see sync messages for blocks within 3 blocks of you.", NamedTextColor.GRAY)));
+                    .append(Component.text("State changes will draw particle lines between linked blocks.", NamedTextColor.GRAY)));
         } else {
             player.sendMessage(Component.text("Debug mode disabled.", NamedTextColor.YELLOW));
         }
@@ -888,7 +888,7 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
                 .append(Component.text(" - Rename a group", NamedTextColor.GRAY)));
         player.sendMessage(Component.text("/wireless modify category <groupName> <categoryName>", NamedTextColor.YELLOW)
                 .append(Component.text(" - Assign group to category (use 'none' to remove)", NamedTextColor.GRAY)));
-        player.sendMessage(Component.text("/wireless append <name> [count]", NamedTextColor.YELLOW)
+        player.sendMessage(Component.text("/wireless extend <name> [count]", NamedTextColor.YELLOW)
                 .append(Component.text(" - Add more blocks to an existing group", NamedTextColor.GRAY)));
         player.sendMessage(Component.text("/wireless recover <name>", NamedTextColor.YELLOW)
                 .append(Component.text(" - Recover lost/missing blocks from a group", NamedTextColor.GRAY)));
@@ -897,7 +897,7 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
         player.sendMessage(Component.text("/wireless gui [--all] [--nocategory]", NamedTextColor.YELLOW)
                 .append(Component.text(" - Open management GUI", NamedTextColor.GRAY)));
         player.sendMessage(Component.text("/wireless debug on|off", NamedTextColor.YELLOW)
-                .append(Component.text(" - Toggle sync debug messages for nearby blocks", NamedTextColor.GRAY)));
+                .append(Component.text(" - Toggle connection particle lines on state changes", NamedTextColor.GRAY)));
         if (player.hasPermission("wirelessredstone.admin")) {
             player.sendMessage(Component.text("/wireless reload", NamedTextColor.YELLOW)
                     .append(Component.text(" - Reload configuration files", NamedTextColor.GRAY)));
@@ -964,7 +964,7 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
             String input = args[0].toLowerCase();
             List<String> subCommands = new ArrayList<>(List.of(
                     "create", "inspect", "modify", "give",
-                    "append", "extend", "recover", "reclaim",
+                    "extend", "recover", "reclaim",
                     "gui", "manage", "list", "debug"
             ));
             if (sender.hasPermission("wirelessredstone.admin")) {
@@ -1078,8 +1078,8 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
                     completions.add("--nocategory");
                 }
             }
-            // /wireless append <groupName> [count]
-            else if (subCommand.equals("append") || subCommand.equals("extend")) {
+            // /wireless extend <groupName> [count]
+            else if (subCommand.equals("extend")) {
                 if (args.length == 2 && sender instanceof Player player) {
                     addGroupNameCompletions(player, input, completions);
                 } else if (args.length == 3) {

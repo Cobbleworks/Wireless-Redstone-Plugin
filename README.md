@@ -16,7 +16,7 @@ Wireless Redstone is an open-source Minecraft plugin that allows players to crea
 
 - **Wireless Bulbs and Lamps:** Create linked groups of copper bulbs or redstone lamps that synchronize state across any distance (2-26 blocks per group)
 - **Wireless Containers:** Create linked groups of chests, barrels, shulker boxes, or copper chests that share inventory in real time
-- **Management GUI:** Visual interface for managing all wireless groups with category organization, custom naming, and icon assignment
+- **Management GUI:** Visual interface for managing all wireless groups with category organization, category descriptions, custom naming, icon assignment, and quick tool buttons
 - **Circuit Analyser:** Diagnostic tool for inspecting wireless blocks with WireView mode showing color-coded glowing outlines per group
 - **Connector Tool:** Management tool for rapidly adding or removing blocks from existing groups, with creation mode for building new groups in place
 - **Block Recovery:** Recover lost or accidentally broken wireless blocks that still belong to an existing group
@@ -105,7 +105,7 @@ Wireless Redstone persists all runtime data to YAML files under `plugins/Wireles
 |------|---------|
 | `bulbs.yml` | Bulb/lamp groups, ownership, names, category links, variant material, locations |
 | `chests.yml` | Container groups, shared inventories, ownership, names, category links, locations |
-| `categories.yml` | Category definitions, owners, icons |
+| `categories.yml` | Category definitions, owners, descriptions, icons |
 
 > **Note:** Do not edit these files manually while the server is running. Use `/wireless reload` after any manual edits made while the server is stopped.
 
@@ -150,10 +150,10 @@ All commands require the `wirelessredstone.use` permission (operator by default)
 | `/wireless inspect [player]` | Give a Circuit Analyser (admin can target another player) |
 | `/wireless modify name <groupName> <newName>` | Rename a group |
 | `/wireless modify category <groupName> <categoryName>` | Assign group to category (`none` to remove) |
-| `/wireless append <groupName> [count]` | Extend an existing group by 1-24 slots (max 26 total) |
+| `/wireless extend <groupName> [count]` | Extend an existing group by 1-24 slots (max 26 total) |
 | `/wireless recover <groupName>` | Recover unplaced/missing items for a group |
 | `/wireless gui [--all] [--nocategory]` | Open management GUI (category view or direct list view) |
-| `/wireless debug on\|off` | Toggle sync debug messages |
+| `/wireless debug on\|off` | Toggle connection particle lines on state changes |
 | `/wireless reload` | Reload configuration files (admin only) |
 
 ### **Variant Flags**

@@ -4,6 +4,8 @@ import org.bukkit.Color;
 import org.bukkit.Location;
 import org.bukkit.Particle;
 import org.bukkit.World;
+import org.bukkit.entity.Player;
+import org.bukkit.util.Vector;
 
 public class ParticleEffects {
 
@@ -108,5 +110,30 @@ public class ParticleEffects {
         world.spawnParticle(Particle.SMOKE, center, 12, 0.3, 0.3, 0.3, 0.03);
         // Small crit particles for visual feedback
         world.spawnParticle(Particle.CRIT, center, 10, 0.3, 0.3, 0.3, 0.1);
+    }
+
+    /**
+     * Draws a private particle line for debug viewers between two linked wireless blocks.
+     */
+    public static void spawnDebugConnectionLine(Player player, Location source, Location target, Color color) {
+        if (source.getWorld() == null || target.getWorld() == null) return;
+        if (!source.getWorld().equals(target.getWorld())) return;
+        if (!player.getWorld().equals(source.getWorld())) return;
+
+        Location start = source.clone().add(0.5, 0.5, 0.5);
+        Location end = target.clone().add(0.5, 0.5, 0.5);
+        Vector direction = end.toVector().subtract(start.toVector());
+        double distance = direction.length();
+        if (distance <= 0.01) return;
+
+        direction.normalize();
+        int steps = Math.min(220, Math.max(2, (int) Math.ceil(distance * 2.0)));
+        double stepLength = distance / steps;
+        Particle.DustOptions dust = new Particle.DustOptions(color, 0.9f);
+
+        for (int i = 0; i <= steps; i++) {
+            Location point = start.clone().add(direction.clone().multiply(stepLength * i));
+            player.spawnParticle(Particle.DUST, point, 1, 0, 0, 0, 0, dust);
+        }
     }
 }

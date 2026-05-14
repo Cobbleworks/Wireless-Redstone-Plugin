@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+- Added category descriptions in the wireless GUI.
+- Added GUI buttons for receiving the Connector Tool and Circuit Analyser.
+- Renamed `/wireless append` to `/wireless extend` and removed the append command alias.
+- Changed debug mode to draw particle connection lines on wireless state changes instead of sending sync messages.
+
 ## [1.0.0] - 2026-04-28
 
 Wireless Redstone v1.0.0 is the initial release, enabling wireless state synchronization for copper bulbs, redstone lamps, and containers across any distance — with GUI management, a circuit analyser, and full hopper compatibility.

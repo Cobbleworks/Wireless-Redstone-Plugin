@@ -9,12 +9,14 @@ public class Category {
     private final UUID categoryId;
     private final UUID ownerUuid;
     private String name;
+    private String description;
     private Material icon;
 
     public Category(UUID categoryId, UUID ownerUuid, String name) {
         this.categoryId = categoryId;
         this.ownerUuid = ownerUuid;
         this.name = name;
+        this.description = null;
         this.icon = Material.CHEST;
     }
 
@@ -32,6 +34,14 @@ public class Category {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description == null || description.isBlank() ? null : description;
     }
 
     public Material getIcon() {

@@ -3,6 +3,7 @@ package com.wirelessredstone.gui;
 import com.wirelessredstone.manager.CategoryManager;
 import com.wirelessredstone.manager.LinkedBulbManager;
 import com.wirelessredstone.manager.LinkedChestManager;
+import com.wirelessredstone.item.CircuitAnalyserFactory;
 import com.wirelessredstone.model.BulbGroup;
 import com.wirelessredstone.model.Category;
 import com.wirelessredstone.model.ChestGroup;
@@ -138,6 +139,9 @@ public class BulbManagerGUI implements InventoryHolder {
         if (categoryManager != null) {
             inventory.setItem(47, createBackToCategoriesItem());
         }
+
+        inventory.setItem(51, createConnectorToolItem());
+        inventory.setItem(52, createCircuitAnalyserItem());
 
         inventory.setItem(53, createCloseItem());
     }
@@ -305,6 +309,36 @@ public class BulbManagerGUI implements InventoryHolder {
         return item;
     }
 
+    private ItemStack createConnectorToolItem() {
+        ItemStack item = new ItemStack(Material.SHEARS);
+        ItemMeta meta = item.getItemMeta();
+        meta.displayName(Component.text("Get Connector Tool", NamedTextColor.GREEN)
+                .decoration(TextDecoration.ITALIC, false)
+                .decoration(TextDecoration.BOLD, true));
+        meta.lore(List.of(
+                Component.text("Click to create a connector", NamedTextColor.GRAY)
+                        .decoration(TextDecoration.ITALIC, false),
+                Component.text("tool for a new group", NamedTextColor.GRAY)
+                        .decoration(TextDecoration.ITALIC, false)
+        ));
+        item.setItemMeta(meta);
+        return item;
+    }
+
+    private ItemStack createCircuitAnalyserItem() {
+        ItemStack item = new ItemStack(Material.AMETHYST_SHARD);
+        ItemMeta meta = item.getItemMeta();
+        meta.displayName(Component.text("Get Circuit Analyser", NamedTextColor.LIGHT_PURPLE)
+                .decoration(TextDecoration.ITALIC, false)
+                .decoration(TextDecoration.BOLD, true));
+        meta.lore(List.of(
+                Component.text("Click to receive the analyser", NamedTextColor.GRAY)
+                        .decoration(TextDecoration.ITALIC, false)
+        ));
+        item.setItemMeta(meta);
+        return item;
+    }
+
     private String formatLocation(Location loc) {
         return String.format("%s: %d, %d, %d", 
             loc.getWorld().getName(), 
@@ -349,6 +383,17 @@ public class BulbManagerGUI implements InventoryHolder {
 
         if (slot == 53) {
             player.closeInventory();
+            return;
+        }
+
+        if (slot == 51) {
+            CategorySelectionGUI.startConnectorToolPrompt(player, categoryId, categoryManager);
+            return;
+        }
+
+        if (slot == 52) {
+            giveItemToPlayer(CircuitAnalyserFactory.createCircuitAnalyser());
+            player.sendMessage(Component.text("You received a Circuit Analyser!", NamedTextColor.GREEN));
             return;
         }
 
@@ -595,5 +640,13 @@ public class BulbManagerGUI implements InventoryHolder {
 
     public void open() {
         player.openInventory(inventory);
+    }
+
+    private void giveItemToPlayer(ItemStack item) {
+        if (player.getInventory().firstEmpty() != -1) {
+            player.getInventory().addItem(item);
+        } else {
+            player.getWorld().dropItemNaturally(player.getLocation(), item);
+        }
     }
 }

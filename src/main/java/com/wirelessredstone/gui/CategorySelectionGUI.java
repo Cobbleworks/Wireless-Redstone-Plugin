@@ -3,6 +3,8 @@ package com.wirelessredstone.gui;
 import com.wirelessredstone.manager.CategoryManager;
 import com.wirelessredstone.manager.LinkedBulbManager;
 import com.wirelessredstone.manager.LinkedChestManager;
+import com.wirelessredstone.item.CircuitAnalyserFactory;
+import com.wirelessredstone.item.ConnectorToolFactory;
 import com.wirelessredstone.model.Category;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -27,7 +29,9 @@ public class CategorySelectionGUI implements InventoryHolder {
 
     public enum PendingActionType {
         RENAME_CATEGORY,
-        CREATE_CATEGORY
+        CREATE_CATEGORY,
+        SET_CATEGORY_DESCRIPTION,
+        CREATE_CONNECTOR_TOOL
     }
 
     public record PendingAction(PendingActionType type, UUID categoryId) {}
@@ -101,6 +105,9 @@ public class CategorySelectionGUI implements InventoryHolder {
         // Create category button
         inventory.setItem(46, createNewCategoryItem());
 
+        inventory.setItem(51, createConnectorToolItem());
+        inventory.setItem(52, createCircuitAnalyserItem());
+
         inventory.setItem(53, createCloseItem());
     }
 
@@ -137,6 +144,11 @@ public class CategorySelectionGUI implements InventoryHolder {
 
         List<Component> lore = new ArrayList<>();
         lore.add(Component.empty());
+        if (category.getDescription() != null) {
+            lore.add(Component.text(category.getDescription(), NamedTextColor.GRAY)
+                    .decoration(TextDecoration.ITALIC, false));
+            lore.add(Component.empty());
+        }
         lore.add(Component.text("Bulb Groups: ", NamedTextColor.GRAY)
                 .append(Component.text(String.valueOf(bulbCount), NamedTextColor.AQUA))
                 .decoration(TextDecoration.ITALIC, false));
@@ -146,6 +158,9 @@ public class CategorySelectionGUI implements InventoryHolder {
         lore.add(Component.empty());
         lore.add(Component.text("Left-click: ", NamedTextColor.YELLOW)
                 .append(Component.text("View groups", NamedTextColor.WHITE))
+                .decoration(TextDecoration.ITALIC, false));
+        lore.add(Component.text("Right-click: ", NamedTextColor.YELLOW)
+                .append(Component.text("Set description", NamedTextColor.WHITE))
                 .decoration(TextDecoration.ITALIC, false));
         lore.add(Component.text("Middle-click: ", NamedTextColor.LIGHT_PURPLE)
                 .append(Component.text("Rename category", NamedTextColor.WHITE))
@@ -158,6 +173,36 @@ public class CategorySelectionGUI implements InventoryHolder {
                 .decoration(TextDecoration.ITALIC, false));
 
         meta.lore(lore);
+        item.setItemMeta(meta);
+        return item;
+    }
+
+    private ItemStack createConnectorToolItem() {
+        ItemStack item = new ItemStack(Material.SHEARS);
+        ItemMeta meta = item.getItemMeta();
+        meta.displayName(Component.text("Get Connector Tool", NamedTextColor.GREEN)
+                .decoration(TextDecoration.ITALIC, false)
+                .decoration(TextDecoration.BOLD, true));
+        meta.lore(List.of(
+                Component.text("Click to create a connector", NamedTextColor.GRAY)
+                        .decoration(TextDecoration.ITALIC, false),
+                Component.text("tool for a new group", NamedTextColor.GRAY)
+                        .decoration(TextDecoration.ITALIC, false)
+        ));
+        item.setItemMeta(meta);
+        return item;
+    }
+
+    private ItemStack createCircuitAnalyserItem() {
+        ItemStack item = new ItemStack(Material.AMETHYST_SHARD);
+        ItemMeta meta = item.getItemMeta();
+        meta.displayName(Component.text("Get Circuit Analyser", NamedTextColor.LIGHT_PURPLE)
+                .decoration(TextDecoration.ITALIC, false)
+                .decoration(TextDecoration.BOLD, true));
+        meta.lore(List.of(
+                Component.text("Click to receive the analyser", NamedTextColor.GRAY)
+                        .decoration(TextDecoration.ITALIC, false)
+        ));
         item.setItemMeta(meta);
         return item;
     }
@@ -307,6 +352,17 @@ public class CategorySelectionGUI implements InventoryHolder {
             return;
         }
 
+        if (slot == 51) {
+            startConnectorToolPrompt(player, null, categoryManager);
+            return;
+        }
+
+        if (slot == 52) {
+            giveItemToPlayer(player, CircuitAnalyserFactory.createCircuitAnalyser());
+            player.sendMessage(Component.text("You received a Circuit Analyser!", NamedTextColor.GREEN));
+            return;
+        }
+
         // Uncategorized
         if (slot == 4) {
             openGroupsGUI(null);
@@ -327,6 +383,8 @@ public class CategorySelectionGUI implements InventoryHolder {
             handleDeleteCategory(category);
         } else if (isMiddleClick) {
             handleRenameCategory(category);
+        } else if (isRightClick) {
+            handleSetDescription(category);
         } else {
             openGroupsGUI(category.getCategoryId());
         }
@@ -343,6 +401,13 @@ public class CategorySelectionGUI implements InventoryHolder {
         player.closeInventory();
         player.sendMessage(Component.text("Enter a new name for the category (or 'cancel' to abort):", NamedTextColor.YELLOW));
         player.sendMessage(Component.text("Current name: " + category.getDisplayName(), NamedTextColor.GRAY));
+    }
+
+    private void handleSetDescription(Category category) {
+        pendingActions.put(player.getUniqueId(), new PendingAction(PendingActionType.SET_CATEGORY_DESCRIPTION, category.getCategoryId()));
+        player.closeInventory();
+        player.sendMessage(Component.text("Enter a category description (or 'clear' to remove, 'cancel' to abort):", NamedTextColor.YELLOW));
+        player.sendMessage(Component.text("Current description: " + (category.getDescription() == null ? "None" : category.getDescription()), NamedTextColor.GRAY));
     }
 
     private void handleSetIcon(Category category) {
@@ -428,6 +493,7 @@ public class CategorySelectionGUI implements InventoryHolder {
                                              LinkedBulbManager bulbManager, LinkedChestManager chestManager) {
         PendingAction action = pendingActions.remove(player.getUniqueId());
         if (action == null) return;
+        input = input.trim();
 
         if (input.equalsIgnoreCase("cancel")) {
             player.sendMessage(Component.text("Action cancelled.", NamedTextColor.GRAY));
@@ -435,18 +501,37 @@ public class CategorySelectionGUI implements InventoryHolder {
             return;
         }
 
-        String name = input.length() > 32 ? input.substring(0, 32) : input;
-
         switch (action.type()) {
             case CREATE_CATEGORY -> {
+                String name = input.length() > 32 ? input.substring(0, 32) : input;
                 categoryManager.createCategory(player.getUniqueId(), name);
                 player.sendMessage(Component.text("Category created: " + name, NamedTextColor.GREEN));
             }
             case RENAME_CATEGORY -> {
                 if (action.categoryId() != null) {
+                    String name = input.length() > 32 ? input.substring(0, 32) : input;
                     categoryManager.renameCategory(action.categoryId(), name);
                     player.sendMessage(Component.text("Category renamed to: " + name, NamedTextColor.GREEN));
                 }
+            }
+            case SET_CATEGORY_DESCRIPTION -> {
+                if (action.categoryId() != null) {
+                    String description = input.equalsIgnoreCase("clear") || input.equalsIgnoreCase("reset")
+                            ? null
+                            : input.length() > 96 ? input.substring(0, 96) : input;
+                    categoryManager.setCategoryDescription(action.categoryId(), description);
+                    player.sendMessage(Component.text(description == null ? "Category description cleared." : "Category description updated.", NamedTextColor.GREEN));
+                }
+            }
+            case CREATE_CONNECTOR_TOOL -> {
+                String groupName = input.length() > 32 ? input.substring(0, 32) : input;
+                String categoryName = action.categoryId() == null
+                        ? null
+                        : categoryManager.getCategoryById(action.categoryId()).map(Category::getName).orElse(null);
+                giveItemToPlayer(player, ConnectorToolFactory.createCreationModeConnectorTool(groupName, categoryName));
+                player.sendMessage(Component.text("You received a Connector Tool for new group ", NamedTextColor.GREEN)
+                        .append(Component.text(groupName, NamedTextColor.LIGHT_PURPLE))
+                        .append(Component.text(".", NamedTextColor.GREEN)));
             }
         }
         
@@ -463,5 +548,24 @@ public class CategorySelectionGUI implements InventoryHolder {
 
     public static void cancelPendingAction(UUID playerUuid) {
         pendingActions.remove(playerUuid);
+    }
+
+    public static void startConnectorToolPrompt(Player player, UUID categoryId, CategoryManager categoryManager) {
+        pendingActions.put(player.getUniqueId(), new PendingAction(PendingActionType.CREATE_CONNECTOR_TOOL, categoryId));
+        player.closeInventory();
+        player.sendMessage(Component.text("Enter a name for the new wireless group (or 'cancel' to abort):", NamedTextColor.YELLOW));
+        if (categoryId != null && categoryManager != null) {
+            categoryManager.getCategoryById(categoryId).ifPresent(category ->
+                    player.sendMessage(Component.text("Category: ", NamedTextColor.GRAY)
+                            .append(Component.text(category.getDisplayName(), NamedTextColor.YELLOW))));
+        }
+    }
+
+    private static void giveItemToPlayer(Player player, ItemStack item) {
+        if (player.getInventory().firstEmpty() != -1) {
+            player.getInventory().addItem(item);
+        } else {
+            player.getWorld().dropItemNaturally(player.getLocation(), item);
+        }
     }
 }

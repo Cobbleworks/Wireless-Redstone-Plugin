@@ -42,6 +42,8 @@ public class CircuitAnalyserFactory {
                         .append(Component.text("to reveal all wireless blocks", NamedTextColor.GRAY))
                         .decoration(TextDecoration.ITALIC, false),
                 Component.text("with color-coded glowing outlines", NamedTextColor.GRAY)
+                        .decoration(TextDecoration.ITALIC, false),
+                Component.text("Triggered circuits draw connection lines", NamedTextColor.GRAY)
                         .decoration(TextDecoration.ITALIC, false)
         ));
 

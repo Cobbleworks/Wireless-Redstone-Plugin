@@ -2,13 +2,14 @@ package com.wirelessredstone.task;
 
 import com.wirelessredstone.WirelessRedstonePlugin;
 import com.wirelessredstone.item.BulbVariant;
+import com.wirelessredstone.item.CircuitAnalyserFactory;
 import com.wirelessredstone.manager.DebugManager;
 import com.wirelessredstone.manager.LinkedBulbManager;
+import com.wirelessredstone.manager.WireViewManager;
 import com.wirelessredstone.model.BulbGroup;
 import com.wirelessredstone.util.BulbUtils;
 import com.wirelessredstone.util.ParticleEffects;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
+import org.bukkit.Color;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
 import org.bukkit.block.data.Lightable;
@@ -129,7 +130,7 @@ public class BulbSyncTask extends BukkitRunnable {
         ParticleEffects.spawnTriggerParticles(sourceLocation, sourceState);
         ParticleEffects.spawnSyncParticles(sourceLocation, sourceState);
 
-        sendDebugMessages(group, sourceLocation, placedLocations, sourceState);
+        showDebugConnections(group, sourceLocation, placedLocations);
 
         final Set<Location> toRemove = new HashSet<>(placedLocations);
         new BukkitRunnable() {
@@ -202,7 +203,7 @@ public class BulbSyncTask extends BukkitRunnable {
         ParticleEffects.spawnTriggerParticles(sourceLocation, sourceState);
         ParticleEffects.spawnSyncParticles(sourceLocation, sourceState);
 
-        sendDebugMessages(group, sourceLocation, placedLocations, sourceState);
+        showDebugConnections(group, sourceLocation, placedLocations);
 
         final Set<Location> toRemove = new HashSet<>(placedLocations);
         new BukkitRunnable() {
@@ -213,39 +214,24 @@ public class BulbSyncTask extends BukkitRunnable {
         }.runTaskLater(WirelessRedstonePlugin.getInstance(), 5L);
     }
 
-    private void sendDebugMessages(BulbGroup group, Location sourceLocation, List<Location> allLocations, boolean newState) {
-        String groupName = group.getDisplayName();
-        String stateText = newState ? "ON" : "OFF";
-        NamedTextColor stateColor = newState ? NamedTextColor.GREEN : NamedTextColor.RED;
+    private void showDebugConnections(BulbGroup group, Location sourceLocation, List<Location> allLocations) {
+        Color groupColor = WireViewManager.getBulbGroupParticleColor(group.getGroupId(), bulbManager.getAllPlacedGroups());
 
         for (Player player : sourceLocation.getWorld().getPlayers()) {
-            boolean shouldShowDebug = false;
-            Location nearestLoc = null;
-
-            for (Location loc : allLocations) {
-                if (debugManager.shouldShowDebugForLocation(player, loc)) {
-                    shouldShowDebug = true;
-                    nearestLoc = loc;
-                    break;
-                }
+            if (!debugManager.isDebugEnabled(player) && !isHoldingCircuitAnalyser(player)) {
+                continue;
             }
 
-            if (shouldShowDebug && nearestLoc != null) {
-                int syncedCount = allLocations.size() - 1;
-                player.sendMessage(
-                    Component.text("[" + groupName + "] ", NamedTextColor.AQUA)
-                        .append(Component.text(formatShortLocation(sourceLocation), NamedTextColor.GRAY))
-                        .append(Component.text(" → ", NamedTextColor.WHITE))
-                        .append(Component.text(syncedCount + " bulb(s)", NamedTextColor.GRAY))
-                        .append(Component.text(" [", NamedTextColor.DARK_GRAY))
-                        .append(Component.text(stateText, stateColor))
-                        .append(Component.text("]", NamedTextColor.DARK_GRAY))
-                );
+            for (Location targetLocation : allLocations) {
+                if (targetLocation.equals(sourceLocation)) continue;
+                if (!targetLocation.isChunkLoaded()) continue;
+                ParticleEffects.spawnDebugConnectionLine(player, sourceLocation, targetLocation, groupColor);
             }
         }
     }
 
-    private String formatShortLocation(Location loc) {
-        return String.format("%d,%d,%d", loc.getBlockX(), loc.getBlockY(), loc.getBlockZ());
+    private boolean isHoldingCircuitAnalyser(Player player) {
+        return CircuitAnalyserFactory.isCircuitAnalyser(player.getInventory().getItemInMainHand())
+                || CircuitAnalyserFactory.isCircuitAnalyser(player.getInventory().getItemInOffHand());
     }
 }
