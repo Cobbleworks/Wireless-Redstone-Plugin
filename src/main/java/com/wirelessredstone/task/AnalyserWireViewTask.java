@@ -91,21 +91,23 @@ public class AnalyserWireViewTask extends BukkitRunnable {
             return;
         }
 
-        Location source = locations.get(0);
-        if (!source.isChunkLoaded() || source.getWorld() == null) {
-            return;
-        }
-
         for (UUID playerId : playersWithAnalyserView) {
             Player player = plugin.getServer().getPlayer(playerId);
-            if (player == null || !player.isOnline() || !source.getWorld().equals(player.getWorld())) {
+            if (player == null || !player.isOnline()) {
                 continue;
             }
 
-            for (int i = 1; i < locations.size(); i++) {
-                Location target = locations.get(i);
-                if (target.getWorld() != null && target.isChunkLoaded()) {
-                    ParticleEffects.spawnDebugConnectionLine(player, source, target, color);
+            for (int sourceIndex = 0; sourceIndex < locations.size() - 1; sourceIndex++) {
+                Location source = locations.get(sourceIndex);
+                if (source.getWorld() == null || !source.isChunkLoaded() || !source.getWorld().equals(player.getWorld())) {
+                    continue;
+                }
+
+                for (int targetIndex = sourceIndex + 1; targetIndex < locations.size(); targetIndex++) {
+                    Location target = locations.get(targetIndex);
+                    if (target.getWorld() != null && target.isChunkLoaded()) {
+                        ParticleEffects.spawnDebugConnectionLine(player, source, target, color);
+                    }
                 }
             }
         }
