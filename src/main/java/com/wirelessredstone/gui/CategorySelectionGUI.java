@@ -190,7 +190,7 @@ public class CategorySelectionGUI implements InventoryHolder {
         meta.lore(List.of(
                 Component.text("Click to create a connector", NamedTextColor.GRAY)
                         .decoration(TextDecoration.ITALIC, false),
-                Component.text("tool for a new group", NamedTextColor.GRAY)
+                Component.text("tool for a new/existing group", NamedTextColor.GRAY)
                         .decoration(TextDecoration.ITALIC, false)
         ));
         item.setItemMeta(meta);
