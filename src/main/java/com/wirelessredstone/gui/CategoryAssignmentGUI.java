@@ -98,10 +98,8 @@ public class CategoryAssignmentGUI implements InventoryHolder {
             inventory.setItem(50, createNavigationItem(Material.ARROW, "Next Page", NamedTextColor.YELLOW));
         }
 
-        // Back button
-        inventory.setItem(45, createBackItem());
-
-        // Close
+        // Back / Close
+        inventory.setItem(52, createBackItem());
         inventory.setItem(53, createCloseItem());
     }
 
@@ -273,7 +271,7 @@ public class CategoryAssignmentGUI implements InventoryHolder {
         }
 
         // Back
-        if (slot == 45) {
+        if (slot == 52) {
             returnToGroupsGUI();
             return;
         }

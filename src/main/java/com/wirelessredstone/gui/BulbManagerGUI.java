@@ -135,14 +135,13 @@ public class BulbManagerGUI implements InventoryHolder {
             inventory.setItem(45, createToggleViewItem());
         }
 
+        inventory.setItem(46, createConnectorToolItem());
+        inventory.setItem(47, createCircuitAnalyserItem());
+
         // Back to categories button when in category mode
         if (categoryManager != null) {
-            inventory.setItem(47, createBackToCategoriesItem());
+            inventory.setItem(52, createBackToCategoriesItem());
         }
-
-        inventory.setItem(51, createConnectorToolItem());
-        inventory.setItem(52, createCircuitAnalyserItem());
-
         inventory.setItem(53, createCloseItem());
     }
 
@@ -374,7 +373,7 @@ public class BulbManagerGUI implements InventoryHolder {
         }
 
         // Back to categories
-        if (slot == 47 && categoryManager != null) {
+        if (slot == 52 && categoryManager != null) {
             CategorySelectionGUI categoryGUI = new CategorySelectionGUI(categoryManager, bulbManager, chestManager, player, showAllGroups);
             player.closeInventory();
             categoryGUI.open();
@@ -386,12 +385,12 @@ public class BulbManagerGUI implements InventoryHolder {
             return;
         }
 
-        if (slot == 51) {
+        if (slot == 46) {
             CategorySelectionGUI.startConnectorToolPrompt(player, categoryId, categoryManager);
             return;
         }
 
-        if (slot == 52) {
+        if (slot == 47) {
             giveItemToPlayer(CircuitAnalyserFactory.createCircuitAnalyser());
             player.sendMessage(Component.text("You received a Circuit Analyser!", NamedTextColor.GREEN));
             return;

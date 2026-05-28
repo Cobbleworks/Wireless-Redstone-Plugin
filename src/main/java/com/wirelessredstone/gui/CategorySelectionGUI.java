@@ -102,11 +102,11 @@ public class CategorySelectionGUI implements InventoryHolder {
             inventory.setItem(45, createToggleViewItem());
         }
 
-        // Create category button
-        inventory.setItem(46, createNewCategoryItem());
+        inventory.setItem(46, createConnectorToolItem());
+        inventory.setItem(47, createCircuitAnalyserItem());
 
-        inventory.setItem(51, createConnectorToolItem());
-        inventory.setItem(52, createCircuitAnalyserItem());
+        // Create category button
+        inventory.setItem(51, createNewCategoryItem());
 
         inventory.setItem(53, createCloseItem());
     }
@@ -341,7 +341,7 @@ public class CategorySelectionGUI implements InventoryHolder {
         }
 
         // Create new category
-        if (slot == 46) {
+        if (slot == 51) {
             handleCreateCategory();
             return;
         }
@@ -352,12 +352,12 @@ public class CategorySelectionGUI implements InventoryHolder {
             return;
         }
 
-        if (slot == 51) {
+        if (slot == 46) {
             startConnectorToolPrompt(player, null, categoryManager);
             return;
         }
 
-        if (slot == 52) {
+        if (slot == 47) {
             giveItemToPlayer(player, CircuitAnalyserFactory.createCircuitAnalyser());
             player.sendMessage(Component.text("You received a Circuit Analyser!", NamedTextColor.GREEN));
             return;
@@ -532,6 +532,7 @@ public class CategorySelectionGUI implements InventoryHolder {
                 player.sendMessage(Component.text("You received a Connector Tool for new group ", NamedTextColor.GREEN)
                         .append(Component.text(groupName, NamedTextColor.LIGHT_PURPLE))
                         .append(Component.text(".", NamedTextColor.GREEN)));
+                return;
             }
         }
         

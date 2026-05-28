@@ -2,7 +2,6 @@ package com.wirelessredstone.task;
 
 import com.wirelessredstone.WirelessRedstonePlugin;
 import com.wirelessredstone.item.BulbVariant;
-import com.wirelessredstone.item.CircuitAnalyserFactory;
 import com.wirelessredstone.manager.DebugManager;
 import com.wirelessredstone.manager.LinkedBulbManager;
 import com.wirelessredstone.manager.WireViewManager;
@@ -244,7 +243,7 @@ public class BulbSyncTask extends BukkitRunnable {
         if (sourceLocation.getWorld() == null) return;
 
         for (Player player : sourceLocation.getWorld().getPlayers()) {
-            if (!debugManager.isDebugEnabled(player) && !isHoldingCircuitAnalyser(player)) {
+            if (!debugManager.isDebugEnabled(player)) {
                 continue;
             }
 
@@ -262,8 +261,4 @@ public class BulbSyncTask extends BukkitRunnable {
                 .getInt("effects.connection-lines.linger-ticks", 10)));
     }
 
-    private boolean isHoldingCircuitAnalyser(Player player) {
-        return CircuitAnalyserFactory.isCircuitAnalyser(player.getInventory().getItemInMainHand())
-                || CircuitAnalyserFactory.isCircuitAnalyser(player.getInventory().getItemInOffHand());
-    }
 }
