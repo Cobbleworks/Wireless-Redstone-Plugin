@@ -37,6 +37,8 @@ public class WirelessRedstonePlugin extends JavaPlugin {
     @Override
     public void onEnable() {
         instance = this;
+        saveDefaultConfig();
+
         bulbManager = new LinkedBulbManager(this);
         chestManager = new LinkedChestManager(this);
         categoryManager = new CategoryManager(this);
@@ -146,6 +148,7 @@ public class WirelessRedstonePlugin extends JavaPlugin {
      * This clears existing data and reloads from disk.
      */
     public void reloadData() {
+        reloadConfig();
         bulbManager.reloadData();
         chestManager.reloadData();
         categoryManager.reloadData();

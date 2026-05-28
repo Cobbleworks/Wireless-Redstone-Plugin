@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added GUI buttons for receiving the Connector Tool and Circuit Analyser.
 - Renamed `/wireless append` to `/wireless extend` and removed the append command alias.
 - Changed debug mode to draw particle connection lines on wireless state changes instead of sending sync messages.
+- Added `effects.connection-lines.linger-ticks` to configure how long triggered connection lines remain visible.
 
 ## [1.0.0] - 2026-04-28
 

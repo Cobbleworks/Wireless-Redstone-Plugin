@@ -81,6 +81,7 @@ On the first server start after installation, Wireless Redstone creates the foll
 ```
 plugins/
 └── WirelessRedstone/
+    ├── config.yml       - Plugin settings, including visual effect durations
     ├── bulbs.yml        - All bulb and lamp group data
     ├── chests.yml       - All container group data and shared inventories
     └── categories.yml   - Category definitions and icons
@@ -103,9 +104,12 @@ Wireless Redstone persists all runtime data to YAML files under `plugins/Wireles
 
 | File | Purpose |
 |------|---------|
+| `config.yml` | Plugin settings, including debug/analyser connection-line linger duration |
 | `bulbs.yml` | Bulb/lamp groups, ownership, names, category links, variant material, locations |
 | `chests.yml` | Container groups, shared inventories, ownership, names, category links, locations |
 | `categories.yml` | Category definitions, owners, descriptions, icons |
+
+`effects.connection-lines.linger-ticks` controls how long triggered connection lines are redrawn for debug mode and Circuit Analyser holders. `20` ticks equals 1 second.
 
 > **Note:** Do not edit these files manually while the server is running. Use `/wireless reload` after any manual edits made while the server is stopped.
 

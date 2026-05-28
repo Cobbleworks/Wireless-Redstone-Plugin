@@ -17,6 +17,7 @@ import org.bukkit.block.data.type.CopperBulb;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -216,6 +217,31 @@ public class BulbSyncTask extends BukkitRunnable {
 
     private void showDebugConnections(BulbGroup group, Location sourceLocation, List<Location> allLocations) {
         Color groupColor = WireViewManager.getBulbGroupParticleColor(group.getGroupId(), bulbManager.getAllPlacedGroups());
+        List<Location> snapshotLocations = new ArrayList<>(allLocations);
+        int lingerTicks = getConnectionLineLingerTicks();
+
+        drawDebugConnections(sourceLocation, snapshotLocations, groupColor);
+
+        if (lingerTicks <= 1) {
+            return;
+        }
+
+        new BukkitRunnable() {
+            private int ticksDrawn = 1;
+
+            @Override
+            public void run() {
+                if (++ticksDrawn > lingerTicks) {
+                    cancel();
+                    return;
+                }
+                drawDebugConnections(sourceLocation, snapshotLocations, groupColor);
+            }
+        }.runTaskTimer(WirelessRedstonePlugin.getInstance(), 1L, 1L);
+    }
+
+    private void drawDebugConnections(Location sourceLocation, List<Location> allLocations, Color groupColor) {
+        if (sourceLocation.getWorld() == null) return;
 
         for (Player player : sourceLocation.getWorld().getPlayers()) {
             if (!debugManager.isDebugEnabled(player) && !isHoldingCircuitAnalyser(player)) {
@@ -228,6 +254,12 @@ public class BulbSyncTask extends BukkitRunnable {
                 ParticleEffects.spawnDebugConnectionLine(player, sourceLocation, targetLocation, groupColor);
             }
         }
+    }
+
+    private int getConnectionLineLingerTicks() {
+        return Math.max(1, Math.min(100, WirelessRedstonePlugin.getInstance()
+                .getConfig()
+                .getInt("effects.connection-lines.linger-ticks", 10)));
     }
 
     private boolean isHoldingCircuitAnalyser(Player player) {
