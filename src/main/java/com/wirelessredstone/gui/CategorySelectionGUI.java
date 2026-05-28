@@ -5,11 +5,15 @@ import com.wirelessredstone.manager.LinkedBulbManager;
 import com.wirelessredstone.manager.LinkedChestManager;
 import com.wirelessredstone.item.CircuitAnalyserFactory;
 import com.wirelessredstone.item.ConnectorToolFactory;
+import com.wirelessredstone.model.BaseGroup;
+import com.wirelessredstone.model.BulbGroup;
 import com.wirelessredstone.model.Category;
+import com.wirelessredstone.model.ChestGroup;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
@@ -489,6 +493,57 @@ public class CategorySelectionGUI implements InventoryHolder {
         return pendingActions.get(playerUuid);
     }
 
+    public static boolean hasPendingConnectorToolPrompt(UUID playerUuid) {
+        PendingAction action = pendingActions.get(playerUuid);
+        return action != null && action.type() == PendingActionType.CREATE_CONNECTOR_TOOL;
+    }
+
+    public static boolean processPendingConnectorToolSelection(Player player, Location location,
+                                                               LinkedBulbManager bulbManager, LinkedChestManager chestManager) {
+        if (!hasPendingConnectorToolPrompt(player.getUniqueId())) {
+            return false;
+        }
+
+        Optional<BulbGroup> bulbGroup = bulbManager.getGroupByLocation(location);
+        if (bulbGroup.isPresent()) {
+            if (giveExistingGroupConnectorTool(player, bulbGroup.get(), ConnectorToolFactory.GroupType.BULB, NamedTextColor.AQUA)) {
+                pendingActions.remove(player.getUniqueId());
+            }
+            return true;
+        }
+
+        if (chestManager != null) {
+            Optional<ChestGroup> chestGroup = chestManager.getGroupByLocation(location);
+            if (chestGroup.isPresent()) {
+                if (giveExistingGroupConnectorTool(player, chestGroup.get(), ConnectorToolFactory.GroupType.CHEST, NamedTextColor.GOLD)) {
+                    pendingActions.remove(player.getUniqueId());
+                }
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static boolean giveExistingGroupConnectorTool(Player player, BaseGroup group,
+                                                          ConnectorToolFactory.GroupType groupType, NamedTextColor groupColor) {
+        if (!player.hasPermission("wirelessredstone.admin")
+                && !player.getUniqueId().equals(group.getOwnerUuid())) {
+            player.sendMessage(Component.text("You can only get connector tools for your own groups.", NamedTextColor.RED));
+            return false;
+        }
+
+        giveItemToPlayer(player, ConnectorToolFactory.createConnectorTool(
+                group.getGroupId(),
+                group.getDisplayName(),
+                groupType
+        ));
+        player.sendMessage(Component.text("You received a Connector Tool for group ", NamedTextColor.GREEN)
+                .append(Component.text(group.getDisplayName(), groupColor))
+                .append(Component.text(".", NamedTextColor.GREEN)));
+        return true;
+    }
+
     public static void processPendingAction(Player player, String input, CategoryManager categoryManager,
                                              LinkedBulbManager bulbManager, LinkedChestManager chestManager) {
         PendingAction action = pendingActions.remove(player.getUniqueId());
@@ -555,6 +610,7 @@ public class CategorySelectionGUI implements InventoryHolder {
         pendingActions.put(player.getUniqueId(), new PendingAction(PendingActionType.CREATE_CONNECTOR_TOOL, categoryId));
         player.closeInventory();
         player.sendMessage(Component.text("Enter a name for the new wireless group (or 'cancel' to abort):", NamedTextColor.YELLOW));
+        player.sendMessage(Component.text("Or right-click an existing wireless block to get a connector for its group.", NamedTextColor.GRAY));
         if (categoryId != null && categoryManager != null) {
             categoryManager.getCategoryById(categoryId).ifPresent(category ->
                     player.sendMessage(Component.text("Category: ", NamedTextColor.GRAY)
