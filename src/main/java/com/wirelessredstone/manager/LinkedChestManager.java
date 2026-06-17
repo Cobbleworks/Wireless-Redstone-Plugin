@@ -7,6 +7,8 @@ import com.wirelessredstone.util.LocationUtils;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
+import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.inventory.Inventory;
@@ -242,6 +244,7 @@ public class LinkedChestManager {
         
         ChestGroup group = groupOpt.get();
         group.updateSharedInventory(contents);
+        updateComparatorOutput(sourceLocation);
         
         for (Location loc : group.getOtherLocations(sourceLocation)) {
             applySharedInventory(loc, group);
@@ -269,6 +272,22 @@ public class LinkedChestManager {
         ItemStack[] shared = group.getSharedInventory();
         for (int i = 0; i < inventory.getSize(); i++) {
             inventory.setItem(i, i < shared.length && shared[i] != null ? shared[i].clone() : null);
+        }
+        updateComparatorOutput(location);
+    }
+
+    private void updateComparatorOutput(Location location) {
+        if (location == null || !location.isChunkLoaded()) return;
+
+        Block block = location.getBlock();
+        block.getState().update(true, true);
+
+        for (BlockFace face : List.of(BlockFace.NORTH, BlockFace.EAST, BlockFace.SOUTH, BlockFace.WEST)) {
+            Block relative = block.getRelative(face);
+            if (relative.getType() == Material.COMPARATOR) {
+                relative.setBlockData(relative.getBlockData(), true);
+                relative.getState().update(true, true);
+            }
         }
     }
 
