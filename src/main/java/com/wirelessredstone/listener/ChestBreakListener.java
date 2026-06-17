@@ -27,12 +27,12 @@ public class ChestBreakListener implements Listener {
         this.chestManager = chestManager;
     }
 
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onBlockBreak(BlockBreakEvent event) {
         Block block = event.getBlock();
         Material blockType = block.getType();
         
-        if (blockType != Material.CHEST && !ChestVariant.isShulkerBox(blockType) && !ChestVariant.isCopperChest(blockType)) {
+        if (blockType != Material.CHEST && blockType != Material.BARREL && !ChestVariant.isShulkerBox(blockType) && !ChestVariant.isCopperChest(blockType)) {
             return;
         }
         
@@ -47,6 +47,10 @@ public class ChestBreakListener implements Listener {
         String groupName = groupOpt.map(ChestGroup::getDisplayName).orElse("Unknown");
         UUID groupId = groupOpt.map(ChestGroup::getGroupId).orElse(null);
         int remainingCount = groupOpt.map(g -> g.getPlacedCount() - 1).orElse(0);
+
+        if (remainingCount > 0) {
+            clearContainerInventory(block);
+        }
 
         ParticleEffects.spawnBreakParticles(location);
 
@@ -68,6 +72,16 @@ public class ChestBreakListener implements Listener {
         plugin.getWireViewManager().refreshAllPlayers();
         if (groupId != null) {
             plugin.getWireViewManager().refreshSingleGroupViewForGroup(groupId);
+            if (remainingCount > 0) {
+                plugin.getServer().getScheduler().runTask(plugin, () -> chestManager.syncGroupToPlacedContainers(groupId));
+            }
+        }
+    }
+
+    private void clearContainerInventory(Block block) {
+        var state = block.getState();
+        if (state instanceof org.bukkit.block.Container container) {
+            container.getInventory().clear();
         }
     }
 }

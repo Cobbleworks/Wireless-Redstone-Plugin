@@ -450,23 +450,7 @@ public class ConnectorToolListener implements Listener {
             ParticleEffects.spawnConnectParticles(otherHalfLocation);
         }
 
-        // Sync the inventory
-        var blockState = block.getState();
-        org.bukkit.inventory.Inventory inventory = null;
-        if (blockState instanceof org.bukkit.block.Chest chest) {
-            inventory = chest.getInventory();
-        } else if (blockState instanceof org.bukkit.block.ShulkerBox shulker) {
-            inventory = shulker.getInventory();
-        } else if (blockState instanceof org.bukkit.block.Barrel barrel) {
-            inventory = barrel.getInventory();
-        }
-
-        if (inventory != null) {
-            var sharedInventory = group.getSharedInventory();
-            for (int i = 0; i < Math.min(sharedInventory.length, inventory.getSize()); i++) {
-                inventory.setItem(i, sharedInventory[i] != null ? sharedInventory[i].clone() : null);
-            }
-        }
+        chestManager.applySharedInventory(location, group);
 
         char slotLabel = (char) ('A' + slot);
         ParticleEffects.spawnConnectParticles(location);

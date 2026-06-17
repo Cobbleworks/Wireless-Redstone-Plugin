@@ -9,6 +9,7 @@ import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
@@ -243,27 +244,32 @@ public class LinkedChestManager {
         group.updateSharedInventory(contents);
         
         for (Location loc : group.getOtherLocations(sourceLocation)) {
-            if (loc == null || !loc.isChunkLoaded()) continue;
-            
-            var block = loc.getBlock();
-            var state = block.getState();
-            org.bukkit.inventory.Inventory inventory = null;
-            
-            if (state instanceof org.bukkit.block.Chest chest) {
-                inventory = chest.getInventory();
-            } else if (state instanceof org.bukkit.block.ShulkerBox shulker) {
-                inventory = shulker.getInventory();
-            }
-            
-            if (inventory != null) {
-                ItemStack[] shared = group.getSharedInventory();
-                for (int i = 0; i < Math.min(shared.length, inventory.getSize()); i++) {
-                    inventory.setItem(i, shared[i] != null ? shared[i].clone() : null);
-                }
-            }
+            applySharedInventory(loc, group);
         }
         
         saveData();
+    }
+
+    public void syncGroupToPlacedContainers(UUID groupId) {
+        ChestGroup group = chestGroups.get(groupId);
+        if (group == null) return;
+
+        for (Location loc : group.getPlacedLocations()) {
+            applySharedInventory(loc, group);
+        }
+    }
+
+    public void applySharedInventory(Location location, ChestGroup group) {
+        if (location == null || !location.isChunkLoaded()) return;
+
+        var state = location.getBlock().getState();
+        if (!(state instanceof org.bukkit.block.Container container)) return;
+
+        Inventory inventory = container.getInventory();
+        ItemStack[] shared = group.getSharedInventory();
+        for (int i = 0; i < inventory.getSize(); i++) {
+            inventory.setItem(i, i < shared.length && shared[i] != null ? shared[i].clone() : null);
+        }
     }
 
     public void saveData() {
@@ -388,10 +394,16 @@ public class LinkedChestManager {
             
             var inventorySection = config.getConfigurationSection(basePath + ".inventory");
             if (inventorySection != null) {
-                ItemStack[] inventory = new ItemStack[27];
+                int inventorySize = ChestGroup.DEFAULT_INVENTORY_SIZE;
                 for (String invKey : inventorySection.getKeys(false)) {
                     int slot = Integer.parseInt(invKey);
-                    if (slot >= 0 && slot < 27) {
+                    inventorySize = Math.max(inventorySize, slot + 1);
+                }
+
+                ItemStack[] inventory = new ItemStack[inventorySize];
+                for (String invKey : inventorySection.getKeys(false)) {
+                    int slot = Integer.parseInt(invKey);
+                    if (slot >= 0 && slot < inventory.length) {
                         inventory[slot] = config.getItemStack(basePath + ".inventory." + invKey);
                     }
                 }

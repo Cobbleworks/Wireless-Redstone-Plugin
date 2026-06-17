@@ -26,7 +26,7 @@ public class ChestPlaceListener implements Listener {
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onBlockPlace(BlockPlaceEvent event) {
         Material blockType = event.getBlock().getType();
-        if (blockType != Material.CHEST && !ChestVariant.isShulkerBox(blockType) && !ChestVariant.isCopperChest(blockType)) {
+        if (blockType != Material.CHEST && blockType != Material.BARREL && !ChestVariant.isShulkerBox(blockType) && !ChestVariant.isCopperChest(blockType)) {
             return;
         }
         
@@ -62,21 +62,7 @@ public class ChestPlaceListener implements Listener {
                     ParticleEffects.spawnSyncParticles(otherLoc, false);
                 }
                 
-                // Sync the shared inventory to the newly placed container
-                var block = location.getBlock();
-                var state = block.getState();
-                org.bukkit.inventory.Inventory inventory = null;
-                
-                if (state instanceof org.bukkit.block.Container container) {
-                    inventory = container.getInventory();
-                }
-                
-                if (inventory != null) {
-                    var sharedInventory = group.getSharedInventory();
-                    for (int i = 0; i < Math.min(sharedInventory.length, inventory.getSize()); i++) {
-                        inventory.setItem(i, sharedInventory[i] != null ? sharedInventory[i].clone() : null);
-                    }
-                }
+                chestManager.applySharedInventory(location, group);
             }
         });
     }

@@ -13,7 +13,6 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.world.ChunkLoadEvent;
-import org.bukkit.inventory.ItemStack;
 
 /**
  * Handles chunk load events to sync wireless blocks when their chunks are loaded.
@@ -86,16 +85,6 @@ public class ChunkLoadListener implements Listener {
     }
 
     private void syncContainerToGroupState(Location location, ChestGroup group) {
-        Block block = location.getBlock();
-        var state = block.getState();
-        
-        if (state instanceof org.bukkit.block.Container container) {
-            var inventory = container.getInventory();
-            ItemStack[] sharedInventory = group.getSharedInventory();
-            
-            for (int i = 0; i < Math.min(sharedInventory.length, inventory.getSize()); i++) {
-                inventory.setItem(i, sharedInventory[i] != null ? sharedInventory[i].clone() : null);
-            }
-        }
+        chestManager.applySharedInventory(location, group);
     }
 }
