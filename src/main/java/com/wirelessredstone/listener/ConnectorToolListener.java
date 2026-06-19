@@ -15,6 +15,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
 import org.bukkit.block.Container;
 import org.bukkit.block.data.type.CopperBulb;
 import org.bukkit.entity.Player;
@@ -175,18 +176,6 @@ public class ConnectorToolListener implements Listener {
             return;
         }
 
-        // For copper chests, convert to waxed variant to prevent oxidation changes
-        if (containerType == ChestVariant.ContainerType.COPPER_CHEST) {
-            Material originalMaterial = block.getType();
-            Material waxedMaterial = convertToWaxedCopperIfNeeded(block);
-            if (waxedMaterial != originalMaterial) {
-                player.sendMessage(Component.text("Converted copper chest to waxed variant to prevent oxidation.", NamedTextColor.GRAY));
-            }
-        }
-
-        // Get the block material for the variant icon (after potential conversion)
-        Material variantMaterial = block.getType();
-
         // Check for large (double) chest and handle both halves
         Location otherHalfLocation = getDoubleChestOtherHalf(block);
         boolean isLargeChest = otherHalfLocation != null;
@@ -198,6 +187,18 @@ public class ConnectorToolListener implements Listener {
                 return;
             }
         }
+
+        // For copper chests, convert both large-chest halves to waxed variants after
+        // detecting the pair so waxing does not collapse the chest into a single half.
+        if (containerType == ChestVariant.ContainerType.COPPER_CHEST) {
+            boolean converted = convertCopperChestPairToWaxed(block, otherHalfLocation);
+            if (converted) {
+                player.sendMessage(Component.text("Converted copper chest to waxed variant to prevent oxidation.", NamedTextColor.GRAY));
+            }
+        }
+
+        // Get the block material for the variant icon (after potential conversion)
+        Material variantMaterial = block.getType();
 
         // Create a new group - large chests start with 2 slots
         UUID groupId = chestManager.createNewGroupId();
@@ -389,15 +390,6 @@ public class ConnectorToolListener implements Listener {
             return;
         }
 
-        // For copper chests, convert to waxed variant to prevent oxidation changes
-        if (containerType == ChestVariant.ContainerType.COPPER_CHEST) {
-            Material originalMaterial = block.getType();
-            Material waxedMaterial = convertToWaxedCopperIfNeeded(block);
-            if (waxedMaterial != originalMaterial) {
-                player.sendMessage(Component.text("Converted copper chest to waxed variant to prevent oxidation.", NamedTextColor.GRAY));
-            }
-        }
-
         // Check for large (double) chest and handle both halves
         Location otherHalfLocation = getDoubleChestOtherHalf(block);
         boolean isLargeChest = otherHalfLocation != null;
@@ -407,6 +399,15 @@ public class ConnectorToolListener implements Listener {
             if (chestManager.isWirelessChestLocation(otherHalfLocation)) {
                 player.sendMessage(Component.text("The other half of this large chest is already part of a wireless group!", NamedTextColor.RED));
                 return;
+            }
+        }
+
+        // For copper chests, convert both large-chest halves to waxed variants after
+        // detecting the pair so waxing does not collapse the chest into a single half.
+        if (containerType == ChestVariant.ContainerType.COPPER_CHEST) {
+            boolean converted = convertCopperChestPairToWaxed(block, otherHalfLocation);
+            if (converted) {
+                player.sendMessage(Component.text("Converted copper chest to waxed variant to prevent oxidation.", NamedTextColor.GRAY));
             }
         }
 
@@ -599,19 +600,41 @@ public class ConnectorToolListener implements Listener {
         Material material = block.getType();
         Material waxedMaterial = ChestVariant.toWaxedCopperChest(material);
         if (waxedMaterial != material) {
-            // Store any block data we need to preserve
             var oldBlockData = block.getBlockData();
-            block.setType(waxedMaterial);
-            // Copper chests have facing data we need to preserve
+            block.setType(waxedMaterial, false);
+
             if (oldBlockData instanceof org.bukkit.block.data.Directional oldDirectional) {
                 var newBlockData = block.getBlockData();
                 if (newBlockData instanceof org.bukkit.block.data.Directional newDirectional) {
                     newDirectional.setFacing(oldDirectional.getFacing());
-                    block.setBlockData(newDirectional);
                 }
+                if (oldBlockData instanceof org.bukkit.block.data.type.Chest oldChest &&
+                    newBlockData instanceof org.bukkit.block.data.type.Chest newChest) {
+                    newChest.setType(oldChest.getType());
+                }
+                if (oldBlockData instanceof org.bukkit.block.data.Waterlogged oldWaterlogged &&
+                    newBlockData instanceof org.bukkit.block.data.Waterlogged newWaterlogged) {
+                    newWaterlogged.setWaterlogged(oldWaterlogged.isWaterlogged());
+                }
+                block.setBlockData(newBlockData, false);
             }
         }
         return waxedMaterial;
+    }
+
+    private boolean convertCopperChestPairToWaxed(Block block, Location otherHalfLocation) {
+        Material originalMaterial = block.getType();
+        Material waxedMaterial = convertToWaxedCopperIfNeeded(block);
+        boolean converted = waxedMaterial != originalMaterial;
+
+        if (otherHalfLocation != null) {
+            Block otherHalf = otherHalfLocation.getBlock();
+            Material otherOriginalMaterial = otherHalf.getType();
+            Material otherWaxedMaterial = convertToWaxedCopperIfNeeded(otherHalf);
+            converted = converted || otherWaxedMaterial != otherOriginalMaterial;
+        }
+
+        return converted;
     }
 
     /**
@@ -642,7 +665,83 @@ public class ConnectorToolListener implements Listener {
                 }
             }
         }
+
+        if (block.getBlockData() instanceof org.bukkit.block.data.type.Chest chestData &&
+            chestData.getType() != org.bukkit.block.data.type.Chest.Type.SINGLE) {
+            BlockFace otherHalfFace = getOtherChestHalfFace(chestData);
+            if (otherHalfFace == null) {
+                return null;
+            }
+
+            Location detectedLocation = findMatchingChestHalfLocation(block, chestData, otherHalfFace);
+            if (detectedLocation != null) {
+                return detectedLocation;
+            }
+        }
+
         return null;
+    }
+
+    private BlockFace getOtherChestHalfFace(org.bukkit.block.data.type.Chest chestData) {
+        return switch (chestData.getType()) {
+            case LEFT -> rotateClockwise(chestData.getFacing());
+            case RIGHT -> rotateCounterClockwise(chestData.getFacing());
+            case SINGLE -> null;
+        };
+    }
+
+    private boolean isMatchingChestHalf(Block block, Block otherHalf, org.bukkit.block.data.type.Chest chestData) {
+        if (getContainerTypeFromMaterial(otherHalf.getType()) != getContainerTypeFromMaterial(block.getType())) {
+            return false;
+        }
+        if (!(otherHalf.getBlockData() instanceof org.bukkit.block.data.type.Chest otherChestData)) {
+            return false;
+        }
+
+        return otherChestData.getFacing() == chestData.getFacing()
+                && otherChestData.getType() != org.bukkit.block.data.type.Chest.Type.SINGLE
+                && otherChestData.getType() != chestData.getType();
+    }
+
+    private Location findMatchingChestHalfLocation(Block block, org.bukkit.block.data.type.Chest chestData, BlockFace preferredFace) {
+        BlockFace[] faces = {
+                preferredFace,
+                BlockFace.NORTH,
+                BlockFace.EAST,
+                BlockFace.SOUTH,
+                BlockFace.WEST
+        };
+
+        for (BlockFace face : faces) {
+            if (face == null) continue;
+
+            Block otherHalf = block.getRelative(face);
+            if (isMatchingChestHalf(block, otherHalf, chestData)) {
+                return otherHalf.getLocation();
+            }
+        }
+
+        return null;
+    }
+
+    private BlockFace rotateClockwise(BlockFace face) {
+        return switch (face) {
+            case NORTH -> BlockFace.EAST;
+            case EAST -> BlockFace.SOUTH;
+            case SOUTH -> BlockFace.WEST;
+            case WEST -> BlockFace.NORTH;
+            default -> null;
+        };
+    }
+
+    private BlockFace rotateCounterClockwise(BlockFace face) {
+        return switch (face) {
+            case NORTH -> BlockFace.WEST;
+            case WEST -> BlockFace.SOUTH;
+            case SOUTH -> BlockFace.EAST;
+            case EAST -> BlockFace.NORTH;
+            default -> null;
+        };
     }
 
     private String formatSlotText(int slot, int slot2) {
