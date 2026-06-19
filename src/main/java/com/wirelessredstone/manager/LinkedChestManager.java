@@ -301,6 +301,7 @@ public class LinkedChestManager {
             String basePath = "groups." + index;
             config.set(basePath + ".id", entry.getKey().toString());
             config.set(basePath + ".maxSize", group.getMaxSize());
+            config.set(basePath + ".inventorySize", group.getInventorySize());
             config.set(basePath + ".containerType", group.getContainerType().name());
 
             if (group.getOwnerUuid() != null) {
@@ -365,6 +366,7 @@ public class LinkedChestManager {
             UUID ownerUuid = ownerStr != null ? UUID.fromString(ownerStr) : null;
             
             int maxSize = config.getInt(basePath + ".maxSize", 2);
+            int groupInventorySize = config.getInt(basePath + ".inventorySize", ChestGroup.DEFAULT_INVENTORY_SIZE);
             
             String containerTypeStr = config.getString(basePath + ".containerType", "CHEST");
             ChestVariant.ContainerType containerType;
@@ -375,6 +377,7 @@ public class LinkedChestManager {
             }
             
             ChestGroup group = new ChestGroup(groupId, maxSize, ownerUuid, containerType);
+            group.setInventorySize(groupInventorySize);
             group.setCustomName(config.getString(basePath + ".customName"));
             
             String customIconStr = config.getString(basePath + ".customIcon");

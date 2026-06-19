@@ -10,7 +10,6 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
-import org.bukkit.block.Chest;
 import org.bukkit.block.Container;
 import org.bukkit.block.DoubleChest;
 import org.bukkit.entity.Player;
@@ -58,8 +57,11 @@ public class ChestBreakListener implements Listener {
         int removedCount = doubleChestBreak != null ? 2 : 1;
         int remainingCount = groupOpt.map(g -> Math.max(0, g.getPlacedCount() - removedCount)).orElse(0);
 
-        if (doubleChestBreak != null) {
+        if (doubleChestBreak != null && remainingCount <= 0) {
             splitSharedInventoryForVanillaDrop(groupOpt.get(), doubleChestBreak);
+        } else if (doubleChestBreak != null) {
+            doubleChestBreak.brokenInventory().clear();
+            doubleChestBreak.otherInventory().clear();
         } else if (remainingCount > 0) {
             clearContainerInventory(block);
         }
@@ -105,35 +107,43 @@ public class ChestBreakListener implements Listener {
 
     private Optional<DoubleChestBreak> findWirelessDoubleChestBreak(Block block, Location location, ChestGroup group) {
         var state = block.getState();
-        if (!(state instanceof Chest currentChest)) {
+        if (!(state instanceof Container currentContainer)) {
             return Optional.empty();
         }
 
-        Inventory inventory = currentChest.getInventory();
+        Inventory inventory = currentContainer.getInventory();
         if (!(inventory.getHolder() instanceof DoubleChest doubleChest)) {
             return Optional.empty();
         }
 
-        Chest otherChest = null;
+        Container otherContainer = null;
+        Inventory brokenInventory = null;
+        Inventory otherInventory = null;
         var leftSide = doubleChest.getLeftSide();
         var rightSide = doubleChest.getRightSide();
 
-        if (leftSide instanceof Chest leftChest && !leftChest.getLocation().equals(location)) {
-            otherChest = leftChest;
-        } else if (rightSide instanceof Chest rightChest && !rightChest.getLocation().equals(location)) {
-            otherChest = rightChest;
+        if (leftSide instanceof Container leftContainer && rightSide instanceof Container rightContainer) {
+            if (leftContainer.getLocation().equals(location)) {
+                otherContainer = rightContainer;
+                brokenInventory = getHalfInventory(inventory, true);
+                otherInventory = getHalfInventory(inventory, false);
+            } else if (rightContainer.getLocation().equals(location)) {
+                otherContainer = leftContainer;
+                brokenInventory = getHalfInventory(inventory, false);
+                otherInventory = getHalfInventory(inventory, true);
+            }
         }
 
-        if (otherChest == null || !group.hasLocation(otherChest.getLocation())) {
+        if (otherContainer == null || brokenInventory == null || otherInventory == null || !group.hasLocation(otherContainer.getLocation())) {
             return Optional.empty();
         }
 
-        return Optional.of(new DoubleChestBreak(otherChest.getLocation(), currentChest, otherChest));
+        return Optional.of(new DoubleChestBreak(otherContainer.getLocation(), brokenInventory, otherInventory));
     }
 
     private void splitSharedInventoryForVanillaDrop(ChestGroup group, DoubleChestBreak doubleChestBreak) {
-        Inventory brokenHalf = doubleChestBreak.brokenChest().getBlockInventory();
-        Inventory remainingHalf = doubleChestBreak.otherChest().getBlockInventory();
+        Inventory brokenHalf = doubleChestBreak.brokenInventory();
+        Inventory remainingHalf = doubleChestBreak.otherInventory();
         ItemStack[] shared = group.getSharedInventory();
 
         brokenHalf.clear();
@@ -151,5 +161,13 @@ public class ChestBreakListener implements Listener {
         }
     }
 
-    private record DoubleChestBreak(Location otherLocation, Chest brokenChest, Chest otherChest) {}
+    private Inventory getHalfInventory(Inventory inventory, boolean leftSide) {
+        if (inventory instanceof org.bukkit.inventory.DoubleChestInventory doubleChestInventory) {
+            return leftSide ? doubleChestInventory.getLeftSide() : doubleChestInventory.getRightSide();
+        }
+
+        return null;
+    }
+
+    private record DoubleChestBreak(Location otherLocation, Inventory brokenInventory, Inventory otherInventory) {}
 }
