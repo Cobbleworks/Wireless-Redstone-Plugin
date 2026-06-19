@@ -10,11 +10,16 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
+import org.bukkit.block.Chest;
+import org.bukkit.block.Container;
+import org.bukkit.block.DoubleChest;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemStack;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -22,6 +27,7 @@ import java.util.UUID;
 public class ChestBreakListener implements Listener {
 
     private final LinkedChestManager chestManager;
+    private static final int SINGLE_CHEST_SIZE = 27;
 
     public ChestBreakListener(LinkedChestManager chestManager) {
         this.chestManager = chestManager;
@@ -46,15 +52,24 @@ public class ChestBreakListener implements Listener {
         Optional<ChestGroup> groupOpt = chestManager.getGroupByLocation(location);
         String groupName = groupOpt.map(ChestGroup::getDisplayName).orElse("Unknown");
         UUID groupId = groupOpt.map(ChestGroup::getGroupId).orElse(null);
-        int remainingCount = groupOpt.map(g -> g.getPlacedCount() - 1).orElse(0);
+        DoubleChestBreak doubleChestBreak = groupOpt
+                .flatMap(group -> findWirelessDoubleChestBreak(block, location, group))
+                .orElse(null);
+        int removedCount = doubleChestBreak != null ? 2 : 1;
+        int remainingCount = groupOpt.map(g -> Math.max(0, g.getPlacedCount() - removedCount)).orElse(0);
 
-        if (remainingCount > 0) {
+        if (doubleChestBreak != null) {
+            splitSharedInventoryForVanillaDrop(groupOpt.get(), doubleChestBreak);
+        } else if (remainingCount > 0) {
             clearContainerInventory(block);
         }
 
         ParticleEffects.spawnBreakParticles(location);
 
         chestManager.unregisterChest(location);
+        if (doubleChestBreak != null) {
+            chestManager.unregisterChest(doubleChestBreak.otherLocation());
+        }
 
         if (remainingCount <= 0) {
             player.sendMessage(Component.text("⚡ ", NamedTextColor.YELLOW)
@@ -66,6 +81,9 @@ public class ChestBreakListener implements Listener {
                     .append(Component.text("Removed from group ", NamedTextColor.GRAY))
                     .append(Component.text(groupName, NamedTextColor.GOLD))
                     .append(Component.text(" (" + remainingCount + " remaining)", NamedTextColor.DARK_GRAY)));
+            if (doubleChestBreak != null) {
+                player.sendMessage(Component.text("The remaining half of this double chest was detached from the wireless group.", NamedTextColor.GRAY));
+            }
         }
 
         WirelessRedstonePlugin plugin = WirelessRedstonePlugin.getInstance();
@@ -80,8 +98,58 @@ public class ChestBreakListener implements Listener {
 
     private void clearContainerInventory(Block block) {
         var state = block.getState();
-        if (state instanceof org.bukkit.block.Container container) {
+        if (state instanceof Container container) {
             container.getInventory().clear();
         }
     }
+
+    private Optional<DoubleChestBreak> findWirelessDoubleChestBreak(Block block, Location location, ChestGroup group) {
+        var state = block.getState();
+        if (!(state instanceof Chest currentChest)) {
+            return Optional.empty();
+        }
+
+        Inventory inventory = currentChest.getInventory();
+        if (!(inventory.getHolder() instanceof DoubleChest doubleChest)) {
+            return Optional.empty();
+        }
+
+        Chest otherChest = null;
+        var leftSide = doubleChest.getLeftSide();
+        var rightSide = doubleChest.getRightSide();
+
+        if (leftSide instanceof Chest leftChest && !leftChest.getLocation().equals(location)) {
+            otherChest = leftChest;
+        } else if (rightSide instanceof Chest rightChest && !rightChest.getLocation().equals(location)) {
+            otherChest = rightChest;
+        }
+
+        if (otherChest == null || !group.hasLocation(otherChest.getLocation())) {
+            return Optional.empty();
+        }
+
+        return Optional.of(new DoubleChestBreak(otherChest.getLocation(), currentChest, otherChest));
+    }
+
+    private void splitSharedInventoryForVanillaDrop(ChestGroup group, DoubleChestBreak doubleChestBreak) {
+        Inventory brokenHalf = doubleChestBreak.brokenChest().getBlockInventory();
+        Inventory remainingHalf = doubleChestBreak.otherChest().getBlockInventory();
+        ItemStack[] shared = group.getSharedInventory();
+
+        brokenHalf.clear();
+        remainingHalf.clear();
+
+        for (int i = 0; i < SINGLE_CHEST_SIZE; i++) {
+            if (i < shared.length && shared[i] != null) {
+                remainingHalf.setItem(i, shared[i].clone());
+            }
+
+            int overflowSlot = i + SINGLE_CHEST_SIZE;
+            if (overflowSlot < shared.length && shared[overflowSlot] != null) {
+                brokenHalf.setItem(i, shared[overflowSlot].clone());
+            }
+        }
+    }
+
+    private record DoubleChestBreak(Location otherLocation, Chest brokenChest, Chest otherChest) {}
 }
