@@ -12,27 +12,34 @@ import java.util.UUID;
  */
 public class ChestGroup extends BaseGroup {
 
+    public static final int DEFAULT_INVENTORY_SIZE = 27;
+    public static final int LARGE_CHEST_INVENTORY_SIZE = 54;
+
     private ItemStack[] sharedInventory;
+    private int inventorySize;
     private ChestVariant.ContainerType containerType;
     private Material variantMaterial; // Specific material for the icon (e.g., BLUE_SHULKER_BOX, WAXED_EXPOSED_COPPER_CHEST)
 
     public ChestGroup(UUID groupId, int maxSize) {
         super(groupId, maxSize);
-        this.sharedInventory = new ItemStack[27];
+        this.sharedInventory = new ItemStack[DEFAULT_INVENTORY_SIZE];
+        this.inventorySize = DEFAULT_INVENTORY_SIZE;
         this.containerType = ChestVariant.ContainerType.CHEST;
         this.variantMaterial = null;
     }
 
     public ChestGroup(UUID groupId, int maxSize, UUID ownerUuid) {
         super(groupId, maxSize, ownerUuid);
-        this.sharedInventory = new ItemStack[27];
+        this.sharedInventory = new ItemStack[DEFAULT_INVENTORY_SIZE];
+        this.inventorySize = DEFAULT_INVENTORY_SIZE;
         this.containerType = ChestVariant.ContainerType.CHEST;
         this.variantMaterial = null;
     }
 
     public ChestGroup(UUID groupId, int maxSize, UUID ownerUuid, ChestVariant.ContainerType containerType) {
         super(groupId, maxSize, ownerUuid);
-        this.sharedInventory = new ItemStack[27];
+        this.sharedInventory = new ItemStack[DEFAULT_INVENTORY_SIZE];
+        this.inventorySize = DEFAULT_INVENTORY_SIZE;
         this.containerType = containerType != null ? containerType : ChestVariant.ContainerType.CHEST;
         this.variantMaterial = null;
     }
@@ -42,16 +49,36 @@ public class ChestGroup extends BaseGroup {
     }
 
     public void setSharedInventory(ItemStack[] inventory) {
-        if (inventory != null && inventory.length == 27) {
-            this.sharedInventory = inventory;
-        }
+        if (inventory == null) return;
+
+        this.inventorySize = Math.max(DEFAULT_INVENTORY_SIZE, inventory.length);
+        this.sharedInventory = cloneInventory(inventory, inventorySize);
     }
 
     public void updateSharedInventory(ItemStack[] inventory) {
         if (inventory == null) return;
-        for (int i = 0; i < Math.min(inventory.length, 27); i++) {
-            this.sharedInventory[i] = inventory[i] != null ? inventory[i].clone() : null;
+
+        this.inventorySize = Math.max(DEFAULT_INVENTORY_SIZE, inventory.length);
+        this.sharedInventory = cloneInventory(inventory, inventorySize);
+    }
+
+    public int getInventorySize() {
+        return inventorySize;
+    }
+
+    public void setInventorySize(int inventorySize) {
+        this.inventorySize = Math.max(DEFAULT_INVENTORY_SIZE, inventorySize);
+        if (sharedInventory.length != this.inventorySize) {
+            this.sharedInventory = cloneInventory(sharedInventory, this.inventorySize);
         }
+    }
+
+    private ItemStack[] cloneInventory(ItemStack[] inventory, int size) {
+        ItemStack[] cloned = new ItemStack[size];
+        for (int i = 0; i < Math.min(inventory.length, size); i++) {
+            cloned[i] = inventory[i] != null ? inventory[i].clone() : null;
+        }
+        return cloned;
     }
 
     public ChestVariant.ContainerType getContainerType() {

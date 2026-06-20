@@ -37,10 +37,7 @@ public class ChestInventoryListener implements Listener {
         var groupOpt = chestManager.getGroupByLocation(location);
         if (groupOpt.isEmpty()) return;
         
-        ItemStack[] sharedInventory = groupOpt.get().getSharedInventory();
-        for (int i = 0; i < Math.min(sharedInventory.length, inventory.getSize()); i++) {
-            inventory.setItem(i, sharedInventory[i] != null ? sharedInventory[i].clone() : null);
-        }
+        chestManager.applySharedInventory(location, groupOpt.get());
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
@@ -147,9 +144,8 @@ public class ChestInventoryListener implements Listener {
         var groupOpt = chestManager.getGroupByLocation(location);
         if (groupOpt.isEmpty()) return;
         
-        // Get the contents - for single chest use first 27 slots
-        var contents = new org.bukkit.inventory.ItemStack[27];
-        for (int i = 0; i < Math.min(27, inventory.getSize()); i++) {
+        var contents = new ItemStack[inventory.getSize()];
+        for (int i = 0; i < inventory.getSize(); i++) {
             var item = inventory.getItem(i);
             contents[i] = item != null ? item.clone() : null;
         }
