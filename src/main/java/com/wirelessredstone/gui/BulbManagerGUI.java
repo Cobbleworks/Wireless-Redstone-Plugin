@@ -45,7 +45,7 @@ public class BulbManagerGUI implements InventoryHolder {
     private boolean showAllGroups;
 
     private interface GuiEntry {}
-    private record CategoryEntry(String displayName, String key, int bulbCount, int chestCount) implements GuiEntry {}
+    private record CategoryEntry(String displayName, String key, int bulbCount, int chestCount, List<String> groupNames) implements GuiEntry {}
     private record GroupGuiEntry(GroupEntry group) implements GuiEntry {}
 
     public BulbManagerGUI(LinkedBulbManager bulbManager, LinkedChestManager chestManager, Player player, boolean showAllGroups) {
@@ -104,15 +104,20 @@ public class BulbManagerGUI implements InventoryHolder {
                 CategoryEntry existing = categoriesByKey.get(key);
                 int bulbCount = existing == null ? 0 : existing.bulbCount();
                 int chestCount = existing == null ? 0 : existing.chestCount();
+                List<String> groupNames = existing == null ? new ArrayList<>() : new ArrayList<>(existing.groupNames());
                 if (group.getType() == GroupEntry.GroupType.BULB) {
                     bulbCount++;
                 } else {
                     chestCount++;
                 }
-                categoriesByKey.put(key, new CategoryEntry(group.getCategoryName(), key, bulbCount, chestCount));
+                groupNames.add(group.getGroupDisplayName());
+                groupNames.sort(String.CASE_INSENSITIVE_ORDER);
+                categoriesByKey.put(key, new CategoryEntry(group.getCategoryName(), key, bulbCount, chestCount, groupNames));
             }
             entries.addAll(categoriesByKey.values());
-            groups.forEach(group -> entries.add(new GroupGuiEntry(group)));
+            groups.stream()
+                    .filter(group -> group.getCategoryName() == null)
+                    .forEach(group -> entries.add(new GroupGuiEntry(group)));
             return;
         }
 
@@ -294,6 +299,26 @@ public class BulbManagerGUI implements InventoryHolder {
         lore.add(Component.text("Container Groups: ", NamedTextColor.GRAY)
                 .append(Component.text(String.valueOf(category.chestCount()), NamedTextColor.GOLD))
                 .decoration(TextDecoration.ITALIC, false));
+        if (!category.groupNames().isEmpty()) {
+            lore.add(Component.empty());
+            lore.add(Component.text("Groups:", NamedTextColor.GRAY)
+                    .decoration(TextDecoration.ITALIC, false));
+            int shown = 0;
+            for (String groupName : category.groupNames()) {
+                if (shown >= 8) {
+                    break;
+                }
+                lore.add(Component.text("- ", NamedTextColor.DARK_GRAY)
+                        .append(Component.text(groupName, NamedTextColor.WHITE))
+                        .decoration(TextDecoration.ITALIC, false));
+                shown++;
+            }
+            int remaining = category.groupNames().size() - shown;
+            if (remaining > 0) {
+                lore.add(Component.text("... and " + remaining + " more", NamedTextColor.DARK_GRAY)
+                        .decoration(TextDecoration.ITALIC, false));
+            }
+        }
         lore.add(Component.empty());
         lore.add(Component.text("Click to view", NamedTextColor.YELLOW)
                 .decoration(TextDecoration.ITALIC, false));
@@ -566,6 +591,7 @@ public class BulbManagerGUI implements InventoryHolder {
         pendingRenames.put(player.getUniqueId(), group);
         player.closeInventory();
         player.sendMessage(Component.text("Enter a new name for the group (or 'cancel' to abort):", NamedTextColor.YELLOW));
+        player.sendMessage(Component.text("Use category/group-name to create or move it into a category.", NamedTextColor.GRAY));
         player.sendMessage(Component.text("Current name: " + group.getDisplayName(), NamedTextColor.GRAY));
     }
 

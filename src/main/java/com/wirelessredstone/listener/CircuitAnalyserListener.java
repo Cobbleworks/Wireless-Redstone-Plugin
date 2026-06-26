@@ -284,6 +284,7 @@ public class CircuitAnalyserListener implements Listener {
         player.sendMessage(Component.text("✎ ", NamedTextColor.YELLOW)
                 .append(Component.text("Enter new name in chat ", NamedTextColor.GRAY))
                 .append(Component.text("(or 'cancel' to abort, 'reset' for default)", NamedTextColor.DARK_GRAY)));
+        player.sendMessage(Component.text("Use category/group-name to create or move it into a category.", NamedTextColor.GRAY));
     }
 
     /**
