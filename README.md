@@ -48,7 +48,6 @@ Wireless Redstone is an open-source Minecraft plugin that allows players to crea
     - [Circuit Analyser](#circuit-analyser)
 4. [Player Commands](#player-commands)
     - [Command Reference](#command-reference)
-    - [Variant Flags](#variant-flags)
 5. [Permissions](#permissions)
 6. [Building from Source](#building-from-source)
 7. [License](#license)
@@ -147,34 +146,15 @@ All commands require the `wirelessredstone.use` permission (operator by default)
 |---------|-------------|
 | `/wireless` | Open management GUI (same as `/wireless gui`) |
 | `/wireless help` | Show command help |
-| `/wireless give bulb [amount] [--variant] [--name=...] [--category=...]` | Give linked copper bulb items |
-| `/wireless give lamp [amount] [--name=...] [--category=...]` | Give linked redstone lamp items |
-| `/wireless give chest [amount] [--variant] [--name=...] [--category=...]` | Give linked container items |
-| `/wireless create <groupName> [categoryName]` | Give a Connector Tool for an existing group, or creation-mode tool for a new group |
+| `/wireless create` | Ask for a new group name and give a creation-mode Connector Tool |
+| `/wireless create <groupName> [categoryName]` | Give a Connector Tool for an existing group, or creation-mode tool for a named new group |
 | `/wireless inspect [player]` | Give a Circuit Analyser (admin can target another player) |
 | `/wireless modify name <groupName> <newName>` | Rename a group |
 | `/wireless modify category <groupName> <categoryName>` | Assign group to category (`none` to remove) |
-| `/wireless extend <groupName> [count]` | Extend an existing group by 1-24 slots (max 26 total) |
-| `/wireless recover <groupName>` | Recover unplaced/missing items for a group |
+| `/wireless recover <groupName>` | Restore saved group blocks destroyed by the environment |
 | `/wireless gui [--all] [--nocategory]` | Open management GUI (category view or direct list view) |
 | `/wireless debug on\|off` | Toggle connection particle lines on state changes |
 | `/wireless reload` | Reload configuration files (admin only) |
-
-### **Variant Flags**
-
-`/wireless give bulb` supports:
-
-- `--copper`
-- `--exposed`
-- `--weathered`
-- `--oxidized`
-
-`/wireless give chest` supports:
-
-- `--chest`
-- `--barrel`
-- `--shulker` plus color variants: `--white`, `--orange`, `--magenta`, `--light-blue`, `--yellow`, `--lime`, `--pink`, `--gray`, `--light-gray`, `--cyan`, `--purple`, `--blue`, `--brown`, `--green`, `--red`, `--black`
-- Copper chest variants: `--copper`, `--copper-exposed`, `--copper-weathered`, `--copper-oxidized`, `--copper-waxed`, `--copper-waxed-exposed`, `--copper-waxed-weathered`, `--copper-waxed-oxidized`
 
 ## **Permissions**
 

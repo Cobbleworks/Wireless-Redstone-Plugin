@@ -7,8 +7,6 @@ import com.wirelessredstone.item.BulbVariant;
 import com.wirelessredstone.item.ChestVariant;
 import com.wirelessredstone.item.CircuitAnalyserFactory;
 import com.wirelessredstone.item.ConnectorToolFactory;
-import com.wirelessredstone.item.WirelessBulbFactory;
-import com.wirelessredstone.item.WirelessChestFactory;
 import com.wirelessredstone.listener.CircuitAnalyserListener;
 import com.wirelessredstone.manager.CategoryManager;
 import com.wirelessredstone.manager.DebugManager;
@@ -18,9 +16,17 @@ import com.wirelessredstone.model.BaseGroup;
 import com.wirelessredstone.model.BulbGroup;
 import com.wirelessredstone.model.Category;
 import com.wirelessredstone.model.ChestGroup;
+import com.wirelessredstone.util.BulbUtils;
+import com.wirelessredstone.util.ParticleEffects;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
+import org.bukkit.block.data.Lightable;
+import org.bukkit.block.data.type.CopperBulb;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -29,8 +35,10 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 public class WirelessCommand implements CommandExecutor, TabCompleter {
@@ -150,9 +158,7 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
             case "create" -> handleCreateCommand(player, parsedArgs);
             case "inspect" -> handleInspectCommand(player, parsedArgs);
             case "modify" -> handleModifyCommand(player, parsedArgs);
-            case "give" -> handleGiveCommand(player, parsedArgs);
-            case "extend" -> handleExtendCommand(player, parsedArgs);
-            case "recover", "reclaim" -> handleRecoverCommand(player, parsedArgs);
+            case "recover" -> handleRecoverCommand(player, parsedArgs);
             case "gui", "manage", "list" -> handleGUICommand(player, parsedArgs);
             case "debug" -> handleDebugCommand(player, parsedArgs);
             case "reload" -> handleReloadCommand(player);
@@ -166,55 +172,6 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
         }
         
         return true;
-    }
-
-    /**
-     * Resolves a category name to its UUID, or returns null if not found or not specified.
-     */
-    private UUID resolveCategoryId(Player player, String categoryName) {
-        if (categoryName == null || categoryName.isEmpty()) {
-            return null;
-        }
-        return findCategoryByName(player, categoryName)
-                .map(Category::getCategoryId)
-                .orElse(null);
-    }
-
-    private void handleExtendCommand(Player player, String[] args) {
-        if (args.length < 2) {
-            player.sendMessage(Component.text("Usage: /wireless extend <groupname> [count]", NamedTextColor.RED));
-            player.sendMessage(Component.text("Example: /wireless extend MyLamps 3", NamedTextColor.GRAY));
-            return;
-        }
-
-        String groupName = args[1];
-        int extraCount = 1;
-        
-        if (args.length >= 3) {
-            try {
-                extraCount = Integer.parseInt(args[2]);
-                if (extraCount < 1 || extraCount > 24) {
-                    player.sendMessage(Component.text("Extra count must be between 1 and 24!", NamedTextColor.RED));
-                    return;
-                }
-            } catch (NumberFormatException e) {
-                player.sendMessage(Component.text("Invalid number: " + args[2], NamedTextColor.RED));
-                return;
-            }
-        }
-
-        // Search for bulb group first
-        Optional<BulbGroup> bulbGroupOpt = findBulbGroupByName(player, groupName);
-        Optional<ChestGroup> chestGroupOpt = findChestGroupByName(player, groupName);
-
-        if (bulbGroupOpt.isPresent()) {
-            extendBulbGroup(player, bulbGroupOpt.get(), extraCount);
-        } else if (chestGroupOpt.isPresent()) {
-            extendChestGroup(player, chestGroupOpt.get(), extraCount);
-        } else {
-            player.sendMessage(Component.text("No group found with name: " + groupName, NamedTextColor.RED));
-            player.sendMessage(Component.text("Use /wireless gui to see your groups.", NamedTextColor.GRAY));
-        }
     }
 
     private Optional<BulbGroup> findBulbGroupByName(Player player, String name) {
@@ -249,52 +206,6 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
         return shortId.equalsIgnoreCase(searchName) || groupId.toString().startsWith(searchName.toLowerCase());
     }
 
-    private void extendBulbGroup(Player player, BulbGroup group, int extraCount) {
-        int currentSize = group.getMaxSize();
-        int newSize = currentSize + extraCount;
-        
-        if (newSize > 26) {
-            player.sendMessage(Component.text("Cannot extend beyond 26 blocks! Current size: " + currentSize, NamedTextColor.RED));
-            return;
-        }
-
-        group.extendGroup(extraCount);
-        
-        BulbVariant variant = BulbVariant.fromBulbType(group.getBulbType());
-        var newBulbs = WirelessBulbFactory.createExtensionBulbs(
-                group.getGroupId(), variant, group.getOwnerUuid(), currentSize, extraCount, newSize);
-        
-        distributeItems(player, newBulbs);
-        bulbManager.saveData();
-        
-        player.sendMessage(Component.text("Extended group ", NamedTextColor.GREEN)
-                .append(Component.text(group.getDisplayName(), NamedTextColor.AQUA))
-                .append(Component.text(" with " + extraCount + " new block(s)! New size: " + newSize, NamedTextColor.GREEN)));
-    }
-
-    private void extendChestGroup(Player player, ChestGroup group, int extraCount) {
-        int currentSize = group.getMaxSize();
-        int newSize = currentSize + extraCount;
-        
-        if (newSize > 26) {
-            player.sendMessage(Component.text("Cannot extend beyond 26 blocks! Current size: " + currentSize, NamedTextColor.RED));
-            return;
-        }
-
-        group.extendGroup(extraCount);
-        
-        ChestVariant variant = ChestVariant.fromContainerType(group.getContainerType());
-        var newChests = WirelessChestFactory.createExtensionContainers(
-                group.getGroupId(), variant, group.getOwnerUuid(), currentSize, extraCount, newSize);
-        
-        distributeItems(player, newChests);
-        chestManager.saveData();
-        
-        player.sendMessage(Component.text("Extended group ", NamedTextColor.GREEN)
-                .append(Component.text(group.getDisplayName(), NamedTextColor.GOLD))
-                .append(Component.text(" with " + extraCount + " new container(s)! New size: " + newSize, NamedTextColor.GREEN)));
-    }
-
     private void handleDebugCommand(Player player, String[] args) {
         if (args.length < 2) {
             boolean current = debugManager.isDebugEnabled(player);
@@ -325,14 +236,13 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
     }
 
     /**
-     * Handles /wireless create <groupName> [categoryName]
-     * Creates a connector tool for the specified group (or creates a new group if it doesn't exist).
+     * Handles /wireless create [groupName] [categoryName]
+     * Without arguments, starts the same chat prompt used by the GUI connector action.
+     * With a name, creates a connector tool for the specified group (or creates a new group if it doesn't exist).
      */
     private void handleCreateCommand(Player player, String[] args) {
         if (args.length < 2) {
-            player.sendMessage(Component.text("Usage: /wireless create <groupName> [categoryName]", NamedTextColor.RED));
-            player.sendMessage(Component.text("Creates a Connector Tool for the group.", NamedTextColor.GRAY));
-            player.sendMessage(Component.text("If the group doesn't exist, a creation-mode tool will be given.", NamedTextColor.GRAY));
+            CategorySelectionGUI.startConnectorToolPrompt(player, null, categoryManager);
             return;
         }
 
@@ -553,149 +463,6 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
                 .append(Component.text(category.getName(), NamedTextColor.YELLOW)));
     }
 
-    /**
-     * Handles /wireless give <bulb|lamp|chest> [amount] [options]
-     * Routes to the appropriate item-giving handler.
-     */
-    private void handleGiveCommand(Player player, String[] args) {
-        if (args.length < 2) {
-            player.sendMessage(Component.text("Usage: /wireless give <bulb|lamp|chest> [amount] [options]", NamedTextColor.RED));
-            player.sendMessage(Component.text("/wireless give bulb [amount] [--variant] [--name=...] [--category=...]", NamedTextColor.GRAY));
-            player.sendMessage(Component.text("/wireless give lamp [amount] [--name=...] [--category=...]", NamedTextColor.GRAY));
-            player.sendMessage(Component.text("/wireless give chest [amount] [--variant] [--name=...] [--category=...]", NamedTextColor.GRAY));
-            return;
-        }
-
-        String itemType = args[1].toLowerCase();
-        String[] subArgs = java.util.Arrays.copyOfRange(args, 1, args.length);
-
-        switch (itemType) {
-            case "bulb", "bulbs" -> handleGiveBulbCommand(player, subArgs);
-            case "lamp", "lamps" -> handleGiveLampCommand(player, subArgs);
-            case "chest", "chests" -> handleGiveChestCommand(player, subArgs);
-            default -> {
-                player.sendMessage(Component.text("Unknown item type: " + itemType, NamedTextColor.RED));
-                player.sendMessage(Component.text("Available: bulb, lamp, chest", NamedTextColor.GRAY));
-            }
-        }
-    }
-
-    /**
-     * Handles /wireless give bulb [amount] [options]
-     */
-    private void handleGiveBulbCommand(Player player, String[] args) {
-        int count = 2;
-        BulbVariant variant = BulbVariant.COPPER;
-        String groupName = null;
-        String categoryName = null;
-        
-        for (int i = 1; i < args.length; i++) {
-            String arg = args[i];
-            if (arg.startsWith("--name=")) {
-                groupName = arg.substring(7);
-            } else if (arg.startsWith("--category=")) {
-                categoryName = arg.substring(11);
-            } else if (arg.startsWith("--")) {
-                BulbVariant parsed = BulbVariant.fromArg(arg);
-                if (parsed != null && parsed != BulbVariant.REDSTONE_LAMP) {
-                    variant = parsed;
-                } else {
-                    player.sendMessage(Component.text("Unknown variant: " + arg, NamedTextColor.RED));
-                    player.sendMessage(Component.text("Use /wireless give lamp for redstone lamps.", NamedTextColor.GRAY));
-                    return;
-                }
-            } else {
-                try {
-                    count = Integer.parseInt(arg);
-                    if (count < 2 || count > 26) {
-                        player.sendMessage(Component.text("Bulb count must be between 2 and 26!", NamedTextColor.RED));
-                        return;
-                    }
-                } catch (NumberFormatException e) {
-                    player.sendMessage(Component.text("Invalid number: " + arg, NamedTextColor.RED));
-                    return;
-                }
-            }
-        }
-
-        UUID categoryId = resolveCategoryId(player, categoryName);
-        giveWirelessBulbs(player, variant, count, groupName, categoryId);
-    }
-
-    /**
-     * Handles /wireless give lamp [amount] [options]
-     */
-    private void handleGiveLampCommand(Player player, String[] args) {
-        int count = 2;
-        String groupName = null;
-        String categoryName = null;
-        
-        for (int i = 1; i < args.length; i++) {
-            String arg = args[i];
-            if (arg.startsWith("--name=")) {
-                groupName = arg.substring(7);
-            } else if (arg.startsWith("--category=")) {
-                categoryName = arg.substring(11);
-            } else {
-                try {
-                    count = Integer.parseInt(arg);
-                    if (count < 2 || count > 26) {
-                        player.sendMessage(Component.text("Lamp count must be between 2 and 26!", NamedTextColor.RED));
-                        return;
-                    }
-                } catch (NumberFormatException e) {
-                    player.sendMessage(Component.text("Invalid number: " + arg, NamedTextColor.RED));
-                    return;
-                }
-            }
-        }
-
-        UUID categoryId = resolveCategoryId(player, categoryName);
-        giveWirelessBulbs(player, BulbVariant.REDSTONE_LAMP, count, groupName, categoryId);
-    }
-
-    /**
-     * Handles /wireless give chest [amount] [options]
-     */
-    private void handleGiveChestCommand(Player player, String[] args) {
-        int count = 2;
-        ChestVariant variant = ChestVariant.CHEST;
-        String groupName = null;
-        String categoryName = null;
-        
-        for (int i = 1; i < args.length; i++) {
-            String arg = args[i];
-            if (arg.startsWith("--name=")) {
-                groupName = arg.substring(7);
-            } else if (arg.startsWith("--category=")) {
-                categoryName = arg.substring(11);
-            } else if (arg.startsWith("--")) {
-                ChestVariant parsed = ChestVariant.fromArg(arg);
-                if (parsed != null) {
-                    variant = parsed;
-                } else {
-                    player.sendMessage(Component.text("Unknown variant: " + arg, NamedTextColor.RED));
-                    player.sendMessage(Component.text("Available: --chest, --shulker, --white, --orange, --magenta, etc.", NamedTextColor.GRAY));
-                    return;
-                }
-            } else {
-                try {
-                    count = Integer.parseInt(arg);
-                    if (count < 2 || count > 26) {
-                        player.sendMessage(Component.text("Container count must be between 2 and 26!", NamedTextColor.RED));
-                        return;
-                    }
-                } catch (NumberFormatException e) {
-                    player.sendMessage(Component.text("Invalid number: " + arg, NamedTextColor.RED));
-                    return;
-                }
-            }
-        }
-
-        UUID categoryId = resolveCategoryId(player, categoryName);
-        giveWirelessContainers(player, variant, count, groupName, categoryId);
-    }
-
     private void giveItemToPlayer(Player player, ItemStack item) {
         if (player.getInventory().firstEmpty() != -1) {
             player.getInventory().addItem(item);
@@ -707,7 +474,7 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
     private void handleRecoverCommand(Player player, String[] args) {
         if (args.length < 2) {
             player.sendMessage(Component.text("Usage: /wireless recover <groupname>", NamedTextColor.RED));
-            player.sendMessage(Component.text("Recovers lost/missing blocks for a group you own.", NamedTextColor.GRAY));
+            player.sendMessage(Component.text("Restores missing saved blocks for a group you own.", NamedTextColor.GRAY));
             player.sendMessage(Component.text("Use /wireless gui to see your group names.", NamedTextColor.GRAY));
             return;
         }
@@ -729,62 +496,281 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
     }
 
     private void recoverBulbGroup(Player player, BulbGroup group) {
-        List<Integer> unplacedIndices = new ArrayList<>();
-        
+        int restored = 0;
+        int skippedUnplaced = 0;
+        int skippedOccupied = 0;
+        int skippedUnloaded = 0;
+        Material expectedMaterial = getExpectedBulbMaterial(group);
+
         for (int i = 0; i < group.getMaxSize(); i++) {
-            if (group.getLocation(i) == null) {
-                unplacedIndices.add(i);
+            Location location = group.getLocation(i);
+            if (location == null) {
+                skippedUnplaced++;
+                continue;
             }
+
+            if (!ensureChunkLoaded(location)) {
+                skippedUnloaded++;
+                continue;
+            }
+
+            Block block = location.getBlock();
+            Material currentType = block.getType();
+            boolean alreadyCorrect = currentType == expectedMaterial;
+            boolean compatibleBulb = BulbUtils.getBulbTypeFromMaterial(currentType) == group.getBulbType();
+
+            if (!alreadyCorrect && !isReplaceableForRecovery(currentType) && !compatibleBulb) {
+                skippedOccupied++;
+                continue;
+            }
+
+            if (!alreadyCorrect) {
+                block.setType(expectedMaterial, false);
+                restored++;
+            }
+
+            applyBulbState(block, group);
+            bulbManager.registerPlacedBulb(location, group.getGroupId(), i, group.getOwnerUuid(), group.getBulbType(), group.getMaxSize());
+            ParticleEffects.spawnConnectParticles(location);
         }
-        
-        if (unplacedIndices.isEmpty()) {
-            player.sendMessage(Component.text("All blocks in group ", NamedTextColor.YELLOW)
-                    .append(Component.text(group.getDisplayName(), NamedTextColor.AQUA))
-                    .append(Component.text(" are already placed!", NamedTextColor.YELLOW)));
-            return;
-        }
-        
-        BulbVariant variant = BulbVariant.fromBulbType(group.getBulbType());
-        ItemStack[] recoveredBulbs = WirelessBulbFactory.createRecoveryBulbs(
-                group.getGroupId(), variant, group.getOwnerUuid(), unplacedIndices, group.getMaxSize());
-        
-        distributeItems(player, recoveredBulbs);
-        
-        player.sendMessage(Component.text("Recovered ", NamedTextColor.GREEN)
-                .append(Component.text(unplacedIndices.size(), NamedTextColor.AQUA))
-                .append(Component.text(" missing block(s) from group ", NamedTextColor.GREEN))
-                .append(Component.text(group.getDisplayName(), NamedTextColor.AQUA))
-                .append(Component.text("!", NamedTextColor.GREEN)));
+
+        bulbManager.saveData();
+        WirelessRedstonePlugin.getInstance().getWireViewManager().refreshSingleGroupViewForGroup(group.getGroupId());
+        sendRecoverSummary(player, group, restored, skippedUnplaced, skippedOccupied, skippedUnloaded, NamedTextColor.AQUA, "block");
     }
 
     private void recoverChestGroup(Player player, ChestGroup group) {
-        List<Integer> unplacedIndices = new ArrayList<>();
-        
+        int restored = 0;
+        int skippedUnplaced = 0;
+        int skippedOccupied = 0;
+        int skippedUnloaded = 0;
+        Set<Integer> processed = new HashSet<>();
+        boolean largeChestGroup = group.getInventorySize() == ChestGroup.LARGE_CHEST_INVENTORY_SIZE
+                && (group.getContainerType() == ChestVariant.ContainerType.CHEST
+                || group.getContainerType() == ChestVariant.ContainerType.COPPER_CHEST);
+
         for (int i = 0; i < group.getMaxSize(); i++) {
-            if (group.getLocation(i) == null) {
-                unplacedIndices.add(i);
+            if (processed.contains(i)) {
+                continue;
             }
+
+            Location location = group.getLocation(i);
+            if (location == null) {
+                skippedUnplaced++;
+                continue;
+            }
+
+            if (largeChestGroup) {
+                int pairIndex = findAdjacentGroupLocationIndex(group, i);
+                if (pairIndex >= 0) {
+                    processed.add(i);
+                    processed.add(pairIndex);
+                    RecoveryResult pairResult = recoverDoubleChestPair(group, i, pairIndex);
+                    restored += pairResult.restored();
+                    skippedOccupied += pairResult.skippedOccupied();
+                    skippedUnloaded += pairResult.skippedUnloaded();
+                    continue;
+                }
+            }
+
+            RecoveryResult result = recoverSingleContainer(group, i);
+            restored += result.restored();
+            skippedOccupied += result.skippedOccupied();
+            skippedUnloaded += result.skippedUnloaded();
         }
-        
-        if (unplacedIndices.isEmpty()) {
-            player.sendMessage(Component.text("All containers in group ", NamedTextColor.YELLOW)
-                    .append(Component.text(group.getDisplayName(), NamedTextColor.GOLD))
-                    .append(Component.text(" are already placed!", NamedTextColor.YELLOW)));
+
+        chestManager.saveData();
+        WirelessRedstonePlugin.getInstance().getWireViewManager().refreshSingleGroupViewForGroup(group.getGroupId());
+        sendRecoverSummary(player, group, restored, skippedUnplaced, skippedOccupied, skippedUnloaded, NamedTextColor.GOLD, "container");
+    }
+
+    private void sendRecoverSummary(Player player, BaseGroup group, int restored, int skippedUnplaced,
+                                    int skippedOccupied, int skippedUnloaded, NamedTextColor groupColor, String blockLabel) {
+        if (restored == 0 && skippedUnplaced == 0 && skippedOccupied == 0 && skippedUnloaded == 0) {
+            player.sendMessage(Component.text("No missing saved " + blockLabel + "s found in group ", NamedTextColor.YELLOW)
+                    .append(Component.text(group.getDisplayName(), groupColor))
+                    .append(Component.text(".", NamedTextColor.YELLOW)));
             return;
         }
-        
-        ChestVariant variant = ChestVariant.fromContainerType(group.getContainerType());
-        ItemStack[] recoveredChests = WirelessChestFactory.createRecoveryContainers(
-                group.getGroupId(), variant, group.getOwnerUuid(), unplacedIndices, group.getMaxSize());
-        
-        distributeItems(player, recoveredChests);
-        
-        player.sendMessage(Component.text("Recovered ", NamedTextColor.GREEN)
-                .append(Component.text(unplacedIndices.size(), NamedTextColor.GOLD))
-                .append(Component.text(" missing container(s) from group ", NamedTextColor.GREEN))
-                .append(Component.text(group.getDisplayName(), NamedTextColor.GOLD))
-                .append(Component.text("!", NamedTextColor.GREEN)));
+
+        if (restored > 0) {
+            player.sendMessage(Component.text("Restored ", NamedTextColor.GREEN)
+                    .append(Component.text(restored, groupColor))
+                    .append(Component.text(" saved " + blockLabel + "(s) for group ", NamedTextColor.GREEN))
+                    .append(Component.text(group.getDisplayName(), groupColor))
+                    .append(Component.text(".", NamedTextColor.GREEN)));
+        } else {
+            player.sendMessage(Component.text("No saved " + blockLabel + " positions needed restoring for group ", NamedTextColor.YELLOW)
+                    .append(Component.text(group.getDisplayName(), groupColor))
+                    .append(Component.text(".", NamedTextColor.YELLOW)));
+        }
+
+        if (skippedUnplaced > 0) {
+            player.sendMessage(Component.text(skippedUnplaced + " empty slot(s) have no saved position. Use a Connector Tool to add new blocks.", NamedTextColor.GRAY));
+        }
+        if (skippedOccupied > 0) {
+            player.sendMessage(Component.text(skippedOccupied + " saved position(s) were occupied by another block and were skipped.", NamedTextColor.GRAY));
+        }
+        if (skippedUnloaded > 0) {
+            player.sendMessage(Component.text(skippedUnloaded + " saved position(s) could not be loaded and were skipped.", NamedTextColor.GRAY));
+        }
     }
+
+    private Material getExpectedBulbMaterial(BulbGroup group) {
+        if (group.getVariantMaterial() != null) {
+            return group.getVariantMaterial();
+        }
+        return BulbVariant.fromBulbType(group.getBulbType()).getMaterial();
+    }
+
+    private Material getExpectedChestMaterial(ChestGroup group) {
+        if (group.getVariantMaterial() != null) {
+            return group.getVariantMaterial();
+        }
+        return ChestVariant.fromContainerType(group.getContainerType()).getMaterial();
+    }
+
+    private boolean ensureChunkLoaded(Location location) {
+        if (location == null || location.getWorld() == null) {
+            return false;
+        }
+        return location.getChunk().isLoaded() || location.getChunk().load();
+    }
+
+    private boolean isReplaceableForRecovery(Material material) {
+        return material.isAir() || material == Material.WATER || material == Material.LAVA;
+    }
+
+    private void applyBulbState(Block block, BulbGroup group) {
+        var data = block.getBlockData();
+        if (data instanceof CopperBulb copperBulb) {
+            copperBulb.setLit(group.isLit());
+            block.setBlockData(copperBulb, false);
+        } else if (data instanceof Lightable lightable) {
+            lightable.setLit(group.isLit());
+            block.setBlockData(lightable, false);
+        }
+    }
+
+    private RecoveryResult recoverSingleContainer(ChestGroup group, int index) {
+        Location location = group.getLocation(index);
+        if (!ensureChunkLoaded(location)) {
+            return new RecoveryResult(0, 0, 1);
+        }
+
+        Material expectedMaterial = getExpectedChestMaterial(group);
+        Block block = location.getBlock();
+        Material currentType = block.getType();
+
+        if (currentType != expectedMaterial && !isReplaceableForRecovery(currentType)) {
+            return new RecoveryResult(0, 1, 0);
+        }
+
+        int restored = 0;
+        if (currentType != expectedMaterial) {
+            block.setType(expectedMaterial, false);
+            restored = 1;
+        }
+
+        chestManager.registerPlacedChest(location, group.getGroupId(), index, group.getOwnerUuid(), group.getMaxSize(), group.getContainerType());
+        chestManager.applySharedInventory(location, group);
+        ParticleEffects.spawnConnectParticles(location);
+        return new RecoveryResult(restored, 0, 0);
+    }
+
+    private RecoveryResult recoverDoubleChestPair(ChestGroup group, int firstIndex, int secondIndex) {
+        Location firstLocation = group.getLocation(firstIndex);
+        Location secondLocation = group.getLocation(secondIndex);
+        if (!ensureChunkLoaded(firstLocation) || !ensureChunkLoaded(secondLocation)) {
+            return new RecoveryResult(0, 0, 1);
+        }
+
+        Material expectedMaterial = getExpectedChestMaterial(group);
+        Block firstBlock = firstLocation.getBlock();
+        Block secondBlock = secondLocation.getBlock();
+        Material firstType = firstBlock.getType();
+        Material secondType = secondBlock.getType();
+
+        if ((firstType != expectedMaterial && !isReplaceableForRecovery(firstType))
+                || (secondType != expectedMaterial && !isReplaceableForRecovery(secondType))) {
+            return new RecoveryResult(0, 1, 0);
+        }
+
+        int restored = 0;
+        if (firstType != expectedMaterial) {
+            firstBlock.setType(expectedMaterial, false);
+            restored++;
+        }
+        if (secondType != expectedMaterial) {
+            secondBlock.setType(expectedMaterial, false);
+            restored++;
+        }
+
+        applyDoubleChestData(firstBlock, secondBlock);
+        chestManager.registerPlacedChest(firstLocation, group.getGroupId(), firstIndex, group.getOwnerUuid(), group.getMaxSize(), group.getContainerType());
+        chestManager.registerPlacedChest(secondLocation, group.getGroupId(), secondIndex, group.getOwnerUuid(), group.getMaxSize(), group.getContainerType());
+        chestManager.applySharedInventory(firstLocation, group);
+        chestManager.applySharedInventory(secondLocation, group);
+        ParticleEffects.spawnConnectParticles(firstLocation);
+        ParticleEffects.spawnConnectParticles(secondLocation);
+        return new RecoveryResult(restored, 0, 0);
+    }
+
+    private int findAdjacentGroupLocationIndex(ChestGroup group, int sourceIndex) {
+        Location source = group.getLocation(sourceIndex);
+        if (source == null) {
+            return -1;
+        }
+
+        for (int i = 0; i < group.getMaxSize(); i++) {
+            if (i == sourceIndex) {
+                continue;
+            }
+            Location candidate = group.getLocation(i);
+            if (candidate == null || candidate.getWorld() == null || source.getWorld() == null) {
+                continue;
+            }
+            if (!candidate.getWorld().equals(source.getWorld()) || candidate.getBlockY() != source.getBlockY()) {
+                continue;
+            }
+
+            int dx = Math.abs(candidate.getBlockX() - source.getBlockX());
+            int dz = Math.abs(candidate.getBlockZ() - source.getBlockZ());
+            if (dx + dz == 1) {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    private void applyDoubleChestData(Block firstBlock, Block secondBlock) {
+        Location first = firstBlock.getLocation();
+        Location second = secondBlock.getLocation();
+
+        if (first.getBlockZ() == second.getBlockZ()) {
+            Block west = first.getBlockX() <= second.getBlockX() ? firstBlock : secondBlock;
+            Block east = west == firstBlock ? secondBlock : firstBlock;
+            setChestBlockData(west, BlockFace.NORTH, org.bukkit.block.data.type.Chest.Type.LEFT);
+            setChestBlockData(east, BlockFace.NORTH, org.bukkit.block.data.type.Chest.Type.RIGHT);
+        } else {
+            Block north = first.getBlockZ() <= second.getBlockZ() ? firstBlock : secondBlock;
+            Block south = north == firstBlock ? secondBlock : firstBlock;
+            setChestBlockData(north, BlockFace.EAST, org.bukkit.block.data.type.Chest.Type.LEFT);
+            setChestBlockData(south, BlockFace.EAST, org.bukkit.block.data.type.Chest.Type.RIGHT);
+        }
+    }
+
+    private void setChestBlockData(Block block, BlockFace facing, org.bukkit.block.data.type.Chest.Type type) {
+        var data = block.getBlockData();
+        if (data instanceof org.bukkit.block.data.type.Chest chestData) {
+            chestData.setFacing(facing);
+            chestData.setType(type);
+            block.setBlockData(chestData, false);
+        }
+    }
+
+    private record RecoveryResult(int restored, int skippedOccupied, int skippedUnloaded) {}
 
     private void handleGUICommand(Player player, String[] args) {
         boolean showAll = args.length >= 2 && args[1].equalsIgnoreCase("--all");
@@ -866,20 +852,11 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
 
     private void sendUsage(Player player) {
         player.sendMessage(Component.text("=== Wireless Redstone Commands ===", NamedTextColor.GOLD));
-        
-        // Give commands
-        player.sendMessage(Component.text("/wireless give bulb [amount] [--variant] [--name=...] [--category=...]", NamedTextColor.YELLOW)
-                .append(Component.text(" - Get linked copper bulbs", NamedTextColor.GRAY)));
-        player.sendMessage(Component.text("  Variants: --copper, --exposed, --weathered, --oxidized", NamedTextColor.DARK_GRAY));
-        player.sendMessage(Component.text("/wireless give lamp [amount] [--name=...] [--category=...]", NamedTextColor.YELLOW)
-                .append(Component.text(" - Get linked redstone lamps", NamedTextColor.GRAY)));
-        player.sendMessage(Component.text("/wireless give chest [amount] [--variant] [--name=...] [--category=...]", NamedTextColor.YELLOW)
-                .append(Component.text(" - Get linked wireless containers", NamedTextColor.GRAY)));
-        player.sendMessage(Component.text("  Variants: --chest, --shulker, --white, --orange, etc.", NamedTextColor.DARK_GRAY));
-        
-        // Tools
+
+        player.sendMessage(Component.text("/wireless create", NamedTextColor.YELLOW)
+                .append(Component.text(" - Enter a new group name and receive a Connector Tool", NamedTextColor.GRAY)));
         player.sendMessage(Component.text("/wireless create <groupName> [categoryName]", NamedTextColor.YELLOW)
-                .append(Component.text(" - Get a Connector Tool (creates group if new)", NamedTextColor.GRAY)));
+                .append(Component.text(" - Get a Connector Tool directly", NamedTextColor.GRAY)));
         player.sendMessage(Component.text("/wireless inspect [player]", NamedTextColor.YELLOW)
                 .append(Component.text(" - Get a Circuit Analyser tool", NamedTextColor.GRAY)));
         
@@ -888,10 +865,8 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
                 .append(Component.text(" - Rename a group", NamedTextColor.GRAY)));
         player.sendMessage(Component.text("/wireless modify category <groupName> <categoryName>", NamedTextColor.YELLOW)
                 .append(Component.text(" - Assign group to category (use 'none' to remove)", NamedTextColor.GRAY)));
-        player.sendMessage(Component.text("/wireless extend <name> [count]", NamedTextColor.YELLOW)
-                .append(Component.text(" - Add more blocks to an existing group", NamedTextColor.GRAY)));
         player.sendMessage(Component.text("/wireless recover <name>", NamedTextColor.YELLOW)
-                .append(Component.text(" - Recover lost/missing blocks from a group", NamedTextColor.GRAY)));
+                .append(Component.text(" - Restore saved blocks destroyed by the environment", NamedTextColor.GRAY)));
         
         // Other
         player.sendMessage(Component.text("/wireless gui [--all] [--nocategory]", NamedTextColor.YELLOW)
@@ -904,58 +879,6 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
         }
     }
 
-    private void giveWirelessBulbs(Player player, BulbVariant variant, int count, String groupName, UUID categoryId) {
-        var groupId = bulbManager.createNewGroupId();
-        var bulbs = WirelessBulbFactory.createLinkedGroup(groupId, variant, player.getUniqueId(), count);
-        distributeItems(player, bulbs);
-        
-        // Pre-create the group with name, category, and variant material if specified
-        if (groupName != null || categoryId != null) {
-            // The group will be created when the first bulb is placed, but we can register it now
-            // with the custom properties by creating a placeholder that will be updated on placement
-            bulbManager.preRegisterGroup(groupId, count, player.getUniqueId(), variant.getBulbType(), groupName, categoryId, variant.getMaterial());
-        }
-        
-        player.sendMessage(Component.text("You received " + count + " linked " + variant.getDisplayName() + "s!", NamedTextColor.GREEN));
-        if (groupName != null) {
-            player.sendMessage(Component.text("Group name: ", NamedTextColor.GRAY)
-                    .append(Component.text(groupName, NamedTextColor.AQUA)));
-        }
-        player.sendMessage(Component.text("Place them and they will sync their state!", NamedTextColor.GRAY));
-    }
-
-    private void giveWirelessContainers(Player player, ChestVariant variant, int count, String groupName, UUID categoryId) {
-        var groupId = chestManager.createNewGroupId();
-        var containers = WirelessChestFactory.createLinkedContainers(groupId, variant, player.getUniqueId(), count);
-        distributeItems(player, containers);
-        
-        // Pre-create the group with name, category, and variant material if specified
-        if (groupName != null || categoryId != null) {
-            chestManager.preRegisterGroup(groupId, count, player.getUniqueId(), variant.getContainerType(), groupName, categoryId, variant.getMaterial());
-        }
-        
-        player.sendMessage(Component.text("You received " + count + " linked " + variant.getDisplayName() + "s!", NamedTextColor.GREEN));
-        if (groupName != null) {
-            player.sendMessage(Component.text("Group name: ", NamedTextColor.GRAY)
-                    .append(Component.text(groupName, NamedTextColor.GOLD)));
-        }
-        player.sendMessage(Component.text("Place them and they will sync their contents!", NamedTextColor.GRAY));
-    }
-
-    /**
-     * Distributes items to a player's inventory, dropping any that don't fit.
-     */
-    private void distributeItems(Player player, ItemStack[] items) {
-        var inventory = player.getInventory();
-        for (var item : items) {
-            if (inventory.firstEmpty() != -1) {
-                inventory.addItem(item);
-            } else {
-                player.getWorld().dropItemNaturally(player.getLocation(), item);
-            }
-        }
-    }
-
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         List<String> completions = new ArrayList<>();
@@ -963,8 +886,7 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
         if (args.length == 1) {
             String input = args[0].toLowerCase();
             List<String> subCommands = new ArrayList<>(List.of(
-                    "create", "inspect", "modify", "give",
-                    "extend", "recover", "reclaim",
+                    "create", "inspect", "modify", "recover",
                     "gui", "manage", "list", "debug"
             ));
             if (sender.hasPermission("wirelessredstone.admin")) {
@@ -1022,53 +944,6 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
                     // For "name", no suggestions - user provides new name
                 }
             }
-            // /wireless give <bulb|lamp|chest> [amount] [options]
-            else if (subCommand.equals("give")) {
-                if (args.length == 2) {
-                    for (String itemType : List.of("bulb", "lamp", "chest")) {
-                        if (itemType.startsWith(input)) {
-                            completions.add(itemType);
-                        }
-                    }
-                } else if (args.length >= 3) {
-                    String itemType = args[1].toLowerCase();
-                    if (itemType.equals("bulb") || itemType.equals("bulbs")) {
-                        for (BulbVariant variant : BulbVariant.values()) {
-                            if (variant != BulbVariant.REDSTONE_LAMP && variant.getArg().startsWith(input)) {
-                                completions.add(variant.getArg());
-                            }
-                        }
-                        for (int i = 2; i <= 10; i++) {
-                            String num = String.valueOf(i);
-                            if (num.startsWith(input)) {
-                                completions.add(num);
-                            }
-                        }
-                        addNameAndCategoryCompletions(sender, input, completions);
-                    } else if (itemType.equals("lamp") || itemType.equals("lamps")) {
-                        for (int i = 2; i <= 10; i++) {
-                            String num = String.valueOf(i);
-                            if (num.startsWith(input)) {
-                                completions.add(num);
-                            }
-                        }
-                        addNameAndCategoryCompletions(sender, input, completions);
-                    } else if (itemType.equals("chest") || itemType.equals("chests")) {
-                        for (ChestVariant variant : ChestVariant.values()) {
-                            if (variant.getArg().startsWith(input)) {
-                                completions.add(variant.getArg());
-                            }
-                        }
-                        for (int i = 2; i <= 10; i++) {
-                            String num = String.valueOf(i);
-                            if (num.startsWith(input)) {
-                                completions.add(num);
-                            }
-                        }
-                        addNameAndCategoryCompletions(sender, input, completions);
-                    }
-                }
-            }
             // /wireless gui [--all] [--nocategory]
             else if (subCommand.equals("gui") || subCommand.equals("manage") || subCommand.equals("list")) {
                 if ("--all".startsWith(input) && sender.hasPermission("wirelessredstone.admin")) {
@@ -1078,46 +953,10 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
                     completions.add("--nocategory");
                 }
             }
-            // /wireless extend <groupName> [count]
-            else if (subCommand.equals("extend")) {
+            // /wireless recover <groupName>
+            else if (subCommand.equals("recover")) {
                 if (args.length == 2 && sender instanceof Player player) {
                     addGroupNameCompletions(player, input, completions);
-                } else if (args.length == 3) {
-                    for (int i = 1; i <= 5; i++) {
-                        String num = String.valueOf(i);
-                        if (num.startsWith(input)) {
-                            completions.add(num);
-                        }
-                    }
-                }
-            }
-            // /wireless recover <groupName>
-            else if (subCommand.equals("recover") || subCommand.equals("reclaim")) {
-                if (args.length == 2 && sender instanceof Player player) {
-                    UUID playerUuid = player.getUniqueId();
-                    boolean isAdmin = player.hasPermission("wirelessredstone.admin");
-                    
-                    bulbManager.getAllGroups().stream()
-                            .filter(g -> isAdmin || playerUuid.equals(g.getOwnerUuid()))
-                            .filter(g -> g.getPlacedCount() < g.getMaxSize())
-                            .forEach(g -> {
-                                String name = g.getCustomName() != null ? g.getCustomName() : g.getGroupId().toString().substring(0, 8);
-                                if (name.toLowerCase().startsWith(input)) {
-                                    completions.add(name.contains(" ") ? "\"" + name + "\"" : name);
-                                }
-                            });
-                    
-                    if (chestManager != null) {
-                        chestManager.getAllGroups().stream()
-                                .filter(g -> isAdmin || playerUuid.equals(g.getOwnerUuid()))
-                                .filter(g -> g.getPlacedCount() < g.getMaxSize())
-                                .forEach(g -> {
-                                    String name = g.getCustomName() != null ? g.getCustomName() : g.getGroupId().toString().substring(0, 8);
-                                    if (name.toLowerCase().startsWith(input)) {
-                                        completions.add(name.contains(" ") ? "\"" + name + "\"" : name);
-                                    }
-                                });
-                    }
                 }
             }
             // /wireless debug on|off
@@ -1172,27 +1011,4 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
                 });
     }
 
-    private void addNameAndCategoryCompletions(CommandSender sender, String input, List<String> completions) {
-        if ("--name=".startsWith(input)) {
-            completions.add("--name=");
-        }
-        if ("--category=".startsWith(input)) {
-            completions.add("--category=");
-        }
-        // If already typing --category=, suggest category names
-        if (input.startsWith("--category=") && sender instanceof Player player) {
-            String categoryInput = input.substring(11).toLowerCase();
-            UUID playerUuid = player.getUniqueId();
-            boolean isAdmin = player.hasPermission("wirelessredstone.admin");
-            
-            categoryManager.getAllCategories().stream()
-                    .filter(c -> isAdmin || playerUuid.equals(c.getOwnerUuid()))
-                    .forEach(c -> {
-                        String name = c.getName();
-                        if (name.toLowerCase().startsWith(categoryInput)) {
-                            completions.add("--category=" + (name.contains(" ") ? "\"" + name + "\"" : name));
-                        }
-                    });
-        }
-    }
 }
