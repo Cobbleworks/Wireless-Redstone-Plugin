@@ -8,6 +8,8 @@ import com.wirelessredstone.model.BulbGroup;
 import com.wirelessredstone.model.Category;
 import com.wirelessredstone.model.ChestGroup;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.ClickEvent;
+import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
@@ -228,7 +230,7 @@ public class BulbManagerGUI implements InventoryHolder {
                 .append(Component.text("Teleport to first placed", NamedTextColor.WHITE))
                 .decoration(TextDecoration.ITALIC, false));
         lore.add(Component.text("Right-click: ", NamedTextColor.YELLOW)
-                .append(Component.text("Teleport to last placed", NamedTextColor.WHITE))
+                .append(Component.text("Show group details", NamedTextColor.WHITE))
                 .decoration(TextDecoration.ITALIC, false));
         lore.add(Component.text("Middle-click: ", NamedTextColor.LIGHT_PURPLE)
                 .append(Component.text("Rename group", NamedTextColor.WHITE))
@@ -412,12 +414,7 @@ public class BulbManagerGUI implements InventoryHolder {
         } else if (isMiddleClick) {
             handleStartRename(group);
         } else if (isRightClick) {
-            List<Location> placed = group.getPlacedLocations();
-            if (!placed.isEmpty()) {
-                handleTeleport(placed.get(placed.size() - 1), GroupEntry.getIndexLabel(group.getLocationIndex(placed.get(placed.size() - 1))));
-            } else {
-                player.sendMessage(Component.text("No items are placed in this group!", NamedTextColor.RED));
-            }
+            handleShowDetails(group);
         } else {
             List<Location> placed = group.getPlacedLocations();
             if (!placed.isEmpty()) {
@@ -426,6 +423,91 @@ public class BulbManagerGUI implements InventoryHolder {
                 player.sendMessage(Component.text("No items are placed in this group!", NamedTextColor.RED));
             }
         }
+    }
+
+    private void handleShowDetails(GroupEntry group) {
+        player.closeInventory();
+
+        NamedTextColor typeColor = group.getType() == GroupEntry.GroupType.BULB
+                ? NamedTextColor.AQUA
+                : NamedTextColor.GOLD;
+        String groupType = group.getType() == GroupEntry.GroupType.BULB ? "bulb" : "chest";
+        UUID groupId = group.getGroupId();
+
+        player.sendMessage(Component.empty());
+        player.sendMessage(Component.text("═══ ⚡ Wireless Group ⚡ ═══", NamedTextColor.LIGHT_PURPLE)
+                .decoration(TextDecoration.BOLD, true));
+
+        String displayName = group.getDisplayName();
+        player.sendMessage(Component.text("Name: ", NamedTextColor.GRAY)
+                .append(Component.text(displayName, NamedTextColor.WHITE).decoration(TextDecoration.BOLD, true)
+                        .hoverEvent(HoverEvent.showText(Component.text("Click to rename", NamedTextColor.YELLOW)))
+                        .clickEvent(ClickEvent.runCommand("/wireless analyser-rename " + groupId + " " + groupType)))
+                .append(Component.text(" ✎", NamedTextColor.DARK_GRAY)));
+
+        player.sendMessage(Component.text("Category: ", NamedTextColor.GRAY)
+                .append(Component.text(getCategoryDisplayName(group), NamedTextColor.YELLOW)
+                        .hoverEvent(HoverEvent.showText(Component.text("Click to change category", NamedTextColor.YELLOW)))
+                        .clickEvent(ClickEvent.runCommand("/wireless analyser-category " + groupId + " " + groupType)))
+                .append(Component.text(" ✎", NamedTextColor.DARK_GRAY)));
+
+        player.sendMessage(Component.text("Type: ", NamedTextColor.GRAY)
+                .append(Component.text(group.getTypeDisplayName(), typeColor)));
+
+        NamedTextColor countColor = group.getPlacedCount() == group.getMaxSize()
+                ? NamedTextColor.GREEN
+                : NamedTextColor.YELLOW;
+        Component placedLine = Component.text("Placed: ", NamedTextColor.GRAY)
+                .append(Component.text(group.getPlacedCount() + "/" + group.getMaxSize(), countColor));
+        if (group.getType() == GroupEntry.GroupType.BULB) {
+            placedLine = placedLine
+                    .append(Component.text(" | State: ", NamedTextColor.GRAY))
+                    .append(Component.text(group.isLit() ? "ON" : "OFF",
+                            group.isLit() ? NamedTextColor.GREEN : NamedTextColor.RED));
+        }
+        player.sendMessage(placedLine);
+
+        player.sendMessage(Component.text("[Get Connector Tool]", NamedTextColor.GREEN)
+                .decoration(TextDecoration.BOLD, true)
+                .hoverEvent(HoverEvent.showText(Component.text("Click to receive a Connector Tool for this group", NamedTextColor.YELLOW)))
+                .clickEvent(ClickEvent.runCommand("/wireless create " + quoteCommandArgument(displayName))));
+
+        player.sendMessage(Component.text("Blocks:", NamedTextColor.GRAY)
+                .decoration(TextDecoration.UNDERLINED, true));
+
+        List<Location> locations = group.getLocations();
+        for (int i = 0; i < locations.size(); i++) {
+            Location loc = locations.get(i);
+            String label = GroupEntry.getIndexLabel(i);
+            if (loc == null) {
+                player.sendMessage(Component.text("[" + label + "] ", NamedTextColor.DARK_AQUA)
+                        .append(Component.text("Not placed", NamedTextColor.RED)));
+                continue;
+            }
+
+            String coords = loc.getBlockX() + "," + loc.getBlockY() + "," + loc.getBlockZ();
+            String command = "/wireless teleport " + groupId + " " + groupType + " " + i;
+            player.sendMessage(Component.text("[" + label + "] ", NamedTextColor.DARK_AQUA)
+                    .append(Component.text(coords, NamedTextColor.WHITE)
+                            .hoverEvent(HoverEvent.showText(Component.text("Click to teleport", NamedTextColor.YELLOW)))
+                            .clickEvent(ClickEvent.runCommand(command))));
+        }
+
+        player.sendMessage(Component.text("═══════════════════════════════", NamedTextColor.DARK_GRAY));
+    }
+
+    private String getCategoryDisplayName(GroupEntry group) {
+        if (categoryManager == null || group.getCategoryId() == null) {
+            return "Uncategorized";
+        }
+
+        return categoryManager.getCategoryById(group.getCategoryId())
+                .map(Category::getDisplayName)
+                .orElse("Unknown");
+    }
+
+    private String quoteCommandArgument(String value) {
+        return "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\"";
     }
 
     private void handleStartRename(GroupEntry group) {

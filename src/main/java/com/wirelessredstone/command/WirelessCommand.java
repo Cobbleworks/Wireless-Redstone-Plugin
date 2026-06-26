@@ -164,6 +164,7 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
             case "reload" -> handleReloadCommand(player);
             case "analyser-rename" -> handleAnalyserRenameCommand(player, parsedArgs);
             case "analyser-category" -> handleAnalyserCategoryCommand(player, parsedArgs);
+            case "teleport" -> handleTeleportCommand(player, parsedArgs);
             default -> {
                 player.sendMessage(Component.text("Unknown subcommand. Use ", NamedTextColor.RED)
                         .append(Component.text("/wireless help", NamedTextColor.YELLOW))
@@ -793,6 +794,66 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
         
         plugin.reloadData();
         player.sendMessage(Component.text("WirelessRedstone configuration reloaded!", NamedTextColor.GREEN));
+    }
+
+    /**
+     * Internal command used by clickable GUI group-detail rows.
+     */
+    private void handleTeleportCommand(Player player, String[] args) {
+        if (args.length < 4) {
+            return;
+        }
+
+        if (!player.hasPermission("wirelessredstone.teleport")) {
+            player.sendMessage(Component.text("You don't have permission to teleport!", NamedTextColor.RED));
+            return;
+        }
+
+        try {
+            UUID groupId = UUID.fromString(args[1]);
+            String groupType = args[2].toLowerCase();
+            int index = Integer.parseInt(args[3]);
+
+            BaseGroup group;
+            NamedTextColor groupColor;
+            if (groupType.equals("bulb")) {
+                group = bulbManager.getGroupById(groupId).orElse(null);
+                groupColor = NamedTextColor.AQUA;
+            } else if (groupType.equals("chest")) {
+                group = chestManager != null ? chestManager.getGroupById(groupId).orElse(null) : null;
+                groupColor = NamedTextColor.GOLD;
+            } else {
+                return;
+            }
+
+            if (group == null) {
+                player.sendMessage(Component.text("That wireless group no longer exists.", NamedTextColor.RED));
+                return;
+            }
+
+            if (!player.hasPermission("wirelessredstone.admin")
+                    && group.getOwnerUuid() != null
+                    && !player.getUniqueId().equals(group.getOwnerUuid())) {
+                player.sendMessage(Component.text("You can only teleport to your own wireless groups.", NamedTextColor.RED));
+                return;
+            }
+
+            Location location = group.getLocation(index);
+            if (location == null) {
+                player.sendMessage(Component.text("Slot " + BaseGroup.getIndexLabel(index) + " is not placed yet.", NamedTextColor.RED));
+                return;
+            }
+
+            Location teleportLocation = location.clone().add(0.5, 1, 0.5);
+            teleportLocation.setYaw(player.getLocation().getYaw());
+            teleportLocation.setPitch(player.getLocation().getPitch());
+            player.teleport(teleportLocation);
+            player.sendMessage(Component.text("Teleported to ", NamedTextColor.GREEN)
+                    .append(Component.text(group.getDisplayName(), groupColor))
+                    .append(Component.text(" slot " + BaseGroup.getIndexLabel(index) + ".", NamedTextColor.GREEN)));
+        } catch (IllegalArgumentException e) {
+            player.sendMessage(Component.text("That teleport link is no longer valid.", NamedTextColor.RED));
+        }
     }
 
     /**
