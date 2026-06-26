@@ -27,7 +27,7 @@ public class CategorySelectionGUI implements InventoryHolder {
 
     private static final int ROWS = 6;
     private static final int SIZE = ROWS * 9;
-    private static final int ITEMS_PER_PAGE = 45;
+    private static final int ITEMS_PER_PAGE = 36;
     
     private static final Map<UUID, PendingAction> pendingActions = new HashMap<>();
     private static final Map<UUID, String> pendingConnectorCategoryNames = new HashMap<>();
@@ -117,7 +117,7 @@ public class CategorySelectionGUI implements InventoryHolder {
         meta.displayName(Component.empty());
         border.setItemMeta(meta);
 
-        for (int i = 45; i < 54; i++) {
+        for (int i = 36; i < 54; i++) {
             inventory.setItem(i, border);
         }
     }
