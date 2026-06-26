@@ -28,7 +28,7 @@ public class BulbManagerGUI implements InventoryHolder {
 
     private static final int ROWS = 6;
     private static final int SIZE = ROWS * 9;
-    private static final int ITEMS_PER_PAGE = 28;
+    private static final int ITEMS_PER_PAGE = 45;
     
     private static final Map<UUID, GroupEntry> pendingRenames = new HashMap<>();
     private static final Map<UUID, GroupEntry> pendingCategoryChanges = new HashMap<>();
@@ -136,11 +136,8 @@ public class BulbManagerGUI implements InventoryHolder {
         int startIndex = currentPage * ITEMS_PER_PAGE;
         int endIndex = Math.min(startIndex + ITEMS_PER_PAGE, entries.size());
 
-        int slot = 10;
         for (int i = startIndex; i < endIndex; i++) {
-            if (slot % 9 == 0) slot++;
-            if (slot % 9 == 8) slot += 2;
-            if (slot >= 44) break;
+            int slot = i - startIndex;
 
             GuiEntry entry = entries.get(i);
             if (entry instanceof CategoryEntry categoryEntry) {
@@ -148,7 +145,6 @@ public class BulbManagerGUI implements InventoryHolder {
             } else if (entry instanceof GroupGuiEntry groupEntry) {
                 inventory.setItem(slot, createGroupItem(groupEntry.group()));
             }
-            slot++;
         }
 
         if (currentPage > 0) {
@@ -180,15 +176,8 @@ public class BulbManagerGUI implements InventoryHolder {
         meta.displayName(Component.empty());
         border.setItemMeta(meta);
 
-        for (int i = 0; i < 9; i++) {
-            inventory.setItem(i, border);
-        }
         for (int i = 45; i < 54; i++) {
             inventory.setItem(i, border);
-        }
-        for (int i = 9; i < 45; i += 9) {
-            inventory.setItem(i, border);
-            inventory.setItem(i + 8, border);
         }
     }
 
@@ -268,7 +257,7 @@ public class BulbManagerGUI implements InventoryHolder {
         lore.add(Component.text("Middle-click: ", NamedTextColor.LIGHT_PURPLE)
                 .append(Component.text("Rename group", NamedTextColor.WHITE))
                 .decoration(TextDecoration.ITALIC, false));
-        lore.add(Component.text("Shift+Right: ", NamedTextColor.LIGHT_PURPLE)
+        lore.add(Component.text("Shift+Middle: ", NamedTextColor.LIGHT_PURPLE)
                 .append(Component.text("Set icon to held item", NamedTextColor.WHITE))
                 .decoration(TextDecoration.ITALIC, false));
         lore.add(Component.text("Shift+Left: ", NamedTextColor.RED)
@@ -492,7 +481,7 @@ public class BulbManagerGUI implements InventoryHolder {
 
         GroupEntry group = groupEntry.group();
 
-        if (isShiftClick && isRightClick) {
+        if (isShiftClick && isMiddleClick) {
             handleSetIcon(group);
         } else if (isShiftClick) {
             handleRemoveGroup(group);
@@ -732,14 +721,8 @@ public class BulbManagerGUI implements InventoryHolder {
     }
 
     private int getEntryIndexFromSlot(int slot) {
-        if (slot < 10 || slot > 43) return -1;
-        if (slot % 9 == 0 || slot % 9 == 8) return -1;
-
-        int row = slot / 9 - 1;
-        int col = slot % 9 - 1;
-        int indexInPage = row * 7 + col;
-
-        return currentPage * ITEMS_PER_PAGE + indexInPage;
+        if (slot < 0 || slot >= ITEMS_PER_PAGE) return -1;
+        return currentPage * ITEMS_PER_PAGE + slot;
     }
 
     private void handleTeleport(Location location, String name) {
@@ -782,7 +765,7 @@ public class BulbManagerGUI implements InventoryHolder {
         
         refreshGroups();
         
-        int totalPages = Math.max(1, (int) Math.ceil((double) groups.size() / ITEMS_PER_PAGE));
+        int totalPages = Math.max(1, (int) Math.ceil((double) entries.size() / ITEMS_PER_PAGE));
         if (currentPage >= totalPages) {
             currentPage = Math.max(0, totalPages - 1);
         }

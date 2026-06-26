@@ -27,7 +27,7 @@ public class CategorySelectionGUI implements InventoryHolder {
 
     private static final int ROWS = 6;
     private static final int SIZE = ROWS * 9;
-    private static final int ITEMS_PER_PAGE = 28;
+    private static final int ITEMS_PER_PAGE = 45;
     
     private static final Map<UUID, PendingAction> pendingActions = new HashMap<>();
     private static final Map<UUID, String> pendingConnectorCategoryNames = new HashMap<>();
@@ -79,19 +79,14 @@ public class CategorySelectionGUI implements InventoryHolder {
         int startIndex = currentPage * ITEMS_PER_PAGE;
         int endIndex = Math.min(startIndex + ITEMS_PER_PAGE, categories.size());
 
-        int slot = 10;
         for (int i = startIndex; i < endIndex; i++) {
-            if (slot % 9 == 0) slot++;
-            if (slot % 9 == 8) slot += 2;
-            if (slot >= 44) break;
-
             Category category = categories.get(i);
+            int slot = i - startIndex;
             inventory.setItem(slot, createCategoryItem(category));
-            slot++;
         }
 
         // Uncategorized option
-        inventory.setItem(4, createUncategorizedItem());
+        inventory.setItem(52, createUncategorizedItem());
 
         if (currentPage > 0) {
             inventory.setItem(48, createNavigationItem(Material.ARROW, "Previous Page", NamedTextColor.YELLOW));
@@ -122,15 +117,8 @@ public class CategorySelectionGUI implements InventoryHolder {
         meta.displayName(Component.empty());
         border.setItemMeta(meta);
 
-        for (int i = 0; i < 9; i++) {
-            if (i != 4) inventory.setItem(i, border);
-        }
         for (int i = 45; i < 54; i++) {
             inventory.setItem(i, border);
-        }
-        for (int i = 9; i < 45; i += 9) {
-            inventory.setItem(i, border);
-            inventory.setItem(i + 8, border);
         }
     }
 
@@ -369,7 +357,7 @@ public class CategorySelectionGUI implements InventoryHolder {
         }
 
         // Uncategorized
-        if (slot == 4) {
+        if (slot == 52) {
             openGroupsGUI(null);
             return;
         }
@@ -470,14 +458,8 @@ public class CategorySelectionGUI implements InventoryHolder {
     }
 
     private int getCategoryIndexFromSlot(int slot) {
-        if (slot < 10 || slot > 43) return -1;
-        if (slot % 9 == 0 || slot % 9 == 8) return -1;
-
-        int row = slot / 9 - 1;
-        int col = slot % 9 - 1;
-        int indexInPage = row * 7 + col;
-
-        return currentPage * ITEMS_PER_PAGE + indexInPage;
+        if (slot < 0 || slot >= ITEMS_PER_PAGE) return -1;
+        return currentPage * ITEMS_PER_PAGE + slot;
     }
 
     @Override
