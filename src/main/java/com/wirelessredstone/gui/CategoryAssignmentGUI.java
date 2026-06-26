@@ -122,7 +122,7 @@ public class CategoryAssignmentGUI implements InventoryHolder {
     }
 
     private ItemStack createCategoryItem(Category category) {
-        Material material = category.getIcon() != null ? category.getIcon() : Material.CHEST;
+        Material material = category.getIcon() != null ? category.getIcon() : Category.DEFAULT_ICON;
         boolean isCurrentCategory = category.getCategoryId().equals(targetGroup.getCategoryId());
 
         ItemStack item = new ItemStack(material);

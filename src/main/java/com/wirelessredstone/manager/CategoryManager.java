@@ -118,6 +118,7 @@ public class CategoryManager {
             }
             if (category.getIcon() != null) {
                 config.set(basePath + ".icon", category.getIcon().name());
+                config.set(basePath + ".customIcon", true);
             }
             index++;
         }
@@ -156,7 +157,11 @@ public class CategoryManager {
             String iconStr = config.getString(basePath + ".icon");
             if (iconStr != null) {
                 try {
-                    category.setIcon(Material.valueOf(iconStr));
+                    Material icon = Material.valueOf(iconStr);
+                    boolean legacyDefaultIcon = icon == Material.CHEST && !config.getBoolean(basePath + ".customIcon", false);
+                    if (!legacyDefaultIcon) {
+                        category.setIcon(icon);
+                    }
                 } catch (IllegalArgumentException ignored) {}
             }
             

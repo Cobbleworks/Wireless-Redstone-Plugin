@@ -281,7 +281,7 @@ public class BulbManagerGUI implements InventoryHolder {
     }
 
     private ItemStack createCategoryItem(CategoryEntry category) {
-        ItemStack item = new ItemStack(Material.CHEST);
+        ItemStack item = new ItemStack(Category.DEFAULT_ICON);
         ItemMeta meta = item.getItemMeta();
 
         meta.displayName(Component.text(category.displayName(), NamedTextColor.GREEN)

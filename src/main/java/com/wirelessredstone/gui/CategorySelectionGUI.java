@@ -135,7 +135,7 @@ public class CategorySelectionGUI implements InventoryHolder {
     }
 
     private ItemStack createCategoryItem(Category category) {
-        Material material = category.getIcon() != null ? category.getIcon() : Material.CHEST;
+        Material material = category.getIcon() != null ? category.getIcon() : Category.DEFAULT_ICON;
         
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
@@ -418,7 +418,7 @@ public class CategorySelectionGUI implements InventoryHolder {
     private void handleSetIcon(Category category) {
         ItemStack heldItem = player.getInventory().getItemInMainHand();
         if (heldItem.getType() == Material.AIR || heldItem.getType() == null) {
-            categoryManager.setCategoryIcon(category.getCategoryId(), Material.CHEST);
+            categoryManager.setCategoryIcon(category.getCategoryId(), null);
             player.sendMessage(Component.text("Category icon reset to default!", NamedTextColor.YELLOW));
         } else {
             categoryManager.setCategoryIcon(category.getCategoryId(), heldItem.getType());
