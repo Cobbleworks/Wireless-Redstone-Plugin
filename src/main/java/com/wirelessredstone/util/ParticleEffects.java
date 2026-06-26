@@ -113,9 +113,9 @@ public class ParticleEffects {
     }
 
     /**
-     * Draws a private particle line for debug viewers between two linked wireless blocks.
+     * Draws a private particle line between two linked wireless blocks.
      */
-    public static void spawnDebugConnectionLine(Player player, Location source, Location target, Color color) {
+    public static void spawnConnectionLine(Player player, Location source, Location target, Color color) {
         if (source.getWorld() == null || target.getWorld() == null) return;
         if (!source.getWorld().equals(target.getWorld())) return;
         if (!player.getWorld().equals(source.getWorld())) return;

@@ -103,12 +103,10 @@ Wireless Redstone persists all runtime data to YAML files under `plugins/Wireles
 
 | File | Purpose |
 |------|---------|
-| `config.yml` | Plugin settings, including debug/analyser connection-line linger duration |
+| `config.yml` | Plugin settings |
 | `bulbs.yml` | Bulb/lamp groups, ownership, names, category links, variant material, locations |
 | `chests.yml` | Container groups, shared inventories, ownership, names, category links, locations |
 | `categories.yml` | Category definitions, owners, descriptions, icons |
-
-`effects.connection-lines.linger-ticks` controls how long triggered connection lines are redrawn for debug mode and Circuit Analyser holders. `20` ticks equals 1 second.
 
 > **Note:** Do not edit these files manually while the server is running. Use `/wireless reload` after any manual edits made while the server is stopped.
 
@@ -152,7 +150,6 @@ All commands require the `wirelessredstone.use` permission (operator by default)
 | `/wireless modify name <groupName> <newName>` | Rename a group |
 | `/wireless recover <groupName>` | Restore saved group blocks destroyed by the environment |
 | `/wireless gui [--all]` | Open management GUI |
-| `/wireless debug on\|off` | Toggle connection particle lines on state changes |
 | `/wireless reload` | Reload configuration files (admin only) |
 
 ## **Permissions**
@@ -213,7 +210,6 @@ src/main/
 │   │   └── WireViewListener.java              - WireView display toggle
 │   ├── manager/
 │   │   ├── CategoryManager.java               - Category CRUD and YAML persistence
-│   │   ├── DebugManager.java                  - Debug logging control
 │   │   ├── LinkedBulbManager.java             - Bulb group CRUD, sync, and file persistence
 │   │   ├── LinkedChestManager.java            - Container group CRUD, sync, and file persistence
 │   │   └── WireViewManager.java               - WireView particle task management

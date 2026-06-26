@@ -12,8 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Changed `/wireless recover <groupName>` to restore saved block positions in-place after environmental block destruction.
 - Changed wireless group GUI right-clicks to print analyser-style group details with clickable teleport links.
 - Renamed `/wireless append` to `/wireless extend` and removed the append command alias.
-- Changed debug mode to draw particle connection lines on wireless state changes instead of sending sync messages.
-- Added `effects.connection-lines.linger-ticks` to configure how long triggered connection lines remain visible.
+- Removed `/wireless debug` mode.
 
 ## [1.0.0] - 2026-04-28
 

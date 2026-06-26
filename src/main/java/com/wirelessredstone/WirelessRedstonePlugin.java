@@ -12,7 +12,6 @@ import com.wirelessredstone.listener.ConnectorToolListener;
 import com.wirelessredstone.listener.GUIListener;
 import com.wirelessredstone.listener.WireViewListener;
 import com.wirelessredstone.manager.CategoryManager;
-import com.wirelessredstone.manager.DebugManager;
 import com.wirelessredstone.manager.LinkedBulbManager;
 import com.wirelessredstone.manager.LinkedChestManager;
 import com.wirelessredstone.manager.WireViewManager;
@@ -29,7 +28,6 @@ public class WirelessRedstonePlugin extends JavaPlugin {
     private LinkedChestManager chestManager;
     private CategoryManager categoryManager;
     private WireViewManager wireViewManager;
-    private DebugManager debugManager;
     private BukkitTask syncTask;
     private AnalyserWireViewTask analyserWireViewTask;
     private ConnectorWireViewTask connectorWireViewTask;
@@ -43,7 +41,6 @@ public class WirelessRedstonePlugin extends JavaPlugin {
         chestManager = new LinkedChestManager(this);
         categoryManager = new CategoryManager(this);
         wireViewManager = new WireViewManager(this, bulbManager, chestManager);
-        debugManager = new DebugManager();
 
         registerCommands();
         registerListeners();
@@ -83,7 +80,7 @@ public class WirelessRedstonePlugin extends JavaPlugin {
     private void registerCommands() {
         var command = getCommand("wireless");
         if (command != null) {
-            var wirelessCommand = new WirelessCommand(this, bulbManager, chestManager, categoryManager, debugManager);
+            var wirelessCommand = new WirelessCommand(this, bulbManager, chestManager, categoryManager);
             command.setExecutor(wirelessCommand);
             command.setTabCompleter(wirelessCommand);
         }
@@ -104,7 +101,7 @@ public class WirelessRedstonePlugin extends JavaPlugin {
     }
 
     private void startTasks() {
-        syncTask = new BulbSyncTask(bulbManager, debugManager).runTaskTimer(this, 1L, 1L);
+        syncTask = new BulbSyncTask(bulbManager).runTaskTimer(this, 1L, 1L);
         analyserWireViewTask = new AnalyserWireViewTask(this, wireViewManager);
         analyserWireViewTask.runTaskTimer(this, 10L, 10L); // Run every 10 ticks (0.5 seconds)
         connectorWireViewTask = new ConnectorWireViewTask(this, wireViewManager);
@@ -129,10 +126,6 @@ public class WirelessRedstonePlugin extends JavaPlugin {
 
     public WireViewManager getWireViewManager() {
         return wireViewManager;
-    }
-
-    public DebugManager getDebugManager() {
-        return debugManager;
     }
 
     public AnalyserWireViewTask getAnalyserWireViewTask() {

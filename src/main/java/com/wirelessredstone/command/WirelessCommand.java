@@ -9,7 +9,6 @@ import com.wirelessredstone.item.CircuitAnalyserFactory;
 import com.wirelessredstone.item.ConnectorToolFactory;
 import com.wirelessredstone.listener.CircuitAnalyserListener;
 import com.wirelessredstone.manager.CategoryManager;
-import com.wirelessredstone.manager.DebugManager;
 import com.wirelessredstone.manager.LinkedBulbManager;
 import com.wirelessredstone.manager.LinkedChestManager;
 import com.wirelessredstone.model.BaseGroup;
@@ -48,15 +47,13 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
     private final LinkedBulbManager bulbManager;
     private final LinkedChestManager chestManager;
     private final CategoryManager categoryManager;
-    private final DebugManager debugManager;
 
     public WirelessCommand(WirelessRedstonePlugin plugin, LinkedBulbManager bulbManager, LinkedChestManager chestManager, 
-                           CategoryManager categoryManager, DebugManager debugManager) {
+                           CategoryManager categoryManager) {
         this.plugin = plugin;
         this.bulbManager = bulbManager;
         this.chestManager = chestManager;
         this.categoryManager = categoryManager;
-        this.debugManager = debugManager;
     }
 
     /**
@@ -161,7 +158,6 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
             case "modify" -> handleModifyCommand(player, parsedArgs);
             case "recover" -> handleRecoverCommand(player, parsedArgs);
             case "gui", "manage", "list" -> handleGUICommand(player, parsedArgs);
-            case "debug" -> handleDebugCommand(player, parsedArgs);
             case "reload" -> handleReloadCommand(player);
             case "analyser-rename" -> handleAnalyserRenameCommand(player, parsedArgs);
             case "analyser-category" -> handleAnalyserCategoryCommand(player, parsedArgs);
@@ -209,35 +205,6 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
         // Match by partial group ID
         String shortId = groupId.toString().substring(0, 8);
         return shortId.equalsIgnoreCase(searchName) || groupId.toString().startsWith(searchName.toLowerCase());
-    }
-
-    private void handleDebugCommand(Player player, String[] args) {
-        if (args.length < 2) {
-            boolean current = debugManager.isDebugEnabled(player);
-            player.sendMessage(Component.text("Debug mode is currently: ", NamedTextColor.GRAY)
-                    .append(Component.text(current ? "ON" : "OFF", current ? NamedTextColor.GREEN : NamedTextColor.RED)));
-            player.sendMessage(Component.text("Use /wireless debug on|off to toggle.", NamedTextColor.GRAY));
-            return;
-        }
-
-        String toggle = args[1].toLowerCase();
-        boolean enabled;
-        if (toggle.equals("on") || toggle.equals("true") || toggle.equals("enable")) {
-            enabled = true;
-        } else if (toggle.equals("off") || toggle.equals("false") || toggle.equals("disable")) {
-            enabled = false;
-        } else {
-            player.sendMessage(Component.text("Usage: /wireless debug on|off", NamedTextColor.RED));
-            return;
-        }
-
-        debugManager.setDebugEnabled(player, enabled);
-        if (enabled) {
-            player.sendMessage(Component.text("Debug mode enabled! ", NamedTextColor.GREEN)
-                    .append(Component.text("State changes will draw particle lines between linked blocks.", NamedTextColor.GRAY)));
-        } else {
-            player.sendMessage(Component.text("Debug mode disabled.", NamedTextColor.YELLOW));
-        }
     }
 
     /**
@@ -859,8 +826,6 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
         // Other
         player.sendMessage(Component.text("/wireless gui [--all]", NamedTextColor.YELLOW)
                 .append(Component.text(" - Open management GUI", NamedTextColor.GRAY)));
-        player.sendMessage(Component.text("/wireless debug on|off", NamedTextColor.YELLOW)
-                .append(Component.text(" - Toggle connection particle lines on state changes", NamedTextColor.GRAY)));
         if (player.hasPermission("wirelessredstone.admin")) {
             player.sendMessage(Component.text("/wireless reload", NamedTextColor.YELLOW)
                     .append(Component.text(" - Reload configuration files", NamedTextColor.GRAY)));
@@ -875,7 +840,7 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
             String input = args[0].toLowerCase();
             List<String> subCommands = new ArrayList<>(List.of(
                     "create", "inspect", "modify", "recover",
-                    "gui", "manage", "list", "debug"
+                    "gui", "manage", "list"
             ));
             if (sender.hasPermission("wirelessredstone.admin")) {
                 subCommands.add("reload");
@@ -939,14 +904,6 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
             else if (subCommand.equals("recover")) {
                 if (args.length == 2 && sender instanceof Player player) {
                     addGroupNameCompletions(player, input, completions);
-                }
-            }
-            // /wireless debug on|off
-            else if (subCommand.equals("debug")) {
-                for (String opt : List.of("on", "off")) {
-                    if (opt.startsWith(input)) {
-                        completions.add(opt);
-                    }
                 }
             }
         }

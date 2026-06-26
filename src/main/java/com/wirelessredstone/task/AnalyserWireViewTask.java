@@ -106,7 +106,7 @@ public class AnalyserWireViewTask extends BukkitRunnable {
                 for (int targetIndex = sourceIndex + 1; targetIndex < locations.size(); targetIndex++) {
                     Location target = locations.get(targetIndex);
                     if (target.getWorld() != null && target.isChunkLoaded()) {
-                        ParticleEffects.spawnDebugConnectionLine(player, source, target, color);
+                        ParticleEffects.spawnConnectionLine(player, source, target, color);
                     }
                 }
             }

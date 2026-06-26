@@ -2,21 +2,16 @@ package com.wirelessredstone.task;
 
 import com.wirelessredstone.WirelessRedstonePlugin;
 import com.wirelessredstone.item.BulbVariant;
-import com.wirelessredstone.manager.DebugManager;
 import com.wirelessredstone.manager.LinkedBulbManager;
-import com.wirelessredstone.manager.WireViewManager;
 import com.wirelessredstone.model.BulbGroup;
 import com.wirelessredstone.util.BulbUtils;
 import com.wirelessredstone.util.ParticleEffects;
-import org.bukkit.Color;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
 import org.bukkit.block.data.Lightable;
 import org.bukkit.block.data.type.CopperBulb;
-import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -24,12 +19,10 @@ import java.util.Set;
 public class BulbSyncTask extends BukkitRunnable {
 
     private final LinkedBulbManager bulbManager;
-    private final DebugManager debugManager;
     private final Set<Location> recentlySynced = new HashSet<>();
 
-    public BulbSyncTask(LinkedBulbManager bulbManager, DebugManager debugManager) {
+    public BulbSyncTask(LinkedBulbManager bulbManager) {
         this.bulbManager = bulbManager;
-        this.debugManager = debugManager;
     }
 
     private int ambientParticleTick = 0;
@@ -130,8 +123,6 @@ public class BulbSyncTask extends BukkitRunnable {
         ParticleEffects.spawnTriggerParticles(sourceLocation, sourceState);
         ParticleEffects.spawnSyncParticles(sourceLocation, sourceState);
 
-        showDebugConnections(group, sourceLocation, placedLocations);
-
         final Set<Location> toRemove = new HashSet<>(placedLocations);
         new BukkitRunnable() {
             @Override
@@ -203,8 +194,6 @@ public class BulbSyncTask extends BukkitRunnable {
         ParticleEffects.spawnTriggerParticles(sourceLocation, sourceState);
         ParticleEffects.spawnSyncParticles(sourceLocation, sourceState);
 
-        showDebugConnections(group, sourceLocation, placedLocations);
-
         final Set<Location> toRemove = new HashSet<>(placedLocations);
         new BukkitRunnable() {
             @Override
@@ -212,53 +201,6 @@ public class BulbSyncTask extends BukkitRunnable {
                 recentlySynced.removeAll(toRemove);
             }
         }.runTaskLater(WirelessRedstonePlugin.getInstance(), 5L);
-    }
-
-    private void showDebugConnections(BulbGroup group, Location sourceLocation, List<Location> allLocations) {
-        Color groupColor = WireViewManager.getBulbGroupParticleColor(group.getGroupId(), bulbManager.getAllPlacedGroups());
-        List<Location> snapshotLocations = new ArrayList<>(allLocations);
-        int lingerTicks = getConnectionLineLingerTicks();
-
-        drawDebugConnections(sourceLocation, snapshotLocations, groupColor);
-
-        if (lingerTicks <= 1) {
-            return;
-        }
-
-        new BukkitRunnable() {
-            private int ticksDrawn = 1;
-
-            @Override
-            public void run() {
-                if (++ticksDrawn > lingerTicks) {
-                    cancel();
-                    return;
-                }
-                drawDebugConnections(sourceLocation, snapshotLocations, groupColor);
-            }
-        }.runTaskTimer(WirelessRedstonePlugin.getInstance(), 1L, 1L);
-    }
-
-    private void drawDebugConnections(Location sourceLocation, List<Location> allLocations, Color groupColor) {
-        if (sourceLocation.getWorld() == null) return;
-
-        for (Player player : sourceLocation.getWorld().getPlayers()) {
-            if (!debugManager.isDebugEnabled(player)) {
-                continue;
-            }
-
-            for (Location targetLocation : allLocations) {
-                if (targetLocation.equals(sourceLocation)) continue;
-                if (!targetLocation.isChunkLoaded()) continue;
-                ParticleEffects.spawnDebugConnectionLine(player, sourceLocation, targetLocation, groupColor);
-            }
-        }
-    }
-
-    private int getConnectionLineLingerTicks() {
-        return Math.max(1, Math.min(100, WirelessRedstonePlugin.getInstance()
-                .getConfig()
-                .getInt("effects.connection-lines.linger-ticks", 10)));
     }
 
 }
