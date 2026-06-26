@@ -135,23 +135,12 @@ public class ConnectorToolListener implements Listener {
             return;
         }
 
-        // Get category from tool if present
-        String categoryName = ConnectorToolFactory.getCategoryName(tool);
-        UUID categoryId = null;
-        if (categoryName != null && !categoryName.isEmpty()) {
-            var categoryManager = WirelessRedstonePlugin.getInstance().getCategoryManager();
-            var category = categoryManager.getCategoryByName(categoryName);
-            if (category.isPresent()) {
-                categoryId = category.get().getCategoryId();
-            }
-        }
-
         // Get the block material for the variant icon
         Material variantMaterial = block.getType();
 
         // Create a new group with the variant material for icon
         UUID groupId = bulbManager.createNewGroupId();
-        bulbManager.preRegisterGroup(groupId, 1, player.getUniqueId(), bulbType, groupName, categoryId, variantMaterial);
+        bulbManager.preRegisterGroup(groupId, 1, player.getUniqueId(), bulbType, groupName, null, variantMaterial);
         
         // Register the bulb at slot 0
         bulbManager.registerPlacedBulb(location, groupId, 0, player.getUniqueId(), bulbType, 1);
@@ -204,19 +193,8 @@ public class ConnectorToolListener implements Listener {
         UUID groupId = chestManager.createNewGroupId();
         int initialSize = isLargeChest ? 2 : 1;
         
-        // Get category from tool if present
-        String categoryName = ConnectorToolFactory.getCategoryName(tool);
-        UUID categoryId = null;
-        if (categoryName != null && !categoryName.isEmpty()) {
-            var categoryManager = WirelessRedstonePlugin.getInstance().getCategoryManager();
-            var category = categoryManager.getCategoryByName(categoryName);
-            if (category.isPresent()) {
-                categoryId = category.get().getCategoryId();
-            }
-        }
-        
         // Pre-register with variant material for icon
-        chestManager.preRegisterGroup(groupId, initialSize, player.getUniqueId(), containerType, groupName, categoryId, variantMaterial);
+        chestManager.preRegisterGroup(groupId, initialSize, player.getUniqueId(), containerType, groupName, null, variantMaterial);
         chestManager.getGroupById(groupId).ifPresent(group ->
                 group.setInventorySize(isLargeChest ? ChestGroup.LARGE_CHEST_INVENTORY_SIZE : ChestGroup.DEFAULT_INVENTORY_SIZE));
         

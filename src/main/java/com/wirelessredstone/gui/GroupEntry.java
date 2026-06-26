@@ -3,6 +3,7 @@ package com.wirelessredstone.gui;
 import com.wirelessredstone.model.BaseGroup;
 import com.wirelessredstone.model.BulbGroup;
 import com.wirelessredstone.model.ChestGroup;
+import com.wirelessredstone.util.GroupNameParser;
 import org.bukkit.Location;
 import org.bukkit.Material;
 
@@ -57,6 +58,18 @@ public class GroupEntry {
 
     public String getDisplayName() {
         return group.getDisplayName();
+    }
+
+    public String getCategoryName() {
+        return GroupNameParser.parse(getDisplayName()).categoryName();
+    }
+
+    public String getCategoryKey() {
+        return GroupNameParser.parse(getDisplayName()).categoryKey();
+    }
+
+    public String getGroupDisplayName() {
+        return GroupNameParser.parse(getDisplayName()).groupName();
     }
 
     public String getCustomName() {

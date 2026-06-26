@@ -333,9 +333,12 @@ public class CategoryAssignmentGUI implements InventoryHolder {
 
     private void returnToGroupsGUI(UUID categoryId) {
         player.closeInventory();
+        String categoryName = categoryId == null
+                ? null
+                : categoryManager.getCategoryById(categoryId).map(Category::getName).orElse(null);
         player.getServer().getScheduler().runTask(
                 player.getServer().getPluginManager().getPlugin("WirelessRedstone"),
-                () -> new BulbManagerGUI(bulbManager, chestManager, categoryManager, player, false, categoryId).open()
+                () -> new BulbManagerGUI(bulbManager, chestManager, categoryManager, player, false, categoryName).open()
         );
     }
 

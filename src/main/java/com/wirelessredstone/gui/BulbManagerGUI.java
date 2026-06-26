@@ -7,6 +7,7 @@ import com.wirelessredstone.item.CircuitAnalyserFactory;
 import com.wirelessredstone.model.BulbGroup;
 import com.wirelessredstone.model.Category;
 import com.wirelessredstone.model.ChestGroup;
+import com.wirelessredstone.util.GroupNameParser;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
@@ -37,34 +38,30 @@ public class BulbManagerGUI implements InventoryHolder {
     private final CategoryManager categoryManager;
     private final Player player;
     private final Inventory inventory;
-    private final UUID categoryId;
+    private final String categoryName;
     private int currentPage = 0;
     private List<GroupEntry> groups;
+    private List<GuiEntry> entries;
     private boolean showAllGroups;
+
+    private interface GuiEntry {}
+    private record CategoryEntry(String displayName, String key, int bulbCount, int chestCount) implements GuiEntry {}
+    private record GroupGuiEntry(GroupEntry group) implements GuiEntry {}
 
     public BulbManagerGUI(LinkedBulbManager bulbManager, LinkedChestManager chestManager, Player player, boolean showAllGroups) {
         this(bulbManager, chestManager, null, player, showAllGroups, null);
     }
 
     public BulbManagerGUI(LinkedBulbManager bulbManager, LinkedChestManager chestManager, CategoryManager categoryManager, 
-                          Player player, boolean showAllGroups, UUID categoryId) {
+                          Player player, boolean showAllGroups, String categoryName) {
         this.bulbManager = bulbManager;
         this.chestManager = chestManager;
         this.categoryManager = categoryManager;
         this.player = player;
         this.showAllGroups = showAllGroups;
-        this.categoryId = categoryId;
+        this.categoryName = categoryName;
         
-        String title = "Wireless Redstone Manager";
-        if (categoryManager != null) {
-            if (categoryId == null) {
-                title = "Uncategorized";
-            } else {
-                title = categoryManager.getCategoryById(categoryId)
-                        .map(Category::getDisplayName)
-                        .orElse("Wireless Redstone Manager");
-            }
-        }
+        String title = categoryName == null ? "Wireless Redstone Manager" : categoryName;
         
         this.inventory = Bukkit.createInventory(this, SIZE, 
             Component.text(title, NamedTextColor.DARK_AQUA).decoration(TextDecoration.BOLD, true));
@@ -86,22 +83,44 @@ public class BulbManagerGUI implements InventoryHolder {
             chestGroups = chestManager != null ? chestManager.getGroupsByOwner(player.getUniqueId()) : Collections.emptyList();
         }
         
-        // Filter by category if categoryManager is active
-        if (categoryManager != null) {
-            bulbGroups = bulbGroups.stream()
-                    .filter(g -> Objects.equals(g.getCategoryId(), categoryId))
-                    .toList();
-            chestGroups = chestGroups.stream()
-                    .filter(g -> Objects.equals(g.getCategoryId(), categoryId))
-                    .toList();
-        }
-        
         for (BulbGroup bg : bulbGroups) {
             groups.add(new GroupEntry(bg));
         }
         for (ChestGroup cg : chestGroups) {
             groups.add(new GroupEntry(cg));
         }
+
+        groups.sort(Comparator.comparing(GroupEntry::getGroupDisplayName, String.CASE_INSENSITIVE_ORDER));
+
+        entries = new ArrayList<>();
+        if (categoryName == null) {
+            Map<String, CategoryEntry> categoriesByKey = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+            for (GroupEntry group : groups) {
+                if (group.getCategoryName() == null) {
+                    continue;
+                }
+
+                String key = group.getCategoryKey();
+                CategoryEntry existing = categoriesByKey.get(key);
+                int bulbCount = existing == null ? 0 : existing.bulbCount();
+                int chestCount = existing == null ? 0 : existing.chestCount();
+                if (group.getType() == GroupEntry.GroupType.BULB) {
+                    bulbCount++;
+                } else {
+                    chestCount++;
+                }
+                categoriesByKey.put(key, new CategoryEntry(group.getCategoryName(), key, bulbCount, chestCount));
+            }
+            entries.addAll(categoriesByKey.values());
+            groups.forEach(group -> entries.add(new GroupGuiEntry(group)));
+            return;
+        }
+
+        String targetKey = GroupNameParser.normalizeCategoryKey(categoryName);
+        groups = groups.stream()
+                .filter(group -> targetKey.equals(group.getCategoryKey()))
+                .toList();
+        groups.forEach(group -> entries.add(new GroupGuiEntry(group)));
     }
 
     private void populateInventory() {
@@ -110,7 +129,7 @@ public class BulbManagerGUI implements InventoryHolder {
         fillBorder();
 
         int startIndex = currentPage * ITEMS_PER_PAGE;
-        int endIndex = Math.min(startIndex + ITEMS_PER_PAGE, groups.size());
+        int endIndex = Math.min(startIndex + ITEMS_PER_PAGE, entries.size());
 
         int slot = 10;
         for (int i = startIndex; i < endIndex; i++) {
@@ -118,8 +137,12 @@ public class BulbManagerGUI implements InventoryHolder {
             if (slot % 9 == 8) slot += 2;
             if (slot >= 44) break;
 
-            GroupEntry group = groups.get(i);
-            inventory.setItem(slot, createGroupItem(group));
+            GuiEntry entry = entries.get(i);
+            if (entry instanceof CategoryEntry categoryEntry) {
+                inventory.setItem(slot, createCategoryItem(categoryEntry));
+            } else if (entry instanceof GroupGuiEntry groupEntry) {
+                inventory.setItem(slot, createGroupItem(groupEntry.group()));
+            }
             slot++;
         }
 
@@ -129,7 +152,7 @@ public class BulbManagerGUI implements InventoryHolder {
 
         inventory.setItem(49, createInfoItem());
 
-        if (endIndex < groups.size()) {
+        if (endIndex < entries.size()) {
             inventory.setItem(50, createNavigationItem(Material.ARROW, "Next Page", NamedTextColor.YELLOW));
         }
 
@@ -140,9 +163,8 @@ public class BulbManagerGUI implements InventoryHolder {
         inventory.setItem(46, createConnectorToolItem());
         inventory.setItem(47, createCircuitAnalyserItem());
 
-        // Back to categories button when in category mode
-        if (categoryManager != null) {
-            inventory.setItem(52, createBackToCategoriesItem());
+        if (categoryName != null) {
+            inventory.setItem(52, createBackToAllGroupsItem());
         }
         inventory.setItem(53, createCloseItem());
     }
@@ -171,7 +193,7 @@ public class BulbManagerGUI implements InventoryHolder {
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
 
-        String displayName = group.getDisplayName();
+        String displayName = group.getGroupDisplayName();
         NamedTextColor typeColor = group.getType() == GroupEntry.GroupType.BULB ? NamedTextColor.AQUA : NamedTextColor.GOLD;
         meta.displayName(Component.text(displayName, typeColor)
                 .decoration(TextDecoration.ITALIC, false)
@@ -179,6 +201,12 @@ public class BulbManagerGUI implements InventoryHolder {
 
         List<Component> lore = new ArrayList<>();
         lore.add(Component.empty());
+
+        if (categoryName == null && group.getCategoryName() != null) {
+            lore.add(Component.text("Category: ", NamedTextColor.GRAY)
+                    .append(Component.text(group.getCategoryName(), NamedTextColor.YELLOW))
+                    .decoration(TextDecoration.ITALIC, false));
+        }
         
         lore.add(Component.text("Type: ", NamedTextColor.GRAY)
                 .append(Component.text(group.getTypeDisplayName(), NamedTextColor.WHITE))
@@ -238,13 +266,36 @@ public class BulbManagerGUI implements InventoryHolder {
         lore.add(Component.text("Shift+Right: ", NamedTextColor.LIGHT_PURPLE)
                 .append(Component.text("Set icon to held item", NamedTextColor.WHITE))
                 .decoration(TextDecoration.ITALIC, false));
-        if (categoryManager != null) {
-            lore.add(Component.text("Drop key (Q): ", NamedTextColor.GOLD)
-                    .append(Component.text("Change category", NamedTextColor.WHITE))
-                    .decoration(TextDecoration.ITALIC, false));
-        }
         lore.add(Component.text("Shift+Left: ", NamedTextColor.RED)
                 .append(Component.text("Remove group", NamedTextColor.WHITE))
+                .decoration(TextDecoration.ITALIC, false));
+
+        meta.lore(lore);
+        item.setItemMeta(meta);
+        return item;
+    }
+
+    private ItemStack createCategoryItem(CategoryEntry category) {
+        ItemStack item = new ItemStack(Material.CHEST);
+        ItemMeta meta = item.getItemMeta();
+
+        meta.displayName(Component.text(category.displayName(), NamedTextColor.GREEN)
+                .decoration(TextDecoration.ITALIC, false)
+                .decoration(TextDecoration.BOLD, true));
+
+        List<Component> lore = new ArrayList<>();
+        lore.add(Component.empty());
+        lore.add(Component.text("Category", NamedTextColor.DARK_GRAY)
+                .decoration(TextDecoration.ITALIC, false));
+        lore.add(Component.empty());
+        lore.add(Component.text("Bulb Groups: ", NamedTextColor.GRAY)
+                .append(Component.text(String.valueOf(category.bulbCount()), NamedTextColor.AQUA))
+                .decoration(TextDecoration.ITALIC, false));
+        lore.add(Component.text("Container Groups: ", NamedTextColor.GRAY)
+                .append(Component.text(String.valueOf(category.chestCount()), NamedTextColor.GOLD))
+                .decoration(TextDecoration.ITALIC, false));
+        lore.add(Component.empty());
+        lore.add(Component.text("Click to view", NamedTextColor.YELLOW)
                 .decoration(TextDecoration.ITALIC, false));
 
         meta.lore(lore);
@@ -265,7 +316,7 @@ public class BulbManagerGUI implements InventoryHolder {
         ItemMeta meta = item.getItemMeta();
         meta.displayName(Component.text("Page Info", NamedTextColor.GOLD).decoration(TextDecoration.ITALIC, false));
         
-        int totalPages = Math.max(1, (int) Math.ceil((double) groups.size() / ITEMS_PER_PAGE));
+        int totalPages = Math.max(1, (int) Math.ceil((double) entries.size() / ITEMS_PER_PAGE));
         meta.lore(List.of(
                 Component.text("Page " + (currentPage + 1) + "/" + totalPages, NamedTextColor.GRAY)
                         .decoration(TextDecoration.ITALIC, false),
@@ -298,12 +349,12 @@ public class BulbManagerGUI implements InventoryHolder {
         return item;
     }
 
-    private ItemStack createBackToCategoriesItem() {
+    private ItemStack createBackToAllGroupsItem() {
         ItemStack item = new ItemStack(Material.DARK_OAK_DOOR);
         ItemMeta meta = item.getItemMeta();
-        meta.displayName(Component.text("Back to Categories", NamedTextColor.YELLOW).decoration(TextDecoration.ITALIC, false));
+        meta.displayName(Component.text("Back to All Groups", NamedTextColor.YELLOW).decoration(TextDecoration.ITALIC, false));
         meta.lore(List.of(
-                Component.text("Click to return to category selection", NamedTextColor.GRAY)
+                Component.text("Click to return to the full list", NamedTextColor.GRAY)
                         .decoration(TextDecoration.ITALIC, false)
         ));
         item.setItemMeta(meta);
@@ -359,7 +410,7 @@ public class BulbManagerGUI implements InventoryHolder {
             return;
         }
 
-        int totalPages = Math.max(1, (int) Math.ceil((double) groups.size() / ITEMS_PER_PAGE));
+        int totalPages = Math.max(1, (int) Math.ceil((double) entries.size() / ITEMS_PER_PAGE));
         if (slot == 50 && currentPage < totalPages - 1) {
             currentPage++;
             populateInventory();
@@ -374,9 +425,8 @@ public class BulbManagerGUI implements InventoryHolder {
             return;
         }
 
-        // Back to categories
-        if (slot == 52 && categoryManager != null) {
-            CategorySelectionGUI categoryGUI = new CategorySelectionGUI(categoryManager, bulbManager, chestManager, player, showAllGroups);
+        if (slot == 52 && categoryName != null) {
+            BulbManagerGUI categoryGUI = new BulbManagerGUI(bulbManager, chestManager, categoryManager, player, showAllGroups, null);
             player.closeInventory();
             categoryGUI.open();
             return;
@@ -388,7 +438,7 @@ public class BulbManagerGUI implements InventoryHolder {
         }
 
         if (slot == 46) {
-            CategorySelectionGUI.startConnectorToolPrompt(player, categoryId, categoryManager);
+            CategorySelectionGUI.startConnectorToolPrompt(player, categoryName);
             return;
         }
 
@@ -398,16 +448,26 @@ public class BulbManagerGUI implements InventoryHolder {
             return;
         }
 
-        int groupIndex = getGroupIndexFromSlot(slot);
-        if (groupIndex < 0 || groupIndex >= groups.size()) {
+        int entryIndex = getEntryIndexFromSlot(slot);
+        if (entryIndex < 0 || entryIndex >= entries.size()) {
             return;
         }
 
-        GroupEntry group = groups.get(groupIndex);
+        GuiEntry entry = entries.get(entryIndex);
+        if (entry instanceof CategoryEntry categoryEntry) {
+            BulbManagerGUI categoryGUI = new BulbManagerGUI(bulbManager, chestManager, categoryManager, player, showAllGroups, categoryEntry.displayName());
+            player.closeInventory();
+            categoryGUI.open();
+            return;
+        }
 
-        if (isDrop && categoryManager != null) {
-            handleChangeCategory(group);
-        } else if (isShiftClick && isRightClick) {
+        if (!(entry instanceof GroupGuiEntry groupEntry)) {
+            return;
+        }
+
+        GroupEntry group = groupEntry.group();
+
+        if (isShiftClick && isRightClick) {
             handleSetIcon(group);
         } else if (isShiftClick) {
             handleRemoveGroup(group);
@@ -438,7 +498,8 @@ public class BulbManagerGUI implements InventoryHolder {
         player.sendMessage(Component.text("═══ ⚡ Wireless Group ⚡ ═══", NamedTextColor.LIGHT_PURPLE)
                 .decoration(TextDecoration.BOLD, true));
 
-        String displayName = group.getDisplayName();
+        String fullName = group.getDisplayName();
+        String displayName = group.getGroupDisplayName();
         player.sendMessage(Component.text("Name: ", NamedTextColor.GRAY)
                 .append(Component.text(displayName, NamedTextColor.WHITE).decoration(TextDecoration.BOLD, true)
                         .hoverEvent(HoverEvent.showText(Component.text("Click to rename", NamedTextColor.YELLOW)))
@@ -446,10 +507,7 @@ public class BulbManagerGUI implements InventoryHolder {
                 .append(Component.text(" ✎", NamedTextColor.DARK_GRAY)));
 
         player.sendMessage(Component.text("Category: ", NamedTextColor.GRAY)
-                .append(Component.text(getCategoryDisplayName(group), NamedTextColor.YELLOW)
-                        .hoverEvent(HoverEvent.showText(Component.text("Click to change category", NamedTextColor.YELLOW)))
-                        .clickEvent(ClickEvent.runCommand("/wireless analyser-category " + groupId + " " + groupType)))
-                .append(Component.text(" ✎", NamedTextColor.DARK_GRAY)));
+                .append(Component.text(getCategoryDisplayName(group), NamedTextColor.YELLOW)));
 
         player.sendMessage(Component.text("Type: ", NamedTextColor.GRAY)
                 .append(Component.text(group.getTypeDisplayName(), typeColor)));
@@ -470,7 +528,7 @@ public class BulbManagerGUI implements InventoryHolder {
         player.sendMessage(Component.text("[Get Connector Tool]", NamedTextColor.GREEN)
                 .decoration(TextDecoration.BOLD, true)
                 .hoverEvent(HoverEvent.showText(Component.text("Click to receive a Connector Tool for this group", NamedTextColor.YELLOW)))
-                .clickEvent(ClickEvent.runCommand("/wireless create " + quoteCommandArgument(displayName))));
+                .clickEvent(ClickEvent.runCommand("/wireless create " + quoteCommandArgument(fullName))));
 
         player.sendMessage(Component.text("Blocks:", NamedTextColor.GRAY)
                 .decoration(TextDecoration.UNDERLINED, true));
@@ -497,13 +555,7 @@ public class BulbManagerGUI implements InventoryHolder {
     }
 
     private String getCategoryDisplayName(GroupEntry group) {
-        if (categoryManager == null || group.getCategoryId() == null) {
-            return "Uncategorized";
-        }
-
-        return categoryManager.getCategoryById(group.getCategoryId())
-                .map(Category::getDisplayName)
-                .orElse("Unknown");
+        return group.getCategoryName() == null ? "Uncategorized" : group.getCategoryName();
     }
 
     private String quoteCommandArgument(String value) {
@@ -518,9 +570,7 @@ public class BulbManagerGUI implements InventoryHolder {
     }
 
     private void handleChangeCategory(GroupEntry group) {
-        // Open the CategoryAssignmentGUI instead of using chat input
-        player.closeInventory();
-        new CategoryAssignmentGUI(categoryManager, bulbManager, chestManager, player, group, categoryId).open();
+        player.sendMessage(Component.text("Rename the group with a prefix like factory/" + group.getGroupDisplayName() + " to set its category.", NamedTextColor.YELLOW));
     }
 
     private void handleSetIcon(GroupEntry group) {
@@ -647,7 +697,7 @@ public class BulbManagerGUI implements InventoryHolder {
         // Schedule to run on next tick to avoid issues with chat event handling
         player.getServer().getScheduler().runTask(
             player.getServer().getPluginManager().getPlugin("WirelessRedstone"),
-            () -> new CategorySelectionGUI(categoryManager, bulbManager, chestManager, player, false).open()
+            () -> new BulbManagerGUI(bulbManager, chestManager, categoryManager, player, false, null).open()
         );
     }
 
@@ -655,7 +705,7 @@ public class BulbManagerGUI implements InventoryHolder {
         pendingCategoryChanges.remove(playerUuid);
     }
 
-    private int getGroupIndexFromSlot(int slot) {
+    private int getEntryIndexFromSlot(int slot) {
         if (slot < 10 || slot > 43) return -1;
         if (slot % 9 == 0 || slot % 9 == 8) return -1;
 

@@ -30,6 +30,7 @@ public class CategorySelectionGUI implements InventoryHolder {
     private static final int ITEMS_PER_PAGE = 28;
     
     private static final Map<UUID, PendingAction> pendingActions = new HashMap<>();
+    private static final Map<UUID, String> pendingConnectorCategoryNames = new HashMap<>();
 
     public enum PendingActionType {
         RENAME_CATEGORY,
@@ -460,7 +461,10 @@ public class CategorySelectionGUI implements InventoryHolder {
     }
 
     private void openGroupsGUI(UUID categoryId) {
-        BulbManagerGUI groupsGUI = new BulbManagerGUI(bulbManager, chestManager, categoryManager, player, showAllCategories, categoryId);
+        String categoryName = categoryId == null
+                ? null
+                : categoryManager.getCategoryById(categoryId).map(Category::getName).orElse(null);
+        BulbManagerGUI groupsGUI = new BulbManagerGUI(bulbManager, chestManager, categoryManager, player, showAllCategories, categoryName);
         player.closeInventory();
         groupsGUI.open();
     }
@@ -551,6 +555,7 @@ public class CategorySelectionGUI implements InventoryHolder {
         input = input.trim();
 
         if (input.equalsIgnoreCase("cancel")) {
+            pendingConnectorCategoryNames.remove(player.getUniqueId());
             player.sendMessage(Component.text("Action cancelled.", NamedTextColor.GRAY));
             reopenCategoryGUI(player, categoryManager, bulbManager, chestManager);
             return;
@@ -580,12 +585,18 @@ public class CategorySelectionGUI implements InventoryHolder {
             }
             case CREATE_CONNECTOR_TOOL -> {
                 String groupName = input.length() > 32 ? input.substring(0, 32) : input;
-                String categoryName = action.categoryId() == null
+                String categoryName = pendingConnectorCategoryNames.remove(player.getUniqueId());
+                if (categoryName == null) {
+                    categoryName = action.categoryId() == null
                         ? null
                         : categoryManager.getCategoryById(action.categoryId()).map(Category::getName).orElse(null);
-                giveItemToPlayer(player, ConnectorToolFactory.createCreationModeConnectorTool(groupName, categoryName));
+                }
+                String storedGroupName = categoryName != null && !categoryName.isBlank() && !groupName.contains("/")
+                        ? categoryName + "/" + groupName
+                        : groupName;
+                giveItemToPlayer(player, ConnectorToolFactory.createCreationModeConnectorTool(storedGroupName));
                 player.sendMessage(Component.text("You received a Connector Tool for new group ", NamedTextColor.GREEN)
-                        .append(Component.text(groupName, NamedTextColor.LIGHT_PURPLE))
+                        .append(Component.text(storedGroupName, NamedTextColor.LIGHT_PURPLE))
                         .append(Component.text(".", NamedTextColor.GREEN)));
                 return;
             }
@@ -604,10 +615,12 @@ public class CategorySelectionGUI implements InventoryHolder {
 
     public static void cancelPendingAction(UUID playerUuid) {
         pendingActions.remove(playerUuid);
+        pendingConnectorCategoryNames.remove(playerUuid);
     }
 
     public static void startConnectorToolPrompt(Player player, UUID categoryId, CategoryManager categoryManager) {
         pendingActions.put(player.getUniqueId(), new PendingAction(PendingActionType.CREATE_CONNECTOR_TOOL, categoryId));
+        pendingConnectorCategoryNames.remove(player.getUniqueId());
         player.closeInventory();
         player.sendMessage(Component.text("Enter a name for the new wireless group (or 'cancel' to abort):", NamedTextColor.YELLOW));
         player.sendMessage(Component.text("Or right-click an existing wireless block to get a connector for its group.", NamedTextColor.GRAY));
@@ -615,6 +628,22 @@ public class CategorySelectionGUI implements InventoryHolder {
             categoryManager.getCategoryById(categoryId).ifPresent(category ->
                     player.sendMessage(Component.text("Category: ", NamedTextColor.GRAY)
                             .append(Component.text(category.getDisplayName(), NamedTextColor.YELLOW))));
+        }
+    }
+
+    public static void startConnectorToolPrompt(Player player, String categoryName) {
+        pendingActions.put(player.getUniqueId(), new PendingAction(PendingActionType.CREATE_CONNECTOR_TOOL, null));
+        if (categoryName == null || categoryName.isBlank()) {
+            pendingConnectorCategoryNames.remove(player.getUniqueId());
+        } else {
+            pendingConnectorCategoryNames.put(player.getUniqueId(), categoryName);
+        }
+        player.closeInventory();
+        player.sendMessage(Component.text("Enter a name for the new wireless group (or 'cancel' to abort):", NamedTextColor.YELLOW));
+        player.sendMessage(Component.text("Or right-click an existing wireless block to get a connector for its group.", NamedTextColor.GRAY));
+        if (categoryName != null && !categoryName.isBlank()) {
+            player.sendMessage(Component.text("Category: ", NamedTextColor.GRAY)
+                    .append(Component.text(categoryName, NamedTextColor.YELLOW)));
         }
     }
 

@@ -147,12 +147,11 @@ All commands require the `wirelessredstone.use` permission (operator by default)
 | `/wireless` | Open management GUI (same as `/wireless gui`) |
 | `/wireless help` | Show command help |
 | `/wireless create` | Ask for a new group name and give a creation-mode Connector Tool |
-| `/wireless create <groupName> [categoryName]` | Give a Connector Tool for an existing group, or creation-mode tool for a named new group |
+| `/wireless create <groupName>` | Give a Connector Tool for an existing group, or creation-mode tool for a named new group. Use `category/groupName` to categorize it |
 | `/wireless inspect [player]` | Give a Circuit Analyser (admin can target another player) |
 | `/wireless modify name <groupName> <newName>` | Rename a group |
-| `/wireless modify category <groupName> <categoryName>` | Assign group to category (`none` to remove) |
 | `/wireless recover <groupName>` | Restore saved group blocks destroyed by the environment |
-| `/wireless gui [--all] [--nocategory]` | Open management GUI (category view or direct list view) |
+| `/wireless gui [--all]` | Open management GUI |
 | `/wireless debug on\|off` | Toggle connection particle lines on state changes |
 | `/wireless reload` | Reload configuration files (admin only) |
 
@@ -196,8 +195,8 @@ src/main/
 │   │   └── WirelessCommand.java               - All /wireless subcommands + tab completion
 │   ├── gui/
 │   │   ├── BulbManagerGUI.java                - Main management GUI
-│   │   ├── CategoryAssignmentGUI.java         - Category assignment GUI
-│   │   ├── CategorySelectionGUI.java          - Category selection GUI
+│   │   ├── CategoryAssignmentGUI.java         - Legacy category assignment GUI
+│   │   ├── CategorySelectionGUI.java          - Connector prompt and legacy category GUI
 │   │   └── GroupEntry.java                    - GUI item entry model
 │   ├── listener/
 │   │   ├── AnalyserWireViewTask.java          - Analyser WireView particle rendering

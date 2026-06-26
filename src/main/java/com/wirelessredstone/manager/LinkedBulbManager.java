@@ -265,9 +265,6 @@ public class LinkedBulbManager {
             if (group.getCustomIcon() != null) {
                 config.set(basePath + ".customIcon", group.getCustomIcon().name());
             }
-            if (group.getCategoryId() != null) {
-                config.set(basePath + ".categoryId", group.getCategoryId().toString());
-            }
             if (group.getVariantMaterial() != null) {
                 config.set(basePath + ".variantMaterial", group.getVariantMaterial().name());
             }
