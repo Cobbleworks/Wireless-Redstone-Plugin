@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Changed `/wireless create` to use the Connector Tool chat prompt, making connector-based setup the primary group creation flow.
 - Changed `/wireless recover <groupName>` to restore saved block positions in-place after environmental block destruction.
 - Changed wireless group GUI right-clicks to print analyser-style group details with clickable teleport links.
+- Changed wireless group GUI icon assignment from Shift+Middle-click to Q/drop-key to avoid conflicting with rename.
 - Renamed `/wireless append` to `/wireless extend` and removed the append command alias.
 - Removed `/wireless debug` mode.
 

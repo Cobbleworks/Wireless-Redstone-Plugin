@@ -257,7 +257,7 @@ public class BulbManagerGUI implements InventoryHolder {
         lore.add(Component.text("Middle-click: ", NamedTextColor.LIGHT_PURPLE)
                 .append(Component.text("Rename group", NamedTextColor.WHITE))
                 .decoration(TextDecoration.ITALIC, false));
-        lore.add(Component.text("Shift+Middle: ", NamedTextColor.LIGHT_PURPLE)
+        lore.add(Component.text("Q: ", NamedTextColor.LIGHT_PURPLE)
                 .append(Component.text("Set icon to held item", NamedTextColor.WHITE))
                 .decoration(TextDecoration.ITALIC, false));
         lore.add(Component.text("Shift+Left: ", NamedTextColor.RED)
@@ -481,7 +481,7 @@ public class BulbManagerGUI implements InventoryHolder {
 
         GroupEntry group = groupEntry.group();
 
-        if (isShiftClick && isMiddleClick) {
+        if (isDrop) {
             handleSetIcon(group);
         } else if (isShiftClick) {
             handleRemoveGroup(group);
