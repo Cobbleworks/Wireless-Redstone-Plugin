@@ -124,7 +124,7 @@ Hoppers connected to wireless containers interact with the shared inventory dire
 
 ### **Circuit Tool**
 
-The Circuit Tool is a special shears item given by `/wireless create`. In **existing-group mode**, right-clicking a compatible block adds it to the group; left-clicking a block in the active group removes it. Left-clicking a different wireless group displays its group name, owner, group size, and current state in chat. In **creation mode** (for new groups), the first right-click registers the first block; subsequent right-clicks add more. While held, the tool renders color-coded glowing outlines around every wireless group so overlapping groups can be distinguished visually.
+The Circuit Tool is a special shears item given by `/wireless create`. In **existing-group mode**, right-clicking a compatible block adds it to the currently edited group; left-clicking any wireless block removes it from whichever group it belongs to. In **creation mode** (for new groups), the first right-click registers the first block; subsequent right-clicks add more. While held, the tool renders color-coded glowing outlines around every wireless group so overlapping groups can be distinguished visually.
 
 ## **Player Commands**
 

@@ -240,7 +240,7 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
                     .append(Component.text("Circuit Tool", NamedTextColor.GREEN).decorate(net.kyori.adventure.text.format.TextDecoration.BOLD))
                     .append(Component.text(" for group ", NamedTextColor.GREEN))
                     .append(Component.text(group.getDisplayName(), NamedTextColor.AQUA)));
-            player.sendMessage(Component.text("Right-click bulbs/lamps to add, Left-click same-group blocks to remove.", NamedTextColor.GRAY));
+            player.sendMessage(Component.text("Right-click bulbs/lamps to add, Left-click any wireless block to remove it from its group.", NamedTextColor.GRAY));
         } else if (chestGroupOpt.isPresent()) {
             ChestGroup group = chestGroupOpt.get();
             ItemStack tool = ConnectorToolFactory.createConnectorTool(
@@ -254,7 +254,7 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
                     .append(Component.text("Circuit Tool", NamedTextColor.GREEN).decorate(net.kyori.adventure.text.format.TextDecoration.BOLD))
                     .append(Component.text(" for group ", NamedTextColor.GREEN))
                     .append(Component.text(group.getDisplayName(), NamedTextColor.GOLD)));
-            player.sendMessage(Component.text("Right-click containers to add, Left-click same-group blocks to remove.", NamedTextColor.GRAY));
+            player.sendMessage(Component.text("Right-click containers to add, Left-click any wireless block to remove it from its group.", NamedTextColor.GRAY));
         } else {
             // No group found - create a creation-mode tool with optional category
             ItemStack tool = ConnectorToolFactory.createCreationModeConnectorTool(groupName);

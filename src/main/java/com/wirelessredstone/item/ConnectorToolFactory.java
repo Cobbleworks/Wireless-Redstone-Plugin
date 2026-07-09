@@ -68,10 +68,7 @@ public class ConnectorToolFactory {
                         .append(Component.text("a matching block to add it", NamedTextColor.GRAY))
                         .decoration(TextDecoration.ITALIC, false),
                 Component.text("Left-click ", NamedTextColor.YELLOW)
-                        .append(Component.text("a group block to remove it", NamedTextColor.GRAY))
-                        .decoration(TextDecoration.ITALIC, false),
-                Component.text("Left-click ", NamedTextColor.YELLOW)
-                        .append(Component.text("another group to analyze it", NamedTextColor.GRAY))
+                        .append(Component.text("any wireless block to remove it", NamedTextColor.GRAY))
                         .decoration(TextDecoration.ITALIC, false),
                 Component.text("Hold ", NamedTextColor.YELLOW)
                         .append(Component.text("to reveal wireless circuits", NamedTextColor.GRAY))

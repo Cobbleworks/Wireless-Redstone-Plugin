@@ -26,13 +26,16 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.BlockDamageEvent;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Listener for Circuit Tool interactions.
@@ -43,6 +46,7 @@ public class ConnectorToolListener implements Listener {
     private final LinkedBulbManager bulbManager;
     private final LinkedChestManager chestManager;
     private final CircuitAnalyserListener circuitAnalyserListener;
+    private final Set<UUID> handledLeftClickPlayers = ConcurrentHashMap.newKeySet();
 
     public ConnectorToolListener(LinkedBulbManager bulbManager, LinkedChestManager chestManager,
                                  CircuitAnalyserListener circuitAnalyserListener) {
@@ -90,16 +94,27 @@ public class ConnectorToolListener implements Listener {
             if (displayExistingGroupInfo(player, location)) {
                 return;
             }
-            // Add block to group
             handleAddBlock(player, location, block, groupId, groupType);
         } else if (event.getAction() == Action.LEFT_CLICK_BLOCK) {
-            if (displayDifferentGroupInfo(player, location, groupId)) {
-                return;
-            }
-            displayCurrentGroupInfo(player, location, groupId);
-            // Remove block from group
-            handleRemoveBlock(player, location, groupId, groupType);
+            handleLeftClickRemove(player, location);
         }
+    }
+
+    @EventHandler(priority = EventPriority.HIGH)
+    public void onBlockDamage(BlockDamageEvent event) {
+        Player player = event.getPlayer();
+        ItemStack item = player.getInventory().getItemInMainHand();
+
+        if (!ConnectorToolFactory.isConnectorTool(item) || ConnectorToolFactory.isCreationMode(item)) {
+            return;
+        }
+
+        event.setCancelled(true);
+        if (handledLeftClickPlayers.contains(player.getUniqueId())) {
+            return;
+        }
+
+        handleLeftClickRemove(player, event.getBlock().getLocation());
     }
 
     private boolean displayExistingGroupInfo(Player player, Location location) {
@@ -109,38 +124,6 @@ public class ConnectorToolListener implements Listener {
         }
 
         return false;
-    }
-
-    private boolean displayDifferentGroupInfo(Player player, Location location, UUID currentGroupId) {
-        Optional<BulbGroup> bulbGroup = bulbManager.getGroupByLocation(location);
-        if (bulbGroup.isPresent()) {
-            if (!bulbGroup.get().getGroupId().equals(currentGroupId)) {
-                circuitAnalyserListener.displayBlockInfo(player, location);
-                return true;
-            }
-            return false;
-        }
-
-        Optional<ChestGroup> chestGroup = chestManager.getGroupByLocation(location);
-        if (chestGroup.isPresent() && !chestGroup.get().getGroupId().equals(currentGroupId)) {
-            circuitAnalyserListener.displayBlockInfo(player, location);
-            return true;
-        }
-
-        return false;
-    }
-
-    private void displayCurrentGroupInfo(Player player, Location location, UUID currentGroupId) {
-        Optional<BulbGroup> bulbGroup = bulbManager.getGroupByLocation(location);
-        if (bulbGroup.isPresent() && bulbGroup.get().getGroupId().equals(currentGroupId)) {
-            circuitAnalyserListener.displayBlockInfo(player, location);
-            return;
-        }
-
-        Optional<ChestGroup> chestGroup = chestManager.getGroupByLocation(location);
-        if (chestGroup.isPresent() && chestGroup.get().getGroupId().equals(currentGroupId)) {
-            circuitAnalyserListener.displayBlockInfo(player, location);
-        }
     }
 
     private void handleCreationModeAdd(Player player, Location location, Block block, ItemStack tool) {
@@ -296,11 +279,23 @@ public class ConnectorToolListener implements Listener {
         }
     }
 
-    private void handleRemoveBlock(Player player, Location location, UUID groupId, ConnectorToolFactory.GroupType groupType) {
-        if (groupType == ConnectorToolFactory.GroupType.BULB) {
-            removeBulbFromGroup(player, location, groupId);
+    private void handleLeftClickRemove(Player player, Location location) {
+        UUID playerId = player.getUniqueId();
+        handledLeftClickPlayers.add(playerId);
+        WirelessRedstonePlugin.getInstance().getServer().getScheduler().runTask(
+                WirelessRedstonePlugin.getInstance(),
+                () -> handledLeftClickPlayers.remove(playerId));
+
+        handleRemoveBlock(player, location);
+    }
+
+    private void handleRemoveBlock(Player player, Location location) {
+        if (bulbManager.getGroupByLocation(location).isPresent()) {
+            removeBulbFromGroup(player, location);
+        } else if (chestManager.getGroupByLocation(location).isPresent()) {
+            removeChestFromGroup(player, location);
         } else {
-            removeChestFromGroup(player, location, groupId);
+            player.sendMessage(Component.text("This block is not part of any wireless group!", NamedTextColor.RED));
         }
     }
 
@@ -420,7 +415,6 @@ public class ConnectorToolListener implements Listener {
         if (existingGroupOpt.isPresent()) {
             ChestGroup existingGroup = existingGroupOpt.get();
             if (existingGroup.getGroupId().equals(groupId)) {
-                removeChestFromGroup(player, location, groupId);
                 return;
             }
 
@@ -555,7 +549,7 @@ public class ConnectorToolListener implements Listener {
         refreshCircuitOverlay();
     }
 
-    private void removeBulbFromGroup(Player player, Location location, UUID groupId) {
+    private void removeBulbFromGroup(Player player, Location location) {
         // Check if this location is part of the group
         Optional<BulbGroup> groupOpt = bulbManager.getGroupByLocation(location);
         if (groupOpt.isEmpty()) {
@@ -564,12 +558,6 @@ public class ConnectorToolListener implements Listener {
         }
 
         BulbGroup group = groupOpt.get();
-        if (!group.getGroupId().equals(groupId)) {
-            player.sendMessage(Component.text("This block is not part of the selected group!", NamedTextColor.RED));
-            player.sendMessage(Component.text("It belongs to: " + group.getDisplayName(), NamedTextColor.GRAY));
-            return;
-        }
-
         int slot = group.getLocationIndex(location);
         char slotLabel = slot >= 0 ? (char) ('A' + slot) : '?';
 
@@ -592,7 +580,7 @@ public class ConnectorToolListener implements Listener {
         refreshCircuitOverlay();
     }
 
-    private void removeChestFromGroup(Player player, Location location, UUID groupId) {
+    private void removeChestFromGroup(Player player, Location location) {
         // Check if this location is part of the group
         Optional<ChestGroup> groupOpt = chestManager.getGroupByLocation(location);
         if (groupOpt.isEmpty()) {
@@ -601,12 +589,6 @@ public class ConnectorToolListener implements Listener {
         }
 
         ChestGroup group = groupOpt.get();
-        if (!group.getGroupId().equals(groupId)) {
-            player.sendMessage(Component.text("This container is not part of the selected group!", NamedTextColor.RED));
-            player.sendMessage(Component.text("It belongs to: " + group.getDisplayName(), NamedTextColor.GRAY));
-            return;
-        }
-
         Location otherHalfLocation = getDoubleChestOtherHalf(location.getBlock());
         boolean isLargeChest = otherHalfLocation != null && group.hasLocation(otherHalfLocation);
         int slot = group.getLocationIndex(location);
