@@ -192,6 +192,12 @@ public class BulbManagerGUI implements InventoryHolder {
                 .decoration(TextDecoration.BOLD, true));
 
         List<Component> lore = new ArrayList<>();
+
+        if (group.getDescription() != null) {
+            lore.add(Component.text(group.getDescription(), NamedTextColor.GRAY)
+                    .decoration(TextDecoration.ITALIC, true));
+        }
+
         lore.add(Component.empty());
 
         if (categoryName == null && group.getCategoryName() != null) {
@@ -200,12 +206,6 @@ public class BulbManagerGUI implements InventoryHolder {
                     .decoration(TextDecoration.ITALIC, false));
         }
 
-        if (group.getDescription() != null) {
-            lore.add(Component.text("Description: ", NamedTextColor.GRAY)
-                    .append(Component.text(group.getDescription(), NamedTextColor.WHITE))
-                    .decoration(TextDecoration.ITALIC, false));
-        }
-        
         lore.add(Component.text("Type: ", NamedTextColor.GRAY)
                 .append(Component.text(group.getTypeDisplayName(), NamedTextColor.WHITE))
                 .decoration(TextDecoration.ITALIC, false));

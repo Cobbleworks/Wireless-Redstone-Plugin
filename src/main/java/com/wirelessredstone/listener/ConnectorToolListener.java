@@ -87,6 +87,9 @@ public class ConnectorToolListener implements Listener {
         }
 
         if (event.getAction() == Action.RIGHT_CLICK_BLOCK) {
+            if (displayExistingGroupInfo(player, location)) {
+                return;
+            }
             // Add block to group
             handleAddBlock(player, location, block, groupId, groupType);
         } else if (event.getAction() == Action.LEFT_CLICK_BLOCK) {
@@ -97,6 +100,15 @@ public class ConnectorToolListener implements Listener {
             // Remove block from group
             handleRemoveBlock(player, location, groupId, groupType);
         }
+    }
+
+    private boolean displayExistingGroupInfo(Player player, Location location) {
+        if (bulbManager.isWirelessBulbLocation(location) || chestManager.isWirelessChestLocation(location)) {
+            circuitAnalyserListener.displayBlockInfo(player, location);
+            return true;
+        }
+
+        return false;
     }
 
     private boolean displayDifferentGroupInfo(Player player, Location location, UUID currentGroupId) {
