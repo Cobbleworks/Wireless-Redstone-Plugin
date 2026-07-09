@@ -1,8 +1,10 @@
 package com.wirelessredstone.gui;
 
+import com.wirelessredstone.WirelessRedstonePlugin;
 import com.wirelessredstone.manager.CategoryManager;
 import com.wirelessredstone.manager.LinkedBulbManager;
 import com.wirelessredstone.manager.LinkedChestManager;
+import com.wirelessredstone.manager.WireViewManager;
 import com.wirelessredstone.item.ConnectorToolFactory;
 import com.wirelessredstone.model.BaseGroup;
 import com.wirelessredstone.model.BulbGroup;
@@ -500,7 +502,10 @@ public class CategorySelectionGUI implements InventoryHolder {
         giveItemToPlayer(player, ConnectorToolFactory.createConnectorTool(
                 group.getGroupId(),
                 group.getDisplayName(),
-                groupType
+                groupType,
+                groupType == ConnectorToolFactory.GroupType.BULB
+                        ? WireViewManager.getBulbGroupTextColor(group.getGroupId(), WirelessRedstonePlugin.getInstance().getBulbManager().getAllPlacedGroups())
+                        : WireViewManager.getChestGroupTextColor(group.getGroupId(), WirelessRedstonePlugin.getInstance().getChestManager().getAllPlacedGroups())
         ));
         player.sendMessage(Component.text("You received a Circuit Tool for group ", NamedTextColor.GREEN)
                 .append(Component.text(group.getDisplayName(), groupColor))

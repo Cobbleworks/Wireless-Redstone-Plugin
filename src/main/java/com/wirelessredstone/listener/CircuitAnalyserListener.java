@@ -40,7 +40,7 @@ public class CircuitAnalyserListener implements Listener {
     private static final Map<UUID, PendingOperation> pendingOperations = new ConcurrentHashMap<>();
 
     private record PendingOperation(UUID groupId, boolean isBulbGroup, OperationType type) {}
-    private enum OperationType { RENAME, CATEGORY }
+    private enum OperationType { RENAME, CATEGORY, DESCRIPTION }
 
     public CircuitAnalyserListener(LinkedBulbManager bulbManager, LinkedChestManager chestManager, CategoryManager categoryManager) {
         this.bulbManager = bulbManager;
@@ -105,6 +105,13 @@ public class CircuitAnalyserListener implements Listener {
         String categoryName = GroupNameParser.parse(fullName).categoryName();
         player.sendMessage(Component.text("Category: ", NamedTextColor.GRAY)
                 .append(Component.text(categoryName == null ? "Uncategorized" : categoryName, NamedTextColor.YELLOW)));
+
+        String descriptionCommand = "/wireless circuit-description " + groupId + " " + (isBulbGroup ? "bulb" : "chest");
+        player.sendMessage(Component.text("Description: ", NamedTextColor.GRAY)
+                .append(Component.text(group.getDescription() == null ? "None" : group.getDescription(), NamedTextColor.WHITE)
+                        .hoverEvent(HoverEvent.showText(Component.text("Click to edit description", NamedTextColor.YELLOW)))
+                        .clickEvent(ClickEvent.runCommand(descriptionCommand)))
+                .append(Component.text(" ✎", NamedTextColor.DARK_GRAY)));
 
         // Placed count and state on same line for bulbs
         int placedCount = group.getPlacedCount();
@@ -197,6 +204,8 @@ public class CircuitAnalyserListener implements Listener {
 
         if (operation.type() == OperationType.RENAME) {
             processRename(player, input, group, operation.isBulbGroup());
+        } else if (operation.type() == OperationType.DESCRIPTION) {
+            processDescription(player, input, group, operation.isBulbGroup());
         } else {
             processCategoryChange(player, input, group, operation.isBulbGroup());
         }
@@ -243,6 +252,27 @@ public class CircuitAnalyserListener implements Listener {
         }
     }
 
+    private void processDescription(Player player, String input, BaseGroup group, boolean isBulbGroup) {
+        if (input.length() > 120) {
+            input = input.substring(0, 120);
+        }
+
+        if (input.equalsIgnoreCase("reset") || input.equalsIgnoreCase("clear") || input.equalsIgnoreCase("none")) {
+            group.setDescription(null);
+            player.sendMessage(Component.text("✓ Group description cleared.", NamedTextColor.GREEN));
+        } else {
+            group.setDescription(input);
+            player.sendMessage(Component.text("✓ Group description set to: ", NamedTextColor.GREEN)
+                    .append(Component.text(input, NamedTextColor.WHITE)));
+        }
+
+        if (isBulbGroup) {
+            bulbManager.saveData();
+        } else {
+            chestManager.saveData();
+        }
+    }
+
     /**
      * Initiates a rename operation for a group from the circuit report.
      */
@@ -262,6 +292,17 @@ public class CircuitAnalyserListener implements Listener {
         player.sendMessage(Component.empty());
         player.sendMessage(Component.text("✎ ", NamedTextColor.YELLOW)
                 .append(Component.text("Rename the group with a prefix like factory/group-name to set its category.", NamedTextColor.GRAY)));
+    }
+
+    /**
+     * Initiates a description change operation for a group from the circuit report.
+     */
+    public static void initiateDescriptionChange(Player player, UUID groupId, boolean isBulbGroup) {
+        pendingOperations.put(player.getUniqueId(), new PendingOperation(groupId, isBulbGroup, OperationType.DESCRIPTION));
+        player.sendMessage(Component.empty());
+        player.sendMessage(Component.text("✎ ", NamedTextColor.YELLOW)
+                .append(Component.text("Enter new description in chat ", NamedTextColor.GRAY))
+                .append(Component.text("(or 'cancel' to abort, 'clear' to remove)", NamedTextColor.DARK_GRAY)));
     }
 
     /**

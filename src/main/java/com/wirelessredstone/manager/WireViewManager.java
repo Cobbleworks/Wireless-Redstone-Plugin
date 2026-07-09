@@ -41,6 +41,15 @@ public class WireViewManager {
         NamedTextColor.WHITE,
         NamedTextColor.BLUE
     };
+    private static final NamedTextColor[] CHEST_GROUP_COLORS = {
+        NamedTextColor.DARK_AQUA,
+        NamedTextColor.DARK_GREEN,
+        NamedTextColor.DARK_RED,
+        NamedTextColor.DARK_PURPLE,
+        NamedTextColor.DARK_BLUE,
+        NamedTextColor.DARK_GRAY,
+        NamedTextColor.GRAY
+    };
 
     public WireViewManager(WirelessRedstonePlugin plugin, LinkedBulbManager bulbManager, LinkedChestManager chestManager) {
         this.plugin = plugin;
@@ -110,18 +119,8 @@ public class WireViewManager {
 
         // Spawn glow entities for chest groups with different color palette
         int chestColorIndex = 0;
-        NamedTextColor[] chestColors = {
-            NamedTextColor.DARK_AQUA,
-            NamedTextColor.DARK_GREEN,
-            NamedTextColor.DARK_RED,
-            NamedTextColor.DARK_PURPLE,
-            NamedTextColor.DARK_BLUE,
-            NamedTextColor.DARK_GRAY,
-            NamedTextColor.GRAY
-        };
-
         for (ChestGroup group : chestManager.getAllPlacedGroups()) {
-            NamedTextColor groupColor = chestColors[chestColorIndex % chestColors.length];
+            NamedTextColor groupColor = CHEST_GROUP_COLORS[chestColorIndex % CHEST_GROUP_COLORS.length];
             chestColorIndex++;
 
             String teamName = WIREVIEW_CHEST_TEAM_PREFIX + group.getGroupId().toString().substring(0, 8);
@@ -166,15 +165,29 @@ public class WireViewManager {
     }
 
     public static Color getBulbGroupParticleColor(UUID groupId, List<BulbGroup> groups) {
+        return Color.fromRGB(getBulbGroupTextColor(groupId, groups).value());
+    }
+
+    public static NamedTextColor getBulbGroupTextColor(UUID groupId, List<BulbGroup> groups) {
         int colorIndex = 0;
         for (BulbGroup group : groups) {
             if (group.getGroupId().equals(groupId)) {
-                NamedTextColor color = BULB_GROUP_COLORS[colorIndex % BULB_GROUP_COLORS.length];
-                return Color.fromRGB(color.value());
+                return BULB_GROUP_COLORS[colorIndex % BULB_GROUP_COLORS.length];
             }
             colorIndex++;
         }
-        return Color.fromRGB(NamedTextColor.AQUA.value());
+        return NamedTextColor.AQUA;
+    }
+
+    public static NamedTextColor getChestGroupTextColor(UUID groupId, List<ChestGroup> groups) {
+        int colorIndex = 0;
+        for (ChestGroup group : groups) {
+            if (group.getGroupId().equals(groupId)) {
+                return CHEST_GROUP_COLORS[colorIndex % CHEST_GROUP_COLORS.length];
+            }
+            colorIndex++;
+        }
+        return NamedTextColor.DARK_AQUA;
     }
 
     private void removeAllGlowEntities(Player player) {

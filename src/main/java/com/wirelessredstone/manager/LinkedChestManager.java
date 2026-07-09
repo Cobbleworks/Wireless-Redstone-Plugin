@@ -310,6 +310,9 @@ public class LinkedChestManager {
             if (group.getCustomName() != null) {
                 config.set(basePath + ".customName", group.getCustomName());
             }
+            if (group.getDescription() != null) {
+                config.set(basePath + ".description", group.getDescription());
+            }
             if (group.getCustomIcon() != null) {
                 config.set(basePath + ".customIcon", group.getCustomIcon().name());
             }
@@ -376,6 +379,7 @@ public class LinkedChestManager {
             ChestGroup group = new ChestGroup(groupId, maxSize, ownerUuid, containerType);
             group.setInventorySize(groupInventorySize);
             group.setCustomName(config.getString(basePath + ".customName"));
+            group.setDescription(config.getString(basePath + ".description"));
             
             String customIconStr = config.getString(basePath + ".customIcon");
             if (customIconStr != null) {

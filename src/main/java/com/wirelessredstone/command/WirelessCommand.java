@@ -10,6 +10,7 @@ import com.wirelessredstone.listener.CircuitAnalyserListener;
 import com.wirelessredstone.manager.CategoryManager;
 import com.wirelessredstone.manager.LinkedBulbManager;
 import com.wirelessredstone.manager.LinkedChestManager;
+import com.wirelessredstone.manager.WireViewManager;
 import com.wirelessredstone.model.BaseGroup;
 import com.wirelessredstone.model.BulbGroup;
 import com.wirelessredstone.model.ChestGroup;
@@ -158,6 +159,7 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
             case "reload" -> handleReloadCommand(player);
             case "circuit-rename" -> handleCircuitRenameCommand(player, parsedArgs);
             case "circuit-category" -> handleCircuitCategoryCommand(player, parsedArgs);
+            case "circuit-description" -> handleCircuitDescriptionCommand(player, parsedArgs);
             case "teleport" -> handleTeleportCommand(player, parsedArgs);
             default -> {
                 player.sendMessage(Component.text("Unknown subcommand. Use ", NamedTextColor.RED)
@@ -230,7 +232,8 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
             ItemStack tool = ConnectorToolFactory.createConnectorTool(
                     group.getGroupId(), 
                     group.getDisplayName(), 
-                    ConnectorToolFactory.GroupType.BULB
+                    ConnectorToolFactory.GroupType.BULB,
+                    WireViewManager.getBulbGroupTextColor(group.getGroupId(), bulbManager.getAllPlacedGroups())
             );
             giveItemToPlayer(player, tool);
             player.sendMessage(Component.text("You received a ", NamedTextColor.GREEN)
@@ -243,7 +246,8 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
             ItemStack tool = ConnectorToolFactory.createConnectorTool(
                     group.getGroupId(), 
                     group.getDisplayName(), 
-                    ConnectorToolFactory.GroupType.CHEST
+                    ConnectorToolFactory.GroupType.CHEST,
+                    WireViewManager.getChestGroupTextColor(group.getGroupId(), chestManager.getAllPlacedGroups())
             );
             giveItemToPlayer(player, tool);
             player.sendMessage(Component.text("You received a ", NamedTextColor.GREEN)
@@ -748,6 +752,24 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
             UUID groupId = UUID.fromString(args[1]);
             boolean isBulbGroup = args[2].equalsIgnoreCase("bulb");
             CircuitAnalyserListener.initiateCategoryChange(player, groupId, isBulbGroup, categoryManager);
+        } catch (IllegalArgumentException e) {
+            // Invalid UUID - silent fail
+        }
+    }
+
+    /**
+     * Handles the circuit-description command triggered from the circuit report.
+     * This initiates a chat input capture for changing a group's description.
+     */
+    private void handleCircuitDescriptionCommand(Player player, String[] args) {
+        if (args.length < 3) {
+            return; // Silent fail - this is an internal command
+        }
+
+        try {
+            UUID groupId = UUID.fromString(args[1]);
+            boolean isBulbGroup = args[2].equalsIgnoreCase("bulb");
+            CircuitAnalyserListener.initiateDescriptionChange(player, groupId, isBulbGroup);
         } catch (IllegalArgumentException e) {
             // Invalid UUID - silent fail
         }

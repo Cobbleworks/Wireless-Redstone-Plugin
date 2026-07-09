@@ -80,6 +80,14 @@ public class GroupEntry {
         group.setCustomName(name);
     }
 
+    public String getDescription() {
+        return group.getDescription();
+    }
+
+    public void setDescription(String description) {
+        group.setDescription(description);
+    }
+
     public Material getCustomIcon() {
         return group.getCustomIcon();
     }

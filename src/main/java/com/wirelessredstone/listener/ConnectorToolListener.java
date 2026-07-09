@@ -6,6 +6,7 @@ import com.wirelessredstone.item.ChestVariant;
 import com.wirelessredstone.item.ConnectorToolFactory;
 import com.wirelessredstone.manager.LinkedBulbManager;
 import com.wirelessredstone.manager.LinkedChestManager;
+import com.wirelessredstone.manager.WireViewManager;
 import com.wirelessredstone.model.BulbGroup;
 import com.wirelessredstone.model.ChestGroup;
 import com.wirelessredstone.util.BulbUtils;
@@ -89,15 +90,16 @@ public class ConnectorToolListener implements Listener {
             // Add block to group
             handleAddBlock(player, location, block, groupId, groupType);
         } else if (event.getAction() == Action.LEFT_CLICK_BLOCK) {
-            if (displayOtherGroupInfo(player, location, groupId)) {
+            if (displayDifferentGroupInfo(player, location, groupId)) {
                 return;
             }
+            displayCurrentGroupInfo(player, location, groupId);
             // Remove block from group
             handleRemoveBlock(player, location, groupId, groupType);
         }
     }
 
-    private boolean displayOtherGroupInfo(Player player, Location location, UUID currentGroupId) {
+    private boolean displayDifferentGroupInfo(Player player, Location location, UUID currentGroupId) {
         Optional<BulbGroup> bulbGroup = bulbManager.getGroupByLocation(location);
         if (bulbGroup.isPresent()) {
             if (!bulbGroup.get().getGroupId().equals(currentGroupId)) {
@@ -114,6 +116,19 @@ public class ConnectorToolListener implements Listener {
         }
 
         return false;
+    }
+
+    private void displayCurrentGroupInfo(Player player, Location location, UUID currentGroupId) {
+        Optional<BulbGroup> bulbGroup = bulbManager.getGroupByLocation(location);
+        if (bulbGroup.isPresent() && bulbGroup.get().getGroupId().equals(currentGroupId)) {
+            circuitAnalyserListener.displayBlockInfo(player, location);
+            return;
+        }
+
+        Optional<ChestGroup> chestGroup = chestManager.getGroupByLocation(location);
+        if (chestGroup.isPresent() && chestGroup.get().getGroupId().equals(currentGroupId)) {
+            circuitAnalyserListener.displayBlockInfo(player, location);
+        }
     }
 
     private void handleCreationModeAdd(Player player, Location location, Block block, ItemStack tool) {
@@ -161,7 +176,11 @@ public class ConnectorToolListener implements Listener {
         bulbManager.registerPlacedBulb(location, groupId, 0, player.getUniqueId(), bulbType, 1);
 
         // Transform the tool from creation mode to regular mode
-        ItemStack newTool = ConnectorToolFactory.createConnectorTool(groupId, groupName, ConnectorToolFactory.GroupType.BULB);
+        ItemStack newTool = ConnectorToolFactory.createConnectorTool(
+                groupId,
+                groupName,
+                ConnectorToolFactory.GroupType.BULB,
+                WireViewManager.getBulbGroupTextColor(groupId, bulbManager.getAllPlacedGroups()));
         player.getInventory().setItemInMainHand(newTool);
 
         ParticleEffects.spawnConnectParticles(location);
@@ -224,7 +243,11 @@ public class ConnectorToolListener implements Listener {
         }
 
         // Transform the tool from creation mode to regular mode
-        ItemStack newTool = ConnectorToolFactory.createConnectorTool(groupId, groupName, ConnectorToolFactory.GroupType.CHEST);
+        ItemStack newTool = ConnectorToolFactory.createConnectorTool(
+                groupId,
+                groupName,
+                ConnectorToolFactory.GroupType.CHEST,
+                WireViewManager.getChestGroupTextColor(groupId, chestManager.getAllPlacedGroups()));
         player.getInventory().setItemInMainHand(newTool);
 
         ParticleEffects.spawnConnectParticles(location);

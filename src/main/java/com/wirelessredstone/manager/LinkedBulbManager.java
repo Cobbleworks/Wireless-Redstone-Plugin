@@ -262,6 +262,9 @@ public class LinkedBulbManager {
             if (group.getCustomName() != null) {
                 config.set(basePath + ".customName", group.getCustomName());
             }
+            if (group.getDescription() != null) {
+                config.set(basePath + ".description", group.getDescription());
+            }
             if (group.getCustomIcon() != null) {
                 config.set(basePath + ".customIcon", group.getCustomIcon().name());
             }
@@ -331,6 +334,7 @@ public class LinkedBulbManager {
             BulbGroup group = new BulbGroup(groupId, maxSize, ownerUuid, bulbType);
             group.setLit(config.getBoolean(basePath + ".lit", false));
             group.setCustomName(config.getString(basePath + ".customName"));
+            group.setDescription(config.getString(basePath + ".description"));
             
             String customIconStr = config.getString(basePath + ".customIcon");
             if (customIconStr != null) {
@@ -395,6 +399,7 @@ public class LinkedBulbManager {
             BulbGroup group = new BulbGroup(groupId, 2, ownerUuid, bulbType);
             group.setLit(config.getBoolean(basePath + ".lit", false));
             group.setCustomName(config.getString(basePath + ".customName"));
+            group.setDescription(config.getString(basePath + ".description"));
 
             String loc1Str = config.getString(basePath + ".loc1");
             String loc2Str = config.getString(basePath + ".loc2");

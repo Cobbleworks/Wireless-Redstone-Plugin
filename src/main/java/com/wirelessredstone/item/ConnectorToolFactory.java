@@ -36,10 +36,18 @@ public class ConnectorToolFactory {
      * Creates a new Circuit Tool item for a specific group.
      */
     public static ItemStack createConnectorTool(UUID groupId, String groupName, GroupType groupType) {
+        NamedTextColor fallbackColor = groupType == GroupType.BULB ? NamedTextColor.AQUA : NamedTextColor.GOLD;
+        return createConnectorTool(groupId, groupName, groupType, fallbackColor);
+    }
+
+    /**
+     * Creates a new Circuit Tool item for a specific group using the group's overlay color.
+     */
+    public static ItemStack createConnectorTool(UUID groupId, String groupName, GroupType groupType, NamedTextColor groupColor) {
         ItemStack item = new ItemStack(Material.SHEARS);
         ItemMeta meta = item.getItemMeta();
 
-        NamedTextColor typeColor = groupType == GroupType.BULB ? NamedTextColor.AQUA : NamedTextColor.GOLD;
+        NamedTextColor typeColor = groupColor != null ? groupColor : (groupType == GroupType.BULB ? NamedTextColor.AQUA : NamedTextColor.GOLD);
         String typeLabel = groupType == GroupType.BULB ? "Bulb/Lamp" : "Container";
 
         meta.displayName(Component.text("Circuit Tool ", NamedTextColor.GREEN)

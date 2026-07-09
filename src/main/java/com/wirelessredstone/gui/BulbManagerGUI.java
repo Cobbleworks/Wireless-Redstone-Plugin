@@ -199,6 +199,12 @@ public class BulbManagerGUI implements InventoryHolder {
                     .append(Component.text(group.getCategoryName(), NamedTextColor.YELLOW))
                     .decoration(TextDecoration.ITALIC, false));
         }
+
+        if (group.getDescription() != null) {
+            lore.add(Component.text("Description: ", NamedTextColor.GRAY)
+                    .append(Component.text(group.getDescription(), NamedTextColor.WHITE))
+                    .decoration(TextDecoration.ITALIC, false));
+        }
         
         lore.add(Component.text("Type: ", NamedTextColor.GRAY)
                 .append(Component.text(group.getTypeDisplayName(), NamedTextColor.WHITE))
@@ -500,6 +506,12 @@ public class BulbManagerGUI implements InventoryHolder {
 
         player.sendMessage(Component.text("Category: ", NamedTextColor.GRAY)
                 .append(Component.text(getCategoryDisplayName(group), NamedTextColor.YELLOW)));
+
+        player.sendMessage(Component.text("Description: ", NamedTextColor.GRAY)
+                .append(Component.text(group.getDescription() == null ? "None" : group.getDescription(), NamedTextColor.WHITE)
+                        .hoverEvent(HoverEvent.showText(Component.text("Click to edit description", NamedTextColor.YELLOW)))
+                        .clickEvent(ClickEvent.runCommand("/wireless circuit-description " + groupId + " " + groupType)))
+                .append(Component.text(" ✎", NamedTextColor.DARK_GRAY)));
 
         player.sendMessage(Component.text("Type: ", NamedTextColor.GRAY)
                 .append(Component.text(group.getTypeDisplayName(), typeColor)));
