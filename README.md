@@ -48,7 +48,6 @@ Wireless Redstone is an open-source Minecraft plugin that allows players to crea
     - [Circuit Analyser](#circuit-analyser)
 4. [Player Commands](#player-commands)
     - [Command Reference](#command-reference)
-    - [Variant Flags](#variant-flags)
 5. [Permissions](#permissions)
 6. [Building from Source](#building-from-source)
 7. [License](#license)
@@ -104,12 +103,10 @@ Wireless Redstone persists all runtime data to YAML files under `plugins/Wireles
 
 | File | Purpose |
 |------|---------|
-| `config.yml` | Plugin settings, including debug/analyser connection-line linger duration |
+| `config.yml` | Plugin settings |
 | `bulbs.yml` | Bulb/lamp groups, ownership, names, category links, variant material, locations |
 | `chests.yml` | Container groups, shared inventories, ownership, names, category links, locations |
 | `categories.yml` | Category definitions, owners, descriptions, icons |
-
-`effects.connection-lines.linger-ticks` controls how long triggered connection lines are redrawn for debug mode and Circuit Analyser holders. `20` ticks equals 1 second.
 
 > **Note:** Do not edit these files manually while the server is running. Use `/wireless reload` after any manual edits made while the server is stopped.
 
@@ -133,7 +130,7 @@ The Connector Tool is a special item given by `/wireless create`. In **existing-
 
 ### **Circuit Analyser**
 
-The Circuit Analyser is a diagnostic tool given by `/wireless inspect`. When held, right-clicking any wireless block displays its group name, owner, group size, and current state in chat. WireView mode activates `AnalyserWireViewTask`, which renders color-coded glowing particle outlines around every block in each group - each group gets a unique color so overlapping groups can be distinguished visually.
+The Circuit Analyser is a diagnostic tool given by `/wireless analyze`. When held, right-clicking any wireless block displays its group name, owner, group size, and current state in chat. WireView mode activates `AnalyserWireViewTask`, which renders color-coded glowing particle outlines around every block in each group - each group gets a unique color so overlapping groups can be distinguished visually.
 
 ## **Player Commands**
 
@@ -147,34 +144,13 @@ All commands require the `wirelessredstone.use` permission (operator by default)
 |---------|-------------|
 | `/wireless` | Open management GUI (same as `/wireless gui`) |
 | `/wireless help` | Show command help |
-| `/wireless give bulb [amount] [--variant] [--name=...] [--category=...]` | Give linked copper bulb items |
-| `/wireless give lamp [amount] [--name=...] [--category=...]` | Give linked redstone lamp items |
-| `/wireless give chest [amount] [--variant] [--name=...] [--category=...]` | Give linked container items |
-| `/wireless create <groupName> [categoryName]` | Give a Connector Tool for an existing group, or creation-mode tool for a new group |
-| `/wireless inspect [player]` | Give a Circuit Analyser (admin can target another player) |
+| `/wireless create` | Ask for a new group name and give a creation-mode Connector Tool |
+| `/wireless create <groupName>` | Give a Connector Tool for an existing group, or creation-mode tool for a named new group. Use `category/groupName` to categorize it |
+| `/wireless analyze [player]` | Give a Circuit Analyser (admin can target another player) |
 | `/wireless modify name <groupName> <newName>` | Rename a group |
-| `/wireless modify category <groupName> <categoryName>` | Assign group to category (`none` to remove) |
-| `/wireless extend <groupName> [count]` | Extend an existing group by 1-24 slots (max 26 total) |
-| `/wireless recover <groupName>` | Recover unplaced/missing items for a group |
-| `/wireless gui [--all] [--nocategory]` | Open management GUI (category view or direct list view) |
-| `/wireless debug on\|off` | Toggle connection particle lines on state changes |
+| `/wireless recover <groupName>` | Restore saved group blocks destroyed by the environment |
+| `/wireless gui [--all]` | Open management GUI |
 | `/wireless reload` | Reload configuration files (admin only) |
-
-### **Variant Flags**
-
-`/wireless give bulb` supports:
-
-- `--copper`
-- `--exposed`
-- `--weathered`
-- `--oxidized`
-
-`/wireless give chest` supports:
-
-- `--chest`
-- `--barrel`
-- `--shulker` plus color variants: `--white`, `--orange`, `--magenta`, `--light-blue`, `--yellow`, `--lime`, `--pink`, `--gray`, `--light-gray`, `--cyan`, `--purple`, `--blue`, `--brown`, `--green`, `--red`, `--black`
-- Copper chest variants: `--copper`, `--copper-exposed`, `--copper-weathered`, `--copper-oxidized`, `--copper-waxed`, `--copper-waxed-exposed`, `--copper-waxed-weathered`, `--copper-waxed-oxidized`
 
 ## **Permissions**
 
@@ -216,8 +192,8 @@ src/main/
 │   │   └── WirelessCommand.java               - All /wireless subcommands + tab completion
 │   ├── gui/
 │   │   ├── BulbManagerGUI.java                - Main management GUI
-│   │   ├── CategoryAssignmentGUI.java         - Category assignment GUI
-│   │   ├── CategorySelectionGUI.java          - Category selection GUI
+│   │   ├── CategoryAssignmentGUI.java         - Legacy category assignment GUI
+│   │   ├── CategorySelectionGUI.java          - Connector prompt and legacy category GUI
 │   │   └── GroupEntry.java                    - GUI item entry model
 │   ├── listener/
 │   │   ├── AnalyserWireViewTask.java          - Analyser WireView particle rendering
@@ -234,7 +210,6 @@ src/main/
 │   │   └── WireViewListener.java              - WireView display toggle
 │   ├── manager/
 │   │   ├── CategoryManager.java               - Category CRUD and YAML persistence
-│   │   ├── DebugManager.java                  - Debug logging control
 │   │   ├── LinkedBulbManager.java             - Bulb group CRUD, sync, and file persistence
 │   │   ├── LinkedChestManager.java            - Container group CRUD, sync, and file persistence
 │   │   └── WireViewManager.java               - WireView particle task management

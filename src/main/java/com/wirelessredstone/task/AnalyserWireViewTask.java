@@ -30,7 +30,7 @@ public class AnalyserWireViewTask extends BukkitRunnable {
     private final Set<UUID> playersWithAnalyserView = ConcurrentHashMap.newKeySet();
     private int connectionLineTick = 0;
 
-    private static final int CONNECTION_LINE_INTERVAL_TICKS = 30;
+    private static final int CONNECTION_LINE_INTERVAL_TICKS = 10;
     private static final Color CHEST_GROUP_CONNECTION_COLOR = Color.fromRGB(255, 170, 0);
 
     public AnalyserWireViewTask(JavaPlugin plugin, WireViewManager wireViewManager) {
@@ -106,7 +106,7 @@ public class AnalyserWireViewTask extends BukkitRunnable {
                 for (int targetIndex = sourceIndex + 1; targetIndex < locations.size(); targetIndex++) {
                     Location target = locations.get(targetIndex);
                     if (target.getWorld() != null && target.isChunkLoaded()) {
-                        ParticleEffects.spawnDebugConnectionLine(player, source, target, color);
+                        ParticleEffects.spawnConnectionLine(player, source, target, color);
                     }
                 }
             }

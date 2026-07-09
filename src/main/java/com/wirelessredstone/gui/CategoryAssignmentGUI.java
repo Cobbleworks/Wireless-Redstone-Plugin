@@ -25,7 +25,7 @@ public class CategoryAssignmentGUI implements InventoryHolder {
 
     private static final int ROWS = 6;
     private static final int SIZE = ROWS * 9;
-    private static final int ITEMS_PER_PAGE = 28;
+    private static final int ITEMS_PER_PAGE = 36;
 
     private final CategoryManager categoryManager;
     private final LinkedBulbManager bulbManager;
@@ -70,21 +70,16 @@ public class CategoryAssignmentGUI implements InventoryHolder {
         inventory.clear();
         fillBorder();
 
-        // Uncategorized option at top center
-        inventory.setItem(4, createUncategorizedItem());
+        // Uncategorized option in the separator/action row
+        inventory.setItem(45, createUncategorizedItem());
 
         int startIndex = currentPage * ITEMS_PER_PAGE;
         int endIndex = Math.min(startIndex + ITEMS_PER_PAGE, categories.size());
 
-        int slot = 10;
         for (int i = startIndex; i < endIndex; i++) {
-            if (slot % 9 == 0) slot++;
-            if (slot % 9 == 8) slot += 2;
-            if (slot >= 44) break;
-
             Category category = categories.get(i);
+            int slot = i - startIndex;
             inventory.setItem(slot, createCategoryItem(category));
-            slot++;
         }
 
         // Navigation
@@ -109,20 +104,13 @@ public class CategoryAssignmentGUI implements InventoryHolder {
         meta.displayName(Component.empty());
         border.setItemMeta(meta);
 
-        for (int i = 0; i < 9; i++) {
-            if (i != 4) inventory.setItem(i, border);
-        }
-        for (int i = 45; i < 54; i++) {
+        for (int i = 36; i < 54; i++) {
             inventory.setItem(i, border);
-        }
-        for (int i = 9; i < 45; i += 9) {
-            inventory.setItem(i, border);
-            inventory.setItem(i + 8, border);
         }
     }
 
     private ItemStack createCategoryItem(Category category) {
-        Material material = category.getIcon() != null ? category.getIcon() : Material.CHEST;
+        Material material = category.getIcon() != null ? category.getIcon() : Category.DEFAULT_ICON;
         boolean isCurrentCategory = category.getCategoryId().equals(targetGroup.getCategoryId());
 
         ItemStack item = new ItemStack(material);
@@ -283,7 +271,7 @@ public class CategoryAssignmentGUI implements InventoryHolder {
         }
 
         // Uncategorized (remove from category)
-        if (slot == 4) {
+        if (slot == 45) {
             assignCategory(null);
             return;
         }
@@ -333,21 +321,18 @@ public class CategoryAssignmentGUI implements InventoryHolder {
 
     private void returnToGroupsGUI(UUID categoryId) {
         player.closeInventory();
+        String categoryName = categoryId == null
+                ? null
+                : categoryManager.getCategoryById(categoryId).map(Category::getName).orElse(null);
         player.getServer().getScheduler().runTask(
                 player.getServer().getPluginManager().getPlugin("WirelessRedstone"),
-                () -> new BulbManagerGUI(bulbManager, chestManager, categoryManager, player, false, categoryId).open()
+                () -> new BulbManagerGUI(bulbManager, chestManager, categoryManager, player, false, categoryName).open()
         );
     }
 
     private int getCategoryIndexFromSlot(int slot) {
-        if (slot < 10 || slot > 43) return -1;
-        if (slot % 9 == 0 || slot % 9 == 8) return -1;
-
-        int row = slot / 9 - 1;
-        int col = slot % 9 - 1;
-        int indexInPage = row * 7 + col;
-
-        return currentPage * ITEMS_PER_PAGE + indexInPage;
+        if (slot < 0 || slot >= ITEMS_PER_PAGE) return -1;
+        return currentPage * ITEMS_PER_PAGE + slot;
     }
 
     @Override

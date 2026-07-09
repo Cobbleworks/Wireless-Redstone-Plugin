@@ -27,9 +27,10 @@ public class CategorySelectionGUI implements InventoryHolder {
 
     private static final int ROWS = 6;
     private static final int SIZE = ROWS * 9;
-    private static final int ITEMS_PER_PAGE = 28;
+    private static final int ITEMS_PER_PAGE = 36;
     
     private static final Map<UUID, PendingAction> pendingActions = new HashMap<>();
+    private static final Map<UUID, String> pendingConnectorCategoryNames = new HashMap<>();
 
     public enum PendingActionType {
         RENAME_CATEGORY,
@@ -78,19 +79,14 @@ public class CategorySelectionGUI implements InventoryHolder {
         int startIndex = currentPage * ITEMS_PER_PAGE;
         int endIndex = Math.min(startIndex + ITEMS_PER_PAGE, categories.size());
 
-        int slot = 10;
         for (int i = startIndex; i < endIndex; i++) {
-            if (slot % 9 == 0) slot++;
-            if (slot % 9 == 8) slot += 2;
-            if (slot >= 44) break;
-
             Category category = categories.get(i);
+            int slot = i - startIndex;
             inventory.setItem(slot, createCategoryItem(category));
-            slot++;
         }
 
         // Uncategorized option
-        inventory.setItem(4, createUncategorizedItem());
+        inventory.setItem(52, createUncategorizedItem());
 
         if (currentPage > 0) {
             inventory.setItem(48, createNavigationItem(Material.ARROW, "Previous Page", NamedTextColor.YELLOW));
@@ -121,20 +117,13 @@ public class CategorySelectionGUI implements InventoryHolder {
         meta.displayName(Component.empty());
         border.setItemMeta(meta);
 
-        for (int i = 0; i < 9; i++) {
-            if (i != 4) inventory.setItem(i, border);
-        }
-        for (int i = 45; i < 54; i++) {
+        for (int i = 36; i < 54; i++) {
             inventory.setItem(i, border);
-        }
-        for (int i = 9; i < 45; i += 9) {
-            inventory.setItem(i, border);
-            inventory.setItem(i + 8, border);
         }
     }
 
     private ItemStack createCategoryItem(Category category) {
-        Material material = category.getIcon() != null ? category.getIcon() : Material.CHEST;
+        Material material = category.getIcon() != null ? category.getIcon() : Category.DEFAULT_ICON;
         
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
@@ -368,7 +357,7 @@ public class CategorySelectionGUI implements InventoryHolder {
         }
 
         // Uncategorized
-        if (slot == 4) {
+        if (slot == 52) {
             openGroupsGUI(null);
             return;
         }
@@ -417,7 +406,7 @@ public class CategorySelectionGUI implements InventoryHolder {
     private void handleSetIcon(Category category) {
         ItemStack heldItem = player.getInventory().getItemInMainHand();
         if (heldItem.getType() == Material.AIR || heldItem.getType() == null) {
-            categoryManager.setCategoryIcon(category.getCategoryId(), Material.CHEST);
+            categoryManager.setCategoryIcon(category.getCategoryId(), null);
             player.sendMessage(Component.text("Category icon reset to default!", NamedTextColor.YELLOW));
         } else {
             categoryManager.setCategoryIcon(category.getCategoryId(), heldItem.getType());
@@ -460,20 +449,17 @@ public class CategorySelectionGUI implements InventoryHolder {
     }
 
     private void openGroupsGUI(UUID categoryId) {
-        BulbManagerGUI groupsGUI = new BulbManagerGUI(bulbManager, chestManager, categoryManager, player, showAllCategories, categoryId);
+        String categoryName = categoryId == null
+                ? null
+                : categoryManager.getCategoryById(categoryId).map(Category::getName).orElse(null);
+        BulbManagerGUI groupsGUI = new BulbManagerGUI(bulbManager, chestManager, categoryManager, player, showAllCategories, categoryName);
         player.closeInventory();
         groupsGUI.open();
     }
 
     private int getCategoryIndexFromSlot(int slot) {
-        if (slot < 10 || slot > 43) return -1;
-        if (slot % 9 == 0 || slot % 9 == 8) return -1;
-
-        int row = slot / 9 - 1;
-        int col = slot % 9 - 1;
-        int indexInPage = row * 7 + col;
-
-        return currentPage * ITEMS_PER_PAGE + indexInPage;
+        if (slot < 0 || slot >= ITEMS_PER_PAGE) return -1;
+        return currentPage * ITEMS_PER_PAGE + slot;
     }
 
     @Override
@@ -551,6 +537,7 @@ public class CategorySelectionGUI implements InventoryHolder {
         input = input.trim();
 
         if (input.equalsIgnoreCase("cancel")) {
+            pendingConnectorCategoryNames.remove(player.getUniqueId());
             player.sendMessage(Component.text("Action cancelled.", NamedTextColor.GRAY));
             reopenCategoryGUI(player, categoryManager, bulbManager, chestManager);
             return;
@@ -580,12 +567,18 @@ public class CategorySelectionGUI implements InventoryHolder {
             }
             case CREATE_CONNECTOR_TOOL -> {
                 String groupName = input.length() > 32 ? input.substring(0, 32) : input;
-                String categoryName = action.categoryId() == null
+                String categoryName = pendingConnectorCategoryNames.remove(player.getUniqueId());
+                if (categoryName == null) {
+                    categoryName = action.categoryId() == null
                         ? null
                         : categoryManager.getCategoryById(action.categoryId()).map(Category::getName).orElse(null);
-                giveItemToPlayer(player, ConnectorToolFactory.createCreationModeConnectorTool(groupName, categoryName));
+                }
+                String storedGroupName = categoryName != null && !categoryName.isBlank() && !groupName.contains("/")
+                        ? categoryName + "/" + groupName
+                        : groupName;
+                giveItemToPlayer(player, ConnectorToolFactory.createCreationModeConnectorTool(storedGroupName));
                 player.sendMessage(Component.text("You received a Connector Tool for new group ", NamedTextColor.GREEN)
-                        .append(Component.text(groupName, NamedTextColor.LIGHT_PURPLE))
+                        .append(Component.text(storedGroupName, NamedTextColor.LIGHT_PURPLE))
                         .append(Component.text(".", NamedTextColor.GREEN)));
                 return;
             }
@@ -604,10 +597,12 @@ public class CategorySelectionGUI implements InventoryHolder {
 
     public static void cancelPendingAction(UUID playerUuid) {
         pendingActions.remove(playerUuid);
+        pendingConnectorCategoryNames.remove(playerUuid);
     }
 
     public static void startConnectorToolPrompt(Player player, UUID categoryId, CategoryManager categoryManager) {
         pendingActions.put(player.getUniqueId(), new PendingAction(PendingActionType.CREATE_CONNECTOR_TOOL, categoryId));
+        pendingConnectorCategoryNames.remove(player.getUniqueId());
         player.closeInventory();
         player.sendMessage(Component.text("Enter a name for the new wireless group (or 'cancel' to abort):", NamedTextColor.YELLOW));
         player.sendMessage(Component.text("Or right-click an existing wireless block to get a connector for its group.", NamedTextColor.GRAY));
@@ -615,6 +610,22 @@ public class CategorySelectionGUI implements InventoryHolder {
             categoryManager.getCategoryById(categoryId).ifPresent(category ->
                     player.sendMessage(Component.text("Category: ", NamedTextColor.GRAY)
                             .append(Component.text(category.getDisplayName(), NamedTextColor.YELLOW))));
+        }
+    }
+
+    public static void startConnectorToolPrompt(Player player, String categoryName) {
+        pendingActions.put(player.getUniqueId(), new PendingAction(PendingActionType.CREATE_CONNECTOR_TOOL, null));
+        if (categoryName == null || categoryName.isBlank()) {
+            pendingConnectorCategoryNames.remove(player.getUniqueId());
+        } else {
+            pendingConnectorCategoryNames.put(player.getUniqueId(), categoryName);
+        }
+        player.closeInventory();
+        player.sendMessage(Component.text("Enter a name for the new wireless group (or 'cancel' to abort):", NamedTextColor.YELLOW));
+        player.sendMessage(Component.text("Or right-click an existing wireless block to get a connector for its group.", NamedTextColor.GRAY));
+        if (categoryName != null && !categoryName.isBlank()) {
+            player.sendMessage(Component.text("Category: ", NamedTextColor.GRAY)
+                    .append(Component.text(categoryName, NamedTextColor.YELLOW)));
         }
     }
 

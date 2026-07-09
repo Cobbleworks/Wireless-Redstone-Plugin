@@ -6,6 +6,8 @@ import java.util.UUID;
 
 public class Category {
 
+    public static final Material DEFAULT_ICON = Material.ENDER_CHEST;
+
     private final UUID categoryId;
     private final UUID ownerUuid;
     private String name;
@@ -17,7 +19,7 @@ public class Category {
         this.ownerUuid = ownerUuid;
         this.name = name;
         this.description = null;
-        this.icon = Material.CHEST;
+        this.icon = null;
     }
 
     public UUID getCategoryId() {

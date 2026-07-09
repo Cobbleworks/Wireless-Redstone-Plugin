@@ -10,6 +10,7 @@ import com.wirelessredstone.model.BulbGroup;
 import com.wirelessredstone.model.Category;
 import com.wirelessredstone.model.ChestGroup;
 import com.wirelessredstone.util.BulbUtils;
+import com.wirelessredstone.util.GroupNameParser;
 import io.papermc.paper.event.player.AsyncChatEvent;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
@@ -124,7 +125,8 @@ public class CircuitAnalyserListener implements Listener {
                 .decoration(TextDecoration.BOLD, true));
 
         // Group Name (clickable to rename) - more prominent
-        String displayName = group.getDisplayName();
+        String fullName = group.getDisplayName();
+        String displayName = GroupNameParser.parse(fullName).groupName();
         String renameCommand = "/wireless analyser-rename " + groupId + " " + (isBulbGroup ? "bulb" : "chest");
         player.sendMessage(Component.text("Name: ", NamedTextColor.GRAY)
                 .append(Component.text(displayName, NamedTextColor.WHITE).decoration(TextDecoration.BOLD, true)
@@ -132,18 +134,9 @@ public class CircuitAnalyserListener implements Listener {
                         .clickEvent(ClickEvent.runCommand(renameCommand)))
                 .append(Component.text(" ✎", NamedTextColor.DARK_GRAY)));
 
-        // Category (clickable to change)
-        String categoryName = "Uncategorized";
-        if (group.getCategoryId() != null) {
-            Optional<Category> categoryOpt = categoryManager.getCategoryById(group.getCategoryId());
-            categoryName = categoryOpt.map(Category::getName).orElse("Unknown");
-        }
-        String setCategoryCommand = "/wireless analyser-category " + groupId + " " + (isBulbGroup ? "bulb" : "chest");
+        String categoryName = GroupNameParser.parse(fullName).categoryName();
         player.sendMessage(Component.text("Category: ", NamedTextColor.GRAY)
-                .append(Component.text(categoryName, NamedTextColor.YELLOW)
-                        .hoverEvent(HoverEvent.showText(Component.text("Click to change category", NamedTextColor.YELLOW)))
-                        .clickEvent(ClickEvent.runCommand(setCategoryCommand)))
-                .append(Component.text(" ✎", NamedTextColor.DARK_GRAY)));
+                .append(Component.text(categoryName == null ? "Uncategorized" : categoryName, NamedTextColor.YELLOW)));
 
         // Placed count and state on same line for bulbs
         int placedCount = group.getPlacedCount();
@@ -162,7 +155,7 @@ public class CircuitAnalyserListener implements Listener {
         }
 
         // Connector Tool button (clickable to get tool)
-        String createToolCommand = "/wireless create " + displayName;
+        String createToolCommand = "/wireless create " + quoteCommandArgument(fullName);
         player.sendMessage(Component.text("[Get Connector Tool]", NamedTextColor.GREEN)
                 .decoration(TextDecoration.BOLD, true)
                 .hoverEvent(HoverEvent.showText(Component.text("Click to receive a Connector Tool for this group", NamedTextColor.YELLOW)))
@@ -194,6 +187,10 @@ public class CircuitAnalyserListener implements Listener {
         }
 
         player.sendMessage(Component.text("═══════════════════════════════", NamedTextColor.DARK_GRAY));
+    }
+
+    private String quoteCommandArgument(String value) {
+        return "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\"";
     }
 
     @EventHandler
@@ -260,41 +257,15 @@ public class CircuitAnalyserListener implements Listener {
     }
 
     private void processCategoryChange(Player player, String input, BaseGroup group, boolean isBulbGroup) {
+        GroupNameParser.ParsedName parsedName = GroupNameParser.parse(group.getDisplayName());
         if (input.equalsIgnoreCase("none") || input.equalsIgnoreCase("uncategorized")) {
-            group.setCategoryId(null);
+            group.setCustomName(parsedName.groupName());
             player.sendMessage(Component.text("✓ Group moved to ", NamedTextColor.GREEN)
                     .append(Component.text("Uncategorized", NamedTextColor.YELLOW)));
         } else {
-            List<Category> playerCategories = categoryManager.getCategoriesByOwner(player.getUniqueId());
-            Category targetCategory = null;
-            
-            // Try to parse as number
-            try {
-                int index = Integer.parseInt(input);
-                if (index >= 1 && index <= playerCategories.size()) {
-                    targetCategory = playerCategories.get(index - 1);
-                }
-            } catch (NumberFormatException ignored) {}
-            
-            // Try to find by name
-            if (targetCategory == null) {
-                for (Category cat : playerCategories) {
-                    if (cat.getName().equalsIgnoreCase(input) || cat.getDisplayName().equalsIgnoreCase(input)) {
-                        targetCategory = cat;
-                        break;
-                    }
-                }
-            }
-            
-            if (targetCategory == null) {
-                player.sendMessage(Component.text("Category not found: " + input, NamedTextColor.RED));
-                player.sendMessage(Component.text("Type 'none' to move to Uncategorized.", NamedTextColor.GRAY));
-                return;
-            }
-            
-            group.setCategoryId(targetCategory.getCategoryId());
+            group.setCustomName(input + "/" + parsedName.groupName());
             player.sendMessage(Component.text("✓ Group moved to category: ", NamedTextColor.GREEN)
-                    .append(Component.text(targetCategory.getDisplayName(), NamedTextColor.YELLOW)));
+                    .append(Component.text(input, NamedTextColor.YELLOW)));
         }
         
         if (isBulbGroup) {
@@ -313,30 +284,16 @@ public class CircuitAnalyserListener implements Listener {
         player.sendMessage(Component.text("✎ ", NamedTextColor.YELLOW)
                 .append(Component.text("Enter new name in chat ", NamedTextColor.GRAY))
                 .append(Component.text("(or 'cancel' to abort, 'reset' for default)", NamedTextColor.DARK_GRAY)));
+        player.sendMessage(Component.text("Use category/group-name to create or move it into a category.", NamedTextColor.GRAY));
     }
 
     /**
      * Initiates a category change operation for a group from the analyser report.
      */
     public static void initiateCategoryChange(Player player, UUID groupId, boolean isBulbGroup, CategoryManager categoryManager) {
-        pendingOperations.put(player.getUniqueId(), new PendingOperation(groupId, isBulbGroup, OperationType.CATEGORY));
-        
-        List<Category> playerCategories = categoryManager.getCategoriesByOwner(player.getUniqueId());
-        
         player.sendMessage(Component.empty());
         player.sendMessage(Component.text("✎ ", NamedTextColor.YELLOW)
-                .append(Component.text("Enter category name or number ", NamedTextColor.GRAY))
-                .append(Component.text("('cancel' to abort, 'none' for uncategorized)", NamedTextColor.DARK_GRAY)));
-        
-        if (!playerCategories.isEmpty()) {
-            player.sendMessage(Component.text("  Your categories:", NamedTextColor.GRAY));
-            for (int i = 0; i < playerCategories.size(); i++) {
-                player.sendMessage(Component.text("  " + (i + 1) + ". ", NamedTextColor.DARK_GRAY)
-                        .append(Component.text(playerCategories.get(i).getDisplayName(), NamedTextColor.YELLOW)));
-            }
-        } else {
-            player.sendMessage(Component.text("  You have no categories yet.", NamedTextColor.GRAY));
-        }
+                .append(Component.text("Rename the group with a prefix like factory/group-name to set its category.", NamedTextColor.GRAY)));
     }
 
     /**

@@ -1,6 +1,1 @@
-# Visual effect settings.
-effects:
-  connection-lines:
-    # How many ticks triggered connection lines are redrawn for debug/analyser viewers.
-    # 20 ticks = 1 second. Lower this if large wireless groups create too many particles.
-    linger-ticks: 10
+# Wireless Redstone configuration.

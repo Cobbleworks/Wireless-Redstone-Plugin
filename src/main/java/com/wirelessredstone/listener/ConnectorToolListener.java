@@ -17,6 +17,9 @@ import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.Container;
+import org.bukkit.block.data.Lightable;
+import org.bukkit.block.data.Powerable;
+import org.bukkit.block.data.Waterlogged;
 import org.bukkit.block.data.type.CopperBulb;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -27,8 +30,6 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -40,10 +41,6 @@ public class ConnectorToolListener implements Listener {
 
     private final LinkedBulbManager bulbManager;
     private final LinkedChestManager chestManager;
-    
-    // Cooldown to prevent duplicate event triggers
-    private final Map<UUID, Long> creationCooldowns = new HashMap<>();
-    private static final long COOLDOWN_MS = 250;
 
     public ConnectorToolListener(LinkedBulbManager bulbManager, LinkedChestManager chestManager) {
         this.bulbManager = bulbManager;
@@ -69,14 +66,6 @@ public class ConnectorToolListener implements Listener {
         // Check if this is a creation mode tool
         if (ConnectorToolFactory.isCreationMode(item)) {
             if (event.getAction() == Action.RIGHT_CLICK_BLOCK) {
-                // Check cooldown to prevent duplicate creation
-                long now = System.currentTimeMillis();
-                Long lastUse = creationCooldowns.get(player.getUniqueId());
-                if (lastUse != null && (now - lastUse) < COOLDOWN_MS) {
-                    return;
-                }
-                creationCooldowns.put(player.getUniqueId(), now);
-                
                 handleCreationModeAdd(player, location, block, item);
             } else if (event.getAction() == Action.LEFT_CLICK_BLOCK) {
                 player.sendMessage(Component.text("This tool is in creation mode. Right-click a block to create the group first.", NamedTextColor.YELLOW));
@@ -135,23 +124,13 @@ public class ConnectorToolListener implements Listener {
             return;
         }
 
-        // Get category from tool if present
-        String categoryName = ConnectorToolFactory.getCategoryName(tool);
-        UUID categoryId = null;
-        if (categoryName != null && !categoryName.isEmpty()) {
-            var categoryManager = WirelessRedstonePlugin.getInstance().getCategoryManager();
-            var category = categoryManager.getCategoryByName(categoryName);
-            if (category.isPresent()) {
-                categoryId = category.get().getCategoryId();
-            }
-        }
-
-        // Get the block material for the variant icon
-        Material variantMaterial = block.getType();
+        Material variantMaterial = bulbType == BulbVariant.BulbType.COPPER_BULB
+                ? convertCopperBulbToWaxedIfNeeded(block)
+                : block.getType();
 
         // Create a new group with the variant material for icon
         UUID groupId = bulbManager.createNewGroupId();
-        bulbManager.preRegisterGroup(groupId, 1, player.getUniqueId(), bulbType, groupName, categoryId, variantMaterial);
+        bulbManager.preRegisterGroup(groupId, 1, player.getUniqueId(), bulbType, groupName, null, variantMaterial);
         
         // Register the bulb at slot 0
         bulbManager.registerPlacedBulb(location, groupId, 0, player.getUniqueId(), bulbType, 1);
@@ -204,19 +183,8 @@ public class ConnectorToolListener implements Listener {
         UUID groupId = chestManager.createNewGroupId();
         int initialSize = isLargeChest ? 2 : 1;
         
-        // Get category from tool if present
-        String categoryName = ConnectorToolFactory.getCategoryName(tool);
-        UUID categoryId = null;
-        if (categoryName != null && !categoryName.isEmpty()) {
-            var categoryManager = WirelessRedstonePlugin.getInstance().getCategoryManager();
-            var category = categoryManager.getCategoryByName(categoryName);
-            if (category.isPresent()) {
-                categoryId = category.get().getCategoryId();
-            }
-        }
-        
         // Pre-register with variant material for icon
-        chestManager.preRegisterGroup(groupId, initialSize, player.getUniqueId(), containerType, groupName, categoryId, variantMaterial);
+        chestManager.preRegisterGroup(groupId, initialSize, player.getUniqueId(), containerType, groupName, null, variantMaterial);
         chestManager.getGroupById(groupId).ifPresent(group ->
                 group.setInventorySize(isLargeChest ? ChestGroup.LARGE_CHEST_INVENTORY_SIZE : ChestGroup.DEFAULT_INVENTORY_SIZE));
         
@@ -273,9 +241,15 @@ public class ConnectorToolListener implements Listener {
     }
 
     private void addBulbToGroup(Player player, Location location, Block block, UUID groupId) {
-        // Check if block is already in a group
-        if (bulbManager.isWirelessBulbLocation(location)) {
-            player.sendMessage(Component.text("This block is already part of a wireless group!", NamedTextColor.RED));
+        Optional<BulbGroup> existingGroupOpt = bulbManager.getGroupByLocation(location);
+        if (existingGroupOpt.isPresent()) {
+            BulbGroup existingGroup = existingGroupOpt.get();
+            if (existingGroup.getGroupId().equals(groupId)) {
+                return;
+            }
+
+            player.sendMessage(Component.text("This block is already part of a different wireless group!", NamedTextColor.RED));
+            player.sendMessage(Component.text("It belongs to: " + existingGroup.getDisplayName(), NamedTextColor.GRAY));
             return;
         }
 
@@ -304,6 +278,10 @@ public class ConnectorToolListener implements Listener {
             return;
         }
 
+        if (bulbType == BulbVariant.BulbType.COPPER_BULB) {
+            material = convertCopperBulbToWaxedIfNeeded(block);
+        }
+
         // Find the first available slot
         int slot = -1;
         for (int i = 0; i < group.getMaxSize(); i++) {
@@ -321,7 +299,6 @@ public class ConnectorToolListener implements Listener {
             }
             group.extendGroup(1);
             slot = group.getMaxSize() - 1;
-            player.sendMessage(Component.text("Group extended to " + group.getMaxSize() + " slots.", NamedTextColor.GRAY));
         }
 
         // Register the bulb
@@ -349,6 +326,30 @@ public class ConnectorToolListener implements Listener {
 
         // Refresh wire view for players viewing this group
         WirelessRedstonePlugin.getInstance().getWireViewManager().refreshSingleGroupViewForGroup(groupId);
+    }
+
+    private Material convertCopperBulbToWaxedIfNeeded(Block block) {
+        Material material = block.getType();
+        Material waxedMaterial = BulbUtils.toWaxedCopperBulb(material);
+        if (waxedMaterial == material) {
+            return material;
+        }
+
+        var oldBlockData = block.getBlockData();
+        block.setType(waxedMaterial, false);
+
+        var newBlockData = block.getBlockData();
+        if (oldBlockData instanceof Lightable oldLightable && newBlockData instanceof Lightable newLightable) {
+            newLightable.setLit(oldLightable.isLit());
+        }
+        if (oldBlockData instanceof Powerable oldPowerable && newBlockData instanceof Powerable newPowerable) {
+            newPowerable.setPowered(oldPowerable.isPowered());
+        }
+        if (oldBlockData instanceof Waterlogged oldWaterlogged && newBlockData instanceof Waterlogged newWaterlogged) {
+            newWaterlogged.setWaterlogged(oldWaterlogged.isWaterlogged());
+        }
+        block.setBlockData(newBlockData, false);
+        return waxedMaterial;
     }
 
     private void addChestToGroup(Player player, Location location, Block block, UUID groupId) {
@@ -458,8 +459,6 @@ public class ConnectorToolListener implements Listener {
             if (isLargeChest && slot2 == -1) {
                 slot2 = (slot == oldSize) ? oldSize + 1 : oldSize;
             }
-            
-            player.sendMessage(Component.text("Group extended to " + group.getMaxSize() + " slots.", NamedTextColor.GRAY));
         }
 
         // Register the chest(s)
