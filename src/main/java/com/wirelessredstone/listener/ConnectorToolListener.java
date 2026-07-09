@@ -299,7 +299,6 @@ public class ConnectorToolListener implements Listener {
             }
             group.extendGroup(1);
             slot = group.getMaxSize() - 1;
-            player.sendMessage(Component.text("Group extended to " + group.getMaxSize() + " slots.", NamedTextColor.GRAY));
         }
 
         // Register the bulb
@@ -460,8 +459,6 @@ public class ConnectorToolListener implements Listener {
             if (isLargeChest && slot2 == -1) {
                 slot2 = (slot == oldSize) ? oldSize + 1 : oldSize;
             }
-            
-            player.sendMessage(Component.text("Group extended to " + group.getMaxSize() + " slots.", NamedTextColor.GRAY));
         }
 
         // Register the chest(s)
