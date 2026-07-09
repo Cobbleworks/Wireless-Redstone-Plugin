@@ -13,7 +13,7 @@ import java.util.List;
 
 /**
  * Factory for creating Circuit Analyser items.
- * Circuit Analysers are used to inspect wireless blocks and display detailed information.
+ * Circuit Analysers are used to analyze wireless blocks and display detailed information.
  */
 public class CircuitAnalyserFactory {
 
@@ -35,7 +35,7 @@ public class CircuitAnalyserFactory {
                         .decoration(TextDecoration.ITALIC, false),
                 Component.empty(),
                 Component.text("Right-click ", NamedTextColor.YELLOW)
-                        .append(Component.text("a wireless block to inspect it", NamedTextColor.GRAY))
+                        .append(Component.text("a wireless block to analyze it", NamedTextColor.GRAY))
                         .decoration(TextDecoration.ITALIC, false),
                 Component.empty(),
                 Component.text("Hold ", NamedTextColor.YELLOW)

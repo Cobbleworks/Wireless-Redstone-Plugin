@@ -154,7 +154,7 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
         switch (subCommand) {
             case "help", "?" -> sendUsage(player);
             case "create" -> handleCreateCommand(player, parsedArgs);
-            case "inspect" -> handleInspectCommand(player, parsedArgs);
+            case "analyze" -> handleAnalyzeCommand(player, parsedArgs);
             case "modify" -> handleModifyCommand(player, parsedArgs);
             case "recover" -> handleRecoverCommand(player, parsedArgs);
             case "gui", "manage", "list" -> handleGUICommand(player, parsedArgs);
@@ -273,10 +273,10 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
     }
 
     /**
-     * Handles /wireless inspect [player]
+     * Handles /wireless analyze [player]
      * Gives the executing player (or specified player) a Circuit Analyser tool.
      */
-    private void handleInspectCommand(Player player, String[] args) {
+    private void handleAnalyzeCommand(Player player, String[] args) {
         Player target = player;
         
         if (args.length >= 2) {
@@ -304,7 +304,7 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
             player.sendMessage(Component.text("You received a ", NamedTextColor.GREEN)
                     .append(Component.text("Circuit Analyser", NamedTextColor.LIGHT_PURPLE))
                     .append(Component.text("!", NamedTextColor.GREEN)));
-            player.sendMessage(Component.text("Right-click any wireless block to inspect it.", NamedTextColor.GRAY));
+            player.sendMessage(Component.text("Right-click any wireless block to analyze it.", NamedTextColor.GRAY));
         } else {
             player.sendMessage(Component.text("Gave a Circuit Analyser to ", NamedTextColor.GREEN)
                     .append(Component.text(target.getName(), NamedTextColor.AQUA)));
@@ -814,7 +814,7 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
                 .append(Component.text(" - Enter a new group name and receive a Connector Tool", NamedTextColor.GRAY)));
         player.sendMessage(Component.text("/wireless create <groupName>", NamedTextColor.YELLOW)
                 .append(Component.text(" - Get a Connector Tool directly; use category/group for categories", NamedTextColor.GRAY)));
-        player.sendMessage(Component.text("/wireless inspect [player]", NamedTextColor.YELLOW)
+        player.sendMessage(Component.text("/wireless analyze [player]", NamedTextColor.YELLOW)
                 .append(Component.text(" - Get a Circuit Analyser tool", NamedTextColor.GRAY)));
         
         // Group management
@@ -839,7 +839,7 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
         if (args.length == 1) {
             String input = args[0].toLowerCase();
             List<String> subCommands = new ArrayList<>(List.of(
-                    "create", "inspect", "modify", "recover",
+                    "create", "analyze", "modify", "recover",
                     "gui", "manage", "list"
             ));
             if (sender.hasPermission("wirelessredstone.admin")) {
@@ -861,8 +861,8 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
                     addGroupNameCompletions(player, input, completions);
                 }
             }
-            // /wireless inspect [player]
-            else if (subCommand.equals("inspect")) {
+            // /wireless analyze [player]
+            else if (subCommand.equals("analyze")) {
                 if (args.length == 2 && sender.hasPermission("wirelessredstone.admin")) {
                     for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
                         if (onlinePlayer.getName().toLowerCase().startsWith(input)) {

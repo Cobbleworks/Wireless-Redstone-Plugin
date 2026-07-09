@@ -17,6 +17,9 @@ import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.Container;
+import org.bukkit.block.data.Lightable;
+import org.bukkit.block.data.Powerable;
+import org.bukkit.block.data.Waterlogged;
 import org.bukkit.block.data.type.CopperBulb;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -27,8 +30,6 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -40,10 +41,6 @@ public class ConnectorToolListener implements Listener {
 
     private final LinkedBulbManager bulbManager;
     private final LinkedChestManager chestManager;
-    
-    // Cooldown to prevent duplicate event triggers
-    private final Map<UUID, Long> creationCooldowns = new HashMap<>();
-    private static final long COOLDOWN_MS = 250;
 
     public ConnectorToolListener(LinkedBulbManager bulbManager, LinkedChestManager chestManager) {
         this.bulbManager = bulbManager;
@@ -69,14 +66,6 @@ public class ConnectorToolListener implements Listener {
         // Check if this is a creation mode tool
         if (ConnectorToolFactory.isCreationMode(item)) {
             if (event.getAction() == Action.RIGHT_CLICK_BLOCK) {
-                // Check cooldown to prevent duplicate creation
-                long now = System.currentTimeMillis();
-                Long lastUse = creationCooldowns.get(player.getUniqueId());
-                if (lastUse != null && (now - lastUse) < COOLDOWN_MS) {
-                    return;
-                }
-                creationCooldowns.put(player.getUniqueId(), now);
-                
                 handleCreationModeAdd(player, location, block, item);
             } else if (event.getAction() == Action.LEFT_CLICK_BLOCK) {
                 player.sendMessage(Component.text("This tool is in creation mode. Right-click a block to create the group first.", NamedTextColor.YELLOW));
@@ -135,8 +124,9 @@ public class ConnectorToolListener implements Listener {
             return;
         }
 
-        // Get the block material for the variant icon
-        Material variantMaterial = block.getType();
+        Material variantMaterial = bulbType == BulbVariant.BulbType.COPPER_BULB
+                ? convertCopperBulbToWaxedIfNeeded(block)
+                : block.getType();
 
         // Create a new group with the variant material for icon
         UUID groupId = bulbManager.createNewGroupId();
@@ -251,9 +241,15 @@ public class ConnectorToolListener implements Listener {
     }
 
     private void addBulbToGroup(Player player, Location location, Block block, UUID groupId) {
-        // Check if block is already in a group
-        if (bulbManager.isWirelessBulbLocation(location)) {
-            player.sendMessage(Component.text("This block is already part of a wireless group!", NamedTextColor.RED));
+        Optional<BulbGroup> existingGroupOpt = bulbManager.getGroupByLocation(location);
+        if (existingGroupOpt.isPresent()) {
+            BulbGroup existingGroup = existingGroupOpt.get();
+            if (existingGroup.getGroupId().equals(groupId)) {
+                return;
+            }
+
+            player.sendMessage(Component.text("This block is already part of a different wireless group!", NamedTextColor.RED));
+            player.sendMessage(Component.text("It belongs to: " + existingGroup.getDisplayName(), NamedTextColor.GRAY));
             return;
         }
 
@@ -280,6 +276,10 @@ public class ConnectorToolListener implements Listener {
             player.sendMessage(Component.text("This block type doesn't match the group!", NamedTextColor.RED));
             player.sendMessage(Component.text("Group uses: " + group.getBulbType().name(), NamedTextColor.GRAY));
             return;
+        }
+
+        if (bulbType == BulbVariant.BulbType.COPPER_BULB) {
+            material = convertCopperBulbToWaxedIfNeeded(block);
         }
 
         // Find the first available slot
@@ -327,6 +327,30 @@ public class ConnectorToolListener implements Listener {
 
         // Refresh wire view for players viewing this group
         WirelessRedstonePlugin.getInstance().getWireViewManager().refreshSingleGroupViewForGroup(groupId);
+    }
+
+    private Material convertCopperBulbToWaxedIfNeeded(Block block) {
+        Material material = block.getType();
+        Material waxedMaterial = BulbUtils.toWaxedCopperBulb(material);
+        if (waxedMaterial == material) {
+            return material;
+        }
+
+        var oldBlockData = block.getBlockData();
+        block.setType(waxedMaterial, false);
+
+        var newBlockData = block.getBlockData();
+        if (oldBlockData instanceof Lightable oldLightable && newBlockData instanceof Lightable newLightable) {
+            newLightable.setLit(oldLightable.isLit());
+        }
+        if (oldBlockData instanceof Powerable oldPowerable && newBlockData instanceof Powerable newPowerable) {
+            newPowerable.setPowered(oldPowerable.isPowered());
+        }
+        if (oldBlockData instanceof Waterlogged oldWaterlogged && newBlockData instanceof Waterlogged newWaterlogged) {
+            newWaterlogged.setWaterlogged(oldWaterlogged.isWaterlogged());
+        }
+        block.setBlockData(newBlockData, false);
+        return waxedMaterial;
     }
 
     private void addChestToGroup(Player player, Location location, Block block, UUID groupId) {

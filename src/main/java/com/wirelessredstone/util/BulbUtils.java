@@ -51,4 +51,18 @@ public class BulbUtils {
             default -> null;
         };
     }
+
+    /**
+     * Converts a non-waxed copper bulb material to its waxed equivalent.
+     * Returns the original material if it is already waxed or not a copper bulb.
+     */
+    public static Material toWaxedCopperBulb(Material material) {
+        return switch (material) {
+            case COPPER_BULB -> Material.WAXED_COPPER_BULB;
+            case EXPOSED_COPPER_BULB -> Material.WAXED_EXPOSED_COPPER_BULB;
+            case WEATHERED_COPPER_BULB -> Material.WAXED_WEATHERED_COPPER_BULB;
+            case OXIDIZED_COPPER_BULB -> Material.WAXED_OXIDIZED_COPPER_BULB;
+            default -> material;
+        };
+    }
 }

@@ -130,7 +130,7 @@ The Connector Tool is a special item given by `/wireless create`. In **existing-
 
 ### **Circuit Analyser**
 
-The Circuit Analyser is a diagnostic tool given by `/wireless inspect`. When held, right-clicking any wireless block displays its group name, owner, group size, and current state in chat. WireView mode activates `AnalyserWireViewTask`, which renders color-coded glowing particle outlines around every block in each group - each group gets a unique color so overlapping groups can be distinguished visually.
+The Circuit Analyser is a diagnostic tool given by `/wireless analyze`. When held, right-clicking any wireless block displays its group name, owner, group size, and current state in chat. WireView mode activates `AnalyserWireViewTask`, which renders color-coded glowing particle outlines around every block in each group - each group gets a unique color so overlapping groups can be distinguished visually.
 
 ## **Player Commands**
 
@@ -146,7 +146,7 @@ All commands require the `wirelessredstone.use` permission (operator by default)
 | `/wireless help` | Show command help |
 | `/wireless create` | Ask for a new group name and give a creation-mode Connector Tool |
 | `/wireless create <groupName>` | Give a Connector Tool for an existing group, or creation-mode tool for a named new group. Use `category/groupName` to categorize it |
-| `/wireless inspect [player]` | Give a Circuit Analyser (admin can target another player) |
+| `/wireless analyze [player]` | Give a Circuit Analyser (admin can target another player) |
 | `/wireless modify name <groupName> <newName>` | Rename a group |
 | `/wireless recover <groupName>` | Restore saved group blocks destroyed by the environment |
 | `/wireless gui [--all]` | Open management GUI |
