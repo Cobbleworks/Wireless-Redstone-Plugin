@@ -156,8 +156,8 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
             case "recover" -> handleRecoverCommand(player, parsedArgs);
             case "gui", "manage", "list" -> handleGUICommand(player, parsedArgs);
             case "reload" -> handleReloadCommand(player);
-            case "analyser-rename" -> handleAnalyserRenameCommand(player, parsedArgs);
-            case "analyser-category" -> handleAnalyserCategoryCommand(player, parsedArgs);
+            case "circuit-rename" -> handleCircuitRenameCommand(player, parsedArgs);
+            case "circuit-category" -> handleCircuitCategoryCommand(player, parsedArgs);
             case "teleport" -> handleTeleportCommand(player, parsedArgs);
             default -> {
                 player.sendMessage(Component.text("Unknown subcommand. Use ", NamedTextColor.RED)
@@ -207,7 +207,7 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
     /**
      * Handles /wireless create [groupName].
      * Without arguments, starts the same chat prompt used by the GUI connector action.
-     * With a name, creates a connector tool for the specified group (or creates a new group if it doesn't exist).
+     * With a name, creates a circuit tool for the specified group (or creates a new group if it doesn't exist).
      * Use category/group-name to make the group appear under a category.
      */
     private void handleCreateCommand(Player player, String[] args) {
@@ -405,7 +405,7 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
         }
 
         bulbManager.saveData();
-        WirelessRedstonePlugin.getInstance().getWireViewManager().refreshSingleGroupViewForGroup(group.getGroupId());
+        WirelessRedstonePlugin.getInstance().getWireViewManager().refreshAllPlayers();
         sendRecoverSummary(player, group, restored, skippedUnplaced, skippedOccupied, skippedUnloaded, NamedTextColor.AQUA, "block");
     }
 
@@ -450,7 +450,7 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
         }
 
         chestManager.saveData();
-        WirelessRedstonePlugin.getInstance().getWireViewManager().refreshSingleGroupViewForGroup(group.getGroupId());
+        WirelessRedstonePlugin.getInstance().getWireViewManager().refreshAllPlayers();
         sendRecoverSummary(player, group, restored, skippedUnplaced, skippedOccupied, skippedUnloaded, NamedTextColor.GOLD, "container");
     }
 
@@ -718,10 +718,10 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
     }
 
     /**
-     * Handles the analyser-rename command triggered from the circuit analyser report.
+     * Handles the circuit-rename command triggered from the circuit report.
      * This initiates a chat input capture for renaming a group.
      */
-    private void handleAnalyserRenameCommand(Player player, String[] args) {
+    private void handleCircuitRenameCommand(Player player, String[] args) {
         if (args.length < 3) {
             return; // Silent fail - this is an internal command
         }
@@ -736,10 +736,10 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
     }
 
     /**
-     * Handles the analyser-category command triggered from the circuit analyser report.
+     * Handles the circuit-category command triggered from the circuit report.
      * This initiates a chat input capture for changing a group's category.
      */
-    private void handleAnalyserCategoryCommand(Player player, String[] args) {
+    private void handleCircuitCategoryCommand(Player player, String[] args) {
         if (args.length < 3) {
             return; // Silent fail - this is an internal command
         }

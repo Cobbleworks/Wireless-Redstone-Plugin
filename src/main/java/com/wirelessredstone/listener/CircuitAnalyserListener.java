@@ -36,7 +36,7 @@ public class CircuitAnalyserListener implements Listener {
 
     private final LinkedBulbManager bulbManager;
     private final LinkedChestManager chestManager;
-    // Pending rename/category operations from the circuit analyser report
+    // Pending rename/category operations from the circuit report
     private static final Map<UUID, PendingOperation> pendingOperations = new ConcurrentHashMap<>();
 
     private record PendingOperation(UUID groupId, boolean isBulbGroup, OperationType type) {}
@@ -95,7 +95,7 @@ public class CircuitAnalyserListener implements Listener {
         // Group Name (clickable to rename) - more prominent
         String fullName = group.getDisplayName();
         String displayName = GroupNameParser.parse(fullName).groupName();
-        String renameCommand = "/wireless analyser-rename " + groupId + " " + (isBulbGroup ? "bulb" : "chest");
+        String renameCommand = "/wireless circuit-rename " + groupId + " " + (isBulbGroup ? "bulb" : "chest");
         player.sendMessage(Component.text("Name: ", NamedTextColor.GRAY)
                 .append(Component.text(displayName, NamedTextColor.WHITE).decoration(TextDecoration.BOLD, true)
                         .hoverEvent(HoverEvent.showText(Component.text("Click to rename", NamedTextColor.YELLOW)))
@@ -244,7 +244,7 @@ public class CircuitAnalyserListener implements Listener {
     }
 
     /**
-     * Initiates a rename operation for a group from the analyser report.
+     * Initiates a rename operation for a group from the circuit report.
      */
     public static void initiateRename(Player player, UUID groupId, boolean isBulbGroup) {
         pendingOperations.put(player.getUniqueId(), new PendingOperation(groupId, isBulbGroup, OperationType.RENAME));
@@ -256,7 +256,7 @@ public class CircuitAnalyserListener implements Listener {
     }
 
     /**
-     * Initiates a category change operation for a group from the analyser report.
+     * Initiates a category change operation for a group from the circuit report.
      */
     public static void initiateCategoryChange(Player player, UUID groupId, boolean isBulbGroup, CategoryManager categoryManager) {
         player.sendMessage(Component.empty());

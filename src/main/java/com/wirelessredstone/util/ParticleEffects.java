@@ -77,7 +77,7 @@ public class ParticleEffects {
     }
 
     /**
-     * Spawns particles when a block is connected to a group using the connector tool.
+     * Spawns particles when a block is connected to a group using the circuit tool.
      * Green particles with upward sparks indicate successful connection.
      */
     public static void spawnConnectParticles(Location location) {
@@ -95,7 +95,7 @@ public class ParticleEffects {
     }
 
     /**
-     * Spawns particles when a block is disconnected from a group using the connector tool.
+     * Spawns particles when a block is disconnected from a group using the circuit tool.
      * Red particles with downward smoke indicate disconnection.
      */
     public static void spawnDisconnectParticles(Location location) {

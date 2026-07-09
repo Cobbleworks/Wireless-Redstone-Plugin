@@ -229,7 +229,7 @@ public class WireViewManager {
 
     /**
      * Enables wire view for a single specific group.
-     * Used by the Connector Tool to show only the group being edited.
+     * Legacy single-group overlay support.
      */
     public void enableSingleGroupView(Player player, UUID groupId, boolean isBulbGroup) {
         UUID playerId = player.getUniqueId();

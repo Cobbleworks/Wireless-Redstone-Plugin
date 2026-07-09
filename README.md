@@ -10,15 +10,14 @@
   <a href="https://github.com/Cobbleworks/Wireless-Redstone-Plugin/releases"><img src="https://img.shields.io/github/v/release/Cobbleworks/Wireless-Redstone-Plugin?include_prereleases&style=flat-square&color=4CAF50" alt="Latest Release"></a>&nbsp;&nbsp;<a href="https://github.com/Cobbleworks/Wireless-Redstone-Plugin/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue?style=flat-square" alt="License"></a>&nbsp;&nbsp;<img src="https://img.shields.io/badge/Java-21+-orange?style=flat-square" alt="Java Version">&nbsp;&nbsp;<img src="https://img.shields.io/badge/Minecraft-1.21+-green?style=flat-square" alt="Minecraft Version">&nbsp;&nbsp;<img src="https://img.shields.io/badge/Platform-Spigot%2FPaper-yellow?style=flat-square" alt="Platform">&nbsp;&nbsp;<img src="https://img.shields.io/badge/Status-Active-brightgreen?style=flat-square" alt="Status">&nbsp;&nbsp;<a href="https://github.com/Cobbleworks/Wireless-Redstone-Plugin/issues"><img src="https://img.shields.io/github/issues/Cobbleworks/Wireless-Redstone-Plugin?style=flat-square&color=orange" alt="Open Issues"></a>
 </p>
 
-Wireless Redstone is an open-source Minecraft plugin that allows players to create named groups of wirelessly linked blocks that synchronize their states or inventories across any distance. Link copper bulbs and redstone lamps into groups that toggle together, or link chests, shulker boxes, and copper chests into shared inventory groups that update in real time. All group data is saved persistently and survives server restarts, with full GUI-based management, a circuit analyser diagnostic tool, a connector tool for rapid assignment, and hopper-compatible container support.
+Wireless Redstone is an open-source Minecraft plugin that allows players to create named groups of wirelessly linked blocks that synchronize their states or inventories across any distance. Link copper bulbs and redstone lamps into groups that toggle together, or link chests, shulker boxes, and copper chests into shared inventory groups that update in real time. All group data is saved persistently and survives server restarts, with full GUI-based management, a unified circuit tool for rapid assignment and inspection, and hopper-compatible container support.
 
 ### **Core Features**
 
 - **Wireless Bulbs and Lamps:** Create linked groups of copper bulbs or redstone lamps that synchronize state across any distance (2-26 blocks per group)
 - **Wireless Containers:** Create linked groups of chests, barrels, shulker boxes, or copper chests that share inventory in real time
 - **Management GUI:** Visual interface for managing all wireless groups with category organization, category descriptions, custom naming, icon assignment, and quick tool buttons
-- **Circuit Analyser:** Diagnostic tool for inspecting wireless blocks with WireView mode showing color-coded glowing outlines per group
-- **Connector Tool:** Management tool for rapidly adding or removing blocks from existing groups, with creation mode for building new groups in place
+- **Circuit Tool:** Management and diagnostic tool for adding/removing blocks, inspecting wireless groups, and showing color-coded glowing outlines per group
 - **Block Recovery:** Recover lost or accidentally broken wireless blocks that still belong to an existing group
 - **All Copper Variants:** Full support for normal, exposed, weathered, and oxidized copper bulbs and chests - including all waxed variants
 - **All Shulker Colors:** Support for all 17 shulker box colors as wireless container variants
@@ -44,8 +43,7 @@ Wireless Redstone is an open-source Minecraft plugin that allows players to crea
 3. [How It Works](#how-it-works)
     - [Wireless Bulbs and Lamps](#wireless-bulbs-and-lamps)
     - [Wireless Containers](#wireless-containers)
-    - [Connector Tool](#connector-tool)
-    - [Circuit Analyser](#circuit-analyser)
+    - [Circuit Tool](#circuit-tool)
 4. [Player Commands](#player-commands)
     - [Command Reference](#command-reference)
 5. [Permissions](#permissions)
@@ -124,13 +122,9 @@ Wireless container groups link chest-type blocks into a shared inventory that al
 
 Hoppers connected to wireless containers interact with the shared inventory directly - items deposited or extracted by hoppers update the shared inventory and are reflected in all linked blocks.
 
-### **Connector Tool**
+### **Circuit Tool**
 
-The Connector Tool is a special item given by `/wireless create`. In **existing-group mode**, right-clicking a compatible block adds it to the group; left-clicking removes it. In **creation mode** (for new groups), the first click registers the first block; subsequent clicks add more. The tool displays a particle outline (via `ConnectorWireViewTask`) around all blocks already in the group so the player can see the current membership while building.
-
-### **Circuit Analyser**
-
-The Circuit Analyser is a diagnostic tool given by `/wireless analyze`. When held, right-clicking any wireless block displays its group name, owner, group size, and current state in chat. WireView mode activates `AnalyserWireViewTask`, which renders color-coded glowing particle outlines around every block in each group - each group gets a unique color so overlapping groups can be distinguished visually.
+The Circuit Tool is a special shears item given by `/wireless create`. In **existing-group mode**, right-clicking a compatible block adds it to the group; left-clicking a block in the active group removes it. Left-clicking a different wireless group displays its group name, owner, group size, and current state in chat. In **creation mode** (for new groups), the first right-click registers the first block; subsequent right-clicks add more. While held, the tool renders color-coded glowing outlines around every wireless group so overlapping groups can be distinguished visually.
 
 ## **Player Commands**
 
@@ -144,9 +138,8 @@ All commands require the `wirelessredstone.use` permission (operator by default)
 |---------|-------------|
 | `/wireless` | Open management GUI (same as `/wireless gui`) |
 | `/wireless help` | Show command help |
-| `/wireless create` | Ask for a new group name and give a creation-mode Connector Tool |
-| `/wireless create <groupName>` | Give a Connector Tool for an existing group, or creation-mode tool for a named new group. Use `category/groupName` to categorize it |
-| `/wireless analyze [player]` | Give a Circuit Analyser (admin can target another player) |
+| `/wireless create` | Ask for a new group name and give a creation-mode Circuit Tool |
+| `/wireless create <groupName>` | Give a Circuit Tool for an existing group, or creation-mode tool for a named new group. Use `category/groupName` to categorize it |
 | `/wireless modify name <groupName> <newName>` | Rename a group |
 | `/wireless recover <groupName>` | Restore saved group blocks destroyed by the environment |
 | `/wireless gui [--all]` | Open management GUI |
@@ -196,7 +189,6 @@ src/main/
 │   │   ├── CategorySelectionGUI.java          - Connector prompt and legacy category GUI
 │   │   └── GroupEntry.java                    - GUI item entry model
 │   ├── listener/
-│   │   ├── AnalyserWireViewTask.java          - Analyser WireView particle rendering
 │   │   ├── BulbBreakListener.java             - Handles wireless bulb block breaks
 │   │   ├── BulbInteractionListener.java       - Handles bulb toggle and sync
 │   │   ├── BulbPlaceListener.java             - Registers placed wireless bulb blocks
@@ -204,8 +196,8 @@ src/main/
 │   │   ├── ChestInventoryListener.java        - Shared inventory interception
 │   │   ├── ChestPlaceListener.java            - Registers placed wireless container blocks
 │   │   ├── ChunkLoadListener.java             - Re-applies block states on chunk load
-│   │   ├── CircuitAnalyserListener.java       - Circuit analyser inspection handling
-│   │   ├── ConnectorToolListener.java         - Connector tool group build/edit
+│   │   ├── CircuitAnalyserListener.java       - Circuit report chat handling
+│   │   ├── ConnectorToolListener.java         - Circuit tool group build/edit
 │   │   ├── GUIListener.java                   - GUI click event handling
 │   │   └── WireViewListener.java              - WireView display toggle
 │   ├── manager/
@@ -219,9 +211,8 @@ src/main/
 │   │   ├── Category.java                      - Category model (name, icon, owner)
 │   │   └── ChestGroup.java                    - Container group model (inventory, locations)
 │   ├── task/
-│   │   ├── AnalyserWireViewTask.java          - Repeating task for analyser particle display
 │   │   ├── BulbSyncTask.java                  - Repeating task for bulb state propagation
-│   │   └── ConnectorWireViewTask.java         - Repeating task for connector particle display
+│   │   └── ConnectorWireViewTask.java         - Repeating task for circuit tool overlay display
 │   └── util/
 │       ├── BulbUtils.java                     - Copper variant helpers
 │       ├── LocationUtils.java                 - World/coordinate serialization

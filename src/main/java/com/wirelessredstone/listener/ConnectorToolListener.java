@@ -170,6 +170,8 @@ public class ConnectorToolListener implements Listener {
                 .append(Component.text(" with first ", NamedTextColor.GREEN))
                 .append(Component.text(bulbType == BulbVariant.BulbType.REDSTONE_LAMP ? "lamp" : "bulb", NamedTextColor.YELLOW))
                 .append(Component.text(" at slot A (1/1)", NamedTextColor.GRAY)));
+
+        refreshCircuitOverlay();
     }
 
     private void createChestGroupFromTool(Player player, Location location, Block block, String groupName,
@@ -235,6 +237,8 @@ public class ConnectorToolListener implements Listener {
                 .append(Component.text(" with first ", NamedTextColor.GREEN))
                 .append(Component.text(containerLabel, NamedTextColor.YELLOW))
                 .append(Component.text(sizeText, NamedTextColor.GRAY)));
+
+        refreshCircuitOverlay();
     }
 
     /**
@@ -349,8 +353,7 @@ public class ConnectorToolListener implements Listener {
                 .append(Component.text(String.valueOf(slotLabel), NamedTextColor.YELLOW))
                 .append(Component.text(" (" + group.getPlacedCount() + "/" + group.getMaxSize() + ")", NamedTextColor.GRAY)));
 
-        // Refresh wire view for players viewing this group
-        WirelessRedstonePlugin.getInstance().getWireViewManager().refreshSingleGroupViewForGroup(groupId);
+        refreshCircuitOverlay();
     }
 
     private Material convertCopperBulbToWaxedIfNeeded(Block block) {
@@ -514,8 +517,7 @@ public class ConnectorToolListener implements Listener {
                     .append(Component.text(" (" + group.getPlacedCount() + "/" + group.getMaxSize() + ")", NamedTextColor.GRAY)));
         }
 
-        // Refresh wire view for players viewing this group
-        WirelessRedstonePlugin.getInstance().getWireViewManager().refreshSingleGroupViewForGroup(groupId);
+        refreshCircuitOverlay();
     }
 
     private void removeBulbFromGroup(Player player, Location location, UUID groupId) {
@@ -552,8 +554,7 @@ public class ConnectorToolListener implements Listener {
                 .append(Component.text(String.valueOf(slotLabel), NamedTextColor.YELLOW))
                 .append(Component.text(", group now has " + group.getMaxSize() + " slots)", NamedTextColor.GRAY)));
 
-        // Refresh wire view for players viewing this group
-        WirelessRedstonePlugin.getInstance().getWireViewManager().refreshSingleGroupViewForGroup(groupId);
+        refreshCircuitOverlay();
     }
 
     private void removeChestFromGroup(Player player, Location location, UUID groupId) {
@@ -596,8 +597,11 @@ public class ConnectorToolListener implements Listener {
                 .append(Component.text(slotText, NamedTextColor.YELLOW))
                 .append(Component.text(", group now has " + group.getMaxSize() + " slots)", NamedTextColor.GRAY)));
 
-        // Refresh wire view for players viewing this group
-        WirelessRedstonePlugin.getInstance().getWireViewManager().refreshSingleGroupViewForGroup(groupId);
+        refreshCircuitOverlay();
+    }
+
+    private void refreshCircuitOverlay() {
+        WirelessRedstonePlugin.getInstance().getWireViewManager().refreshAllPlayers();
     }
 
     private ChestVariant.ContainerType getContainerTypeFromMaterial(Material material) {

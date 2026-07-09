@@ -495,7 +495,7 @@ public class BulbManagerGUI implements InventoryHolder {
         player.sendMessage(Component.text("Name: ", NamedTextColor.GRAY)
                 .append(Component.text(displayName, NamedTextColor.WHITE).decoration(TextDecoration.BOLD, true)
                         .hoverEvent(HoverEvent.showText(Component.text("Click to rename", NamedTextColor.YELLOW)))
-                        .clickEvent(ClickEvent.runCommand("/wireless analyser-rename " + groupId + " " + groupType)))
+                        .clickEvent(ClickEvent.runCommand("/wireless circuit-rename " + groupId + " " + groupType)))
                 .append(Component.text(" ✎", NamedTextColor.DARK_GRAY)));
 
         player.sendMessage(Component.text("Category: ", NamedTextColor.GRAY)
