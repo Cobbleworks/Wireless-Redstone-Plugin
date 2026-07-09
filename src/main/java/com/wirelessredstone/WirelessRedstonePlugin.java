@@ -15,7 +15,6 @@ import com.wirelessredstone.manager.CategoryManager;
 import com.wirelessredstone.manager.LinkedBulbManager;
 import com.wirelessredstone.manager.LinkedChestManager;
 import com.wirelessredstone.manager.WireViewManager;
-import com.wirelessredstone.task.AnalyserWireViewTask;
 import com.wirelessredstone.task.BulbSyncTask;
 import com.wirelessredstone.task.ConnectorWireViewTask;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -29,7 +28,6 @@ public class WirelessRedstonePlugin extends JavaPlugin {
     private CategoryManager categoryManager;
     private WireViewManager wireViewManager;
     private BukkitTask syncTask;
-    private AnalyserWireViewTask analyserWireViewTask;
     private ConnectorWireViewTask connectorWireViewTask;
 
     @Override
@@ -53,10 +51,6 @@ public class WirelessRedstonePlugin extends JavaPlugin {
     public void onDisable() {
         if (syncTask != null) {
             syncTask.cancel();
-        }
-        if (analyserWireViewTask != null) {
-            analyserWireViewTask.cleanupAll();
-            analyserWireViewTask.cancel();
         }
         if (connectorWireViewTask != null) {
             connectorWireViewTask.cleanupAll();
@@ -96,14 +90,13 @@ public class WirelessRedstonePlugin extends JavaPlugin {
         pluginManager.registerEvents(new ChunkLoadListener(bulbManager, chestManager), this);
         pluginManager.registerEvents(new GUIListener(bulbManager, chestManager, categoryManager), this);
         pluginManager.registerEvents(new WireViewListener(wireViewManager), this);
-        pluginManager.registerEvents(new CircuitAnalyserListener(bulbManager, chestManager, categoryManager), this);
-        pluginManager.registerEvents(new ConnectorToolListener(bulbManager, chestManager), this);
+        var circuitAnalyserListener = new CircuitAnalyserListener(bulbManager, chestManager, categoryManager);
+        pluginManager.registerEvents(circuitAnalyserListener, this);
+        pluginManager.registerEvents(new ConnectorToolListener(bulbManager, chestManager, circuitAnalyserListener), this);
     }
 
     private void startTasks() {
         syncTask = new BulbSyncTask(bulbManager).runTaskTimer(this, 1L, 1L);
-        analyserWireViewTask = new AnalyserWireViewTask(this, wireViewManager);
-        analyserWireViewTask.runTaskTimer(this, 10L, 10L); // Run every 10 ticks (0.5 seconds)
         connectorWireViewTask = new ConnectorWireViewTask(this, wireViewManager);
         connectorWireViewTask.runTaskTimer(this, 10L, 10L); // Run every 10 ticks (0.5 seconds)
     }
@@ -126,10 +119,6 @@ public class WirelessRedstonePlugin extends JavaPlugin {
 
     public WireViewManager getWireViewManager() {
         return wireViewManager;
-    }
-
-    public AnalyserWireViewTask getAnalyserWireViewTask() {
-        return analyserWireViewTask;
     }
 
     public ConnectorWireViewTask getConnectorWireViewTask() {

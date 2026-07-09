@@ -39,7 +39,7 @@ public class ChestPlaceListener implements Listener {
         if (otherHalfLocation != null && chestManager.isWirelessChestLocation(otherHalfLocation)) {
             event.setCancelled(true);
             event.getPlayer().sendMessage(Component.text("Wireless single chests cannot be merged into large chests.", NamedTextColor.RED));
-            event.getPlayer().sendMessage(Component.text("Create a separate large-chest group with the connector tool instead.", NamedTextColor.GRAY));
+            event.getPlayer().sendMessage(Component.text("Create a separate large-chest group with the circuit tool instead.", NamedTextColor.GRAY));
             return;
         }
         
@@ -67,7 +67,7 @@ public class ChestPlaceListener implements Listener {
         if (isLargeChest) {
             event.setCancelled(true);
             event.getPlayer().sendMessage(Component.text("Wireless chest items cannot be placed as part of a large chest.", NamedTextColor.RED));
-            event.getPlayer().sendMessage(Component.text("Use the connector tool on an existing large chest to create a large-chest group.", NamedTextColor.GRAY));
+            event.getPlayer().sendMessage(Component.text("Use the circuit tool on an existing large chest to create a large-chest group.", NamedTextColor.GRAY));
             return;
         }
 

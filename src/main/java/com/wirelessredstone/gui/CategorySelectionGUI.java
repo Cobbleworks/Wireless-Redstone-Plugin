@@ -3,7 +3,6 @@ package com.wirelessredstone.gui;
 import com.wirelessredstone.manager.CategoryManager;
 import com.wirelessredstone.manager.LinkedBulbManager;
 import com.wirelessredstone.manager.LinkedChestManager;
-import com.wirelessredstone.item.CircuitAnalyserFactory;
 import com.wirelessredstone.item.ConnectorToolFactory;
 import com.wirelessredstone.model.BaseGroup;
 import com.wirelessredstone.model.BulbGroup;
@@ -103,7 +102,6 @@ public class CategorySelectionGUI implements InventoryHolder {
         }
 
         inventory.setItem(46, createConnectorToolItem());
-        inventory.setItem(47, createCircuitAnalyserItem());
 
         // Create category button
         inventory.setItem(51, createNewCategoryItem());
@@ -173,27 +171,13 @@ public class CategorySelectionGUI implements InventoryHolder {
     private ItemStack createConnectorToolItem() {
         ItemStack item = new ItemStack(Material.SHEARS);
         ItemMeta meta = item.getItemMeta();
-        meta.displayName(Component.text("Get Connector Tool", NamedTextColor.GREEN)
+        meta.displayName(Component.text("Get Circuit Tool", NamedTextColor.GREEN)
                 .decoration(TextDecoration.ITALIC, false)
                 .decoration(TextDecoration.BOLD, true));
         meta.lore(List.of(
-                Component.text("Click to create a connector", NamedTextColor.GRAY)
+                Component.text("Click to create a circuit", NamedTextColor.GRAY)
                         .decoration(TextDecoration.ITALIC, false),
                 Component.text("tool for a new/existing group", NamedTextColor.GRAY)
-                        .decoration(TextDecoration.ITALIC, false)
-        ));
-        item.setItemMeta(meta);
-        return item;
-    }
-
-    private ItemStack createCircuitAnalyserItem() {
-        ItemStack item = new ItemStack(Material.AMETHYST_SHARD);
-        ItemMeta meta = item.getItemMeta();
-        meta.displayName(Component.text("Get Circuit Analyser", NamedTextColor.LIGHT_PURPLE)
-                .decoration(TextDecoration.ITALIC, false)
-                .decoration(TextDecoration.BOLD, true));
-        meta.lore(List.of(
-                Component.text("Click to receive the analyser", NamedTextColor.GRAY)
                         .decoration(TextDecoration.ITALIC, false)
         ));
         item.setItemMeta(meta);
@@ -347,12 +331,6 @@ public class CategorySelectionGUI implements InventoryHolder {
 
         if (slot == 46) {
             startConnectorToolPrompt(player, null, categoryManager);
-            return;
-        }
-
-        if (slot == 47) {
-            giveItemToPlayer(player, CircuitAnalyserFactory.createCircuitAnalyser());
-            player.sendMessage(Component.text("You received a Circuit Analyser!", NamedTextColor.GREEN));
             return;
         }
 
@@ -515,7 +493,7 @@ public class CategorySelectionGUI implements InventoryHolder {
                                                           ConnectorToolFactory.GroupType groupType, NamedTextColor groupColor) {
         if (!player.hasPermission("wirelessredstone.admin")
                 && !player.getUniqueId().equals(group.getOwnerUuid())) {
-            player.sendMessage(Component.text("You can only get connector tools for your own groups.", NamedTextColor.RED));
+            player.sendMessage(Component.text("You can only get circuit tools for your own groups.", NamedTextColor.RED));
             return false;
         }
 
@@ -524,7 +502,7 @@ public class CategorySelectionGUI implements InventoryHolder {
                 group.getDisplayName(),
                 groupType
         ));
-        player.sendMessage(Component.text("You received a Connector Tool for group ", NamedTextColor.GREEN)
+        player.sendMessage(Component.text("You received a Circuit Tool for group ", NamedTextColor.GREEN)
                 .append(Component.text(group.getDisplayName(), groupColor))
                 .append(Component.text(".", NamedTextColor.GREEN)));
         return true;
@@ -577,7 +555,7 @@ public class CategorySelectionGUI implements InventoryHolder {
                         ? categoryName + "/" + groupName
                         : groupName;
                 giveItemToPlayer(player, ConnectorToolFactory.createCreationModeConnectorTool(storedGroupName));
-                player.sendMessage(Component.text("You received a Connector Tool for new group ", NamedTextColor.GREEN)
+                player.sendMessage(Component.text("You received a Circuit Tool for new group ", NamedTextColor.GREEN)
                         .append(Component.text(storedGroupName, NamedTextColor.LIGHT_PURPLE))
                         .append(Component.text(".", NamedTextColor.GREEN)));
                 return;

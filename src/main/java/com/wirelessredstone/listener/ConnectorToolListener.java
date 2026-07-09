@@ -34,17 +34,20 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Listener for Connector Tool interactions.
+ * Listener for Circuit Tool interactions.
  * Handles right-click to add blocks to a group and left-click to remove blocks from a group.
  */
 public class ConnectorToolListener implements Listener {
 
     private final LinkedBulbManager bulbManager;
     private final LinkedChestManager chestManager;
+    private final CircuitAnalyserListener circuitAnalyserListener;
 
-    public ConnectorToolListener(LinkedBulbManager bulbManager, LinkedChestManager chestManager) {
+    public ConnectorToolListener(LinkedBulbManager bulbManager, LinkedChestManager chestManager,
+                                 CircuitAnalyserListener circuitAnalyserListener) {
         this.bulbManager = bulbManager;
         this.chestManager = chestManager;
+        this.circuitAnalyserListener = circuitAnalyserListener;
     }
 
     @EventHandler(priority = EventPriority.HIGH)
@@ -78,7 +81,7 @@ public class ConnectorToolListener implements Listener {
         ConnectorToolFactory.GroupType groupType = ConnectorToolFactory.getGroupType(item);
 
         if (groupId == null || groupType == null) {
-            player.sendMessage(Component.text("Invalid connector tool!", NamedTextColor.RED));
+            player.sendMessage(Component.text("Invalid circuit tool!", NamedTextColor.RED));
             return;
         }
 
@@ -86,9 +89,31 @@ public class ConnectorToolListener implements Listener {
             // Add block to group
             handleAddBlock(player, location, block, groupId, groupType);
         } else if (event.getAction() == Action.LEFT_CLICK_BLOCK) {
+            if (displayOtherGroupInfo(player, location, groupId)) {
+                return;
+            }
             // Remove block from group
             handleRemoveBlock(player, location, groupId, groupType);
         }
+    }
+
+    private boolean displayOtherGroupInfo(Player player, Location location, UUID currentGroupId) {
+        Optional<BulbGroup> bulbGroup = bulbManager.getGroupByLocation(location);
+        if (bulbGroup.isPresent()) {
+            if (!bulbGroup.get().getGroupId().equals(currentGroupId)) {
+                circuitAnalyserListener.displayBlockInfo(player, location);
+                return true;
+            }
+            return false;
+        }
+
+        Optional<ChestGroup> chestGroup = chestManager.getGroupByLocation(location);
+        if (chestGroup.isPresent() && !chestGroup.get().getGroupId().equals(currentGroupId)) {
+            circuitAnalyserListener.displayBlockInfo(player, location);
+            return true;
+        }
+
+        return false;
     }
 
     private void handleCreationModeAdd(Player player, Location location, Block block, ItemStack tool) {

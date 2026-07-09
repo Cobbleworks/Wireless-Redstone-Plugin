@@ -13,8 +13,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Factory for creating Connector Tool items.
- * Connector Tools are used to add/remove blocks from wireless groups.
+ * Factory for creating Circuit Tool items.
+ * Circuit Tools are used to analyze groups and add/remove blocks from wireless groups.
  */
 public class ConnectorToolFactory {
 
@@ -33,7 +33,7 @@ public class ConnectorToolFactory {
     }
 
     /**
-     * Creates a new Connector Tool item for a specific group.
+     * Creates a new Circuit Tool item for a specific group.
      */
     public static ItemStack createConnectorTool(UUID groupId, String groupName, GroupType groupType) {
         ItemStack item = new ItemStack(Material.SHEARS);
@@ -42,7 +42,7 @@ public class ConnectorToolFactory {
         NamedTextColor typeColor = groupType == GroupType.BULB ? NamedTextColor.AQUA : NamedTextColor.GOLD;
         String typeLabel = groupType == GroupType.BULB ? "Bulb/Lamp" : "Container";
 
-        meta.displayName(Component.text("Connector Tool ", NamedTextColor.GREEN)
+        meta.displayName(Component.text("Circuit Tool ", NamedTextColor.GREEN)
                 .decoration(TextDecoration.ITALIC, false)
                 .decoration(TextDecoration.BOLD, true)
                 .append(Component.text("(" + groupName + ")", typeColor)
@@ -62,6 +62,12 @@ public class ConnectorToolFactory {
                 Component.text("Left-click ", NamedTextColor.YELLOW)
                         .append(Component.text("a group block to remove it", NamedTextColor.GRAY))
                         .decoration(TextDecoration.ITALIC, false),
+                Component.text("Left-click ", NamedTextColor.YELLOW)
+                        .append(Component.text("another group to analyze it", NamedTextColor.GRAY))
+                        .decoration(TextDecoration.ITALIC, false),
+                Component.text("Hold ", NamedTextColor.YELLOW)
+                        .append(Component.text("to reveal wireless circuits", NamedTextColor.GRAY))
+                        .decoration(TextDecoration.ITALIC, false),
                 Component.empty(),
                 Component.text("ID: ", NamedTextColor.DARK_GRAY)
                         .append(Component.text(groupId.toString().substring(0, 8), NamedTextColor.DARK_GRAY))
@@ -78,7 +84,7 @@ public class ConnectorToolFactory {
     }
 
     /**
-     * Creates a new Connector Tool in "creation mode" for creating a new group.
+     * Creates a new Circuit Tool in "creation mode" for creating a new group.
      * The first block added will determine the group type (bulb/lamp or chest).
      */
     public static ItemStack createCreationModeConnectorTool(String groupName) {
@@ -86,14 +92,14 @@ public class ConnectorToolFactory {
     }
 
     /**
-     * Creates a new Connector Tool in "creation mode" for creating a new group with an optional category.
+     * Creates a new Circuit Tool in "creation mode" for creating a new group with an optional category.
      * The first block added will determine the group type (bulb/lamp or chest).
      */
     public static ItemStack createCreationModeConnectorTool(String groupName, String categoryName) {
         ItemStack item = new ItemStack(Material.SHEARS);
         ItemMeta meta = item.getItemMeta();
 
-        meta.displayName(Component.text("Creation Tool ", NamedTextColor.GREEN)
+        meta.displayName(Component.text("Circuit Tool ", NamedTextColor.GREEN)
                 .decoration(TextDecoration.ITALIC, false)
                 .decoration(TextDecoration.BOLD, true)
                 .append(Component.text("(" + groupName + ")", NamedTextColor.LIGHT_PURPLE)
@@ -115,6 +121,9 @@ public class ConnectorToolFactory {
         loreLines.add(Component.text("Right-click ", NamedTextColor.YELLOW)
                 .append(Component.text("a bulb/lamp/chest to create group", NamedTextColor.GRAY))
                 .decoration(TextDecoration.ITALIC, false));
+        loreLines.add(Component.text("Hold ", NamedTextColor.YELLOW)
+                .append(Component.text("to reveal wireless circuits", NamedTextColor.GRAY))
+                .decoration(TextDecoration.ITALIC, false));
         loreLines.add(Component.empty());
         loreLines.add(Component.text("⚡ ", NamedTextColor.LIGHT_PURPLE)
                 .append(Component.text("Creation Mode", NamedTextColor.LIGHT_PURPLE))
@@ -134,7 +143,7 @@ public class ConnectorToolFactory {
     }
 
     /**
-     * Checks if an item is a Connector Tool.
+     * Checks if an item is a Circuit Tool.
      */
     public static boolean isConnectorTool(ItemStack item) {
         if (item == null || !item.hasItemMeta()) return false;
@@ -142,7 +151,7 @@ public class ConnectorToolFactory {
     }
 
     /**
-     * Gets the group ID from a Connector Tool.
+     * Gets the group ID from a Circuit Tool.
      */
     public static UUID getGroupId(ItemStack item) {
         if (!isConnectorTool(item)) return null;
@@ -151,7 +160,7 @@ public class ConnectorToolFactory {
     }
 
     /**
-     * Gets the group type from a Connector Tool.
+     * Gets the group type from a Circuit Tool.
      */
     public static GroupType getGroupType(ItemStack item) {
         if (!isConnectorTool(item)) return null;
@@ -165,7 +174,7 @@ public class ConnectorToolFactory {
     }
 
     /**
-     * Checks if the Connector Tool is in creation mode (no group exists yet).
+     * Checks if the Circuit Tool is in creation mode (no group exists yet).
      */
     public static boolean isCreationMode(ItemStack item) {
         if (!isConnectorTool(item)) return false;
@@ -173,7 +182,7 @@ public class ConnectorToolFactory {
     }
 
     /**
-     * Gets the group name from a Connector Tool (works for both regular and creation mode).
+     * Gets the group name from a Circuit Tool (works for both regular and creation mode).
      */
     public static String getGroupName(ItemStack item) {
         if (!isConnectorTool(item)) return null;
@@ -181,7 +190,7 @@ public class ConnectorToolFactory {
     }
 
     /**
-     * Gets the category name from a creation-mode Connector Tool.
+     * Gets the category name from a creation-mode Circuit Tool.
      * Returns null if no category is set or if not in creation mode.
      */
     public static String getCategoryName(ItemStack item) {

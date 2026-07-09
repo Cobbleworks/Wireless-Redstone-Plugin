@@ -8,7 +8,7 @@ author: Developer
 commands:
   wireless:
     description: Wireless Redstone commands
-    usage: /wireless <create|analyze|modify|recover|gui> [options]
+    usage: /wireless <create|modify|recover|gui> [options]
     permission: wirelessredstone.use
     aliases: [wr]
 
