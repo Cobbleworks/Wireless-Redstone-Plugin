@@ -50,6 +50,7 @@ public class ConnectorToolListener implements Listener {
     private final LinkedChestManager chestManager;
     private final CircuitAnalyserListener circuitAnalyserListener;
     private final Set<UUID> handledLeftClickPlayers = ConcurrentHashMap.newKeySet();
+    private final Set<UUID> handledExplicitClickPlayers = ConcurrentHashMap.newKeySet();
 
     public ConnectorToolListener(LinkedBulbManager bulbManager, LinkedChestManager chestManager,
                                  CircuitAnalyserListener circuitAnalyserListener) {
@@ -73,6 +74,7 @@ public class ConnectorToolListener implements Listener {
         event.setCancelled(true);
 
         Location location = block.getLocation();
+        markExplicitClick(player);
 
         // Check if this is a creation mode tool
         if (ConnectorToolFactory.isCreationMode(item)) {
@@ -115,6 +117,7 @@ public class ConnectorToolListener implements Listener {
 
         Block block = event.getBlock();
         event.setCancelled(true);
+        markExplicitClick(player);
         handleLeftClickRemove(player, block.getLocation());
     }
 
@@ -133,8 +136,17 @@ public class ConnectorToolListener implements Listener {
         Block target = player.getTargetBlockExact(6, FluidCollisionMode.NEVER);
         if (target == null || !isWirelessLocation(target.getLocation())) return;
 
-        event.setCancelled(true);
-        handleLeftClickRemove(player, target.getLocation());
+        Location location = target.getLocation();
+        WirelessRedstonePlugin plugin = WirelessRedstonePlugin.getInstance();
+        plugin.getServer().getScheduler().runTask(plugin, () -> {
+            if (!player.isOnline() || handledExplicitClickPlayers.contains(player.getUniqueId())) {
+                return;
+            }
+            if (isEditingTool(player.getInventory().getItemInMainHand())
+                    && isWirelessLocation(location)) {
+                handleLeftClickRemove(player, location);
+            }
+        });
     }
 
     private boolean isEditingTool(ItemStack item) {
@@ -145,6 +157,14 @@ public class ConnectorToolListener implements Listener {
     private boolean isWirelessLocation(Location location) {
         return bulbManager.isWirelessBulbLocation(location)
                 || chestManager.isWirelessChestLocation(location);
+    }
+
+    private void markExplicitClick(Player player) {
+        UUID playerId = player.getUniqueId();
+        handledExplicitClickPlayers.add(playerId);
+        WirelessRedstonePlugin plugin = WirelessRedstonePlugin.getInstance();
+        plugin.getServer().getScheduler().runTaskLater(plugin,
+                () -> handledExplicitClickPlayers.remove(playerId), 2L);
     }
 
     private void handleLeftClickRemove(Player player, Location location) {
