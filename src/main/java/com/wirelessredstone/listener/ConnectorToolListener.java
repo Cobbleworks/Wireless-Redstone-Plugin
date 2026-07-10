@@ -26,16 +26,13 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
-import org.bukkit.event.block.BlockDamageEvent;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Listener for Circuit Tool interactions.
@@ -46,7 +43,6 @@ public class ConnectorToolListener implements Listener {
     private final LinkedBulbManager bulbManager;
     private final LinkedChestManager chestManager;
     private final CircuitAnalyserListener circuitAnalyserListener;
-    private final Set<UUID> handledLeftClickPlayers = ConcurrentHashMap.newKeySet();
 
     public ConnectorToolListener(LinkedBulbManager bulbManager, LinkedChestManager chestManager,
                                  CircuitAnalyserListener circuitAnalyserListener) {
@@ -96,25 +92,8 @@ public class ConnectorToolListener implements Listener {
             }
             handleAddBlock(player, location, block, groupId, groupType);
         } else if (event.getAction() == Action.LEFT_CLICK_BLOCK) {
-            handleLeftClickRemove(player, location);
+            handleRemoveBlock(player, location);
         }
-    }
-
-    @EventHandler(priority = EventPriority.HIGH)
-    public void onBlockDamage(BlockDamageEvent event) {
-        Player player = event.getPlayer();
-        ItemStack item = player.getInventory().getItemInMainHand();
-
-        if (!ConnectorToolFactory.isConnectorTool(item) || ConnectorToolFactory.isCreationMode(item)) {
-            return;
-        }
-
-        event.setCancelled(true);
-        if (handledLeftClickPlayers.contains(player.getUniqueId())) {
-            return;
-        }
-
-        handleLeftClickRemove(player, event.getBlock().getLocation());
     }
 
     private boolean displayExistingGroupInfo(Player player, Location location) {
@@ -279,23 +258,19 @@ public class ConnectorToolListener implements Listener {
         }
     }
 
-    private void handleLeftClickRemove(Player player, Location location) {
-        UUID playerId = player.getUniqueId();
-        handledLeftClickPlayers.add(playerId);
-        WirelessRedstonePlugin.getInstance().getServer().getScheduler().runTask(
-                WirelessRedstonePlugin.getInstance(),
-                () -> handledLeftClickPlayers.remove(playerId));
-
-        handleRemoveBlock(player, location);
-    }
-
     private void handleRemoveBlock(Player player, Location location) {
-        if (bulbManager.getGroupByLocation(location).isPresent()) {
-            removeBulbFromGroup(player, location);
-        } else if (chestManager.getGroupByLocation(location).isPresent()) {
-            removeChestFromGroup(player, location);
-        } else {
-            player.sendMessage(Component.text("This block is not part of any wireless group!", NamedTextColor.RED));
+        try {
+            if (bulbManager.getGroupByLocation(location).isPresent()) {
+                removeBulbFromGroup(player, location);
+            } else if (chestManager.getGroupByLocation(location).isPresent()) {
+                removeChestFromGroup(player, location);
+            } else {
+                player.sendMessage(Component.text("This block is not part of any wireless group!", NamedTextColor.RED));
+            }
+        } catch (Exception e) {
+            WirelessRedstonePlugin.getInstance().getLogger().log(java.util.logging.Level.SEVERE,
+                    "Error removing block at " + location + " via circuit tool", e);
+            player.sendMessage(Component.text("⚠ An internal error occurred while removing this block. Check the console.", NamedTextColor.RED));
         }
     }
 
