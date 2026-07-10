@@ -18,11 +18,9 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
-public class LinkedBulbManager {
+public class LinkedBulbManager extends LinkedGroupManager<BulbGroup> {
 
-    private final WirelessRedstonePlugin plugin;
-    private final Map<UUID, BulbGroup> bulbGroups = new ConcurrentHashMap<>();
-    private final Map<Location, UUID> locationToGroupId = new ConcurrentHashMap<>();
+    private final Map<UUID, BulbGroup> bulbGroups = groups;
     
     public static final NamespacedKey WIRELESS_BULB_KEY;
     public static final NamespacedKey GROUP_ID_KEY;
@@ -41,21 +39,8 @@ public class LinkedBulbManager {
     }
 
     public LinkedBulbManager(WirelessRedstonePlugin plugin) {
-        this.plugin = plugin;
+        super(plugin);
         loadData();
-    }
-
-    /**
-     * Reloads all bulb data from disk, clearing existing data first.
-     */
-    public void reloadData() {
-        bulbGroups.clear();
-        locationToGroupId.clear();
-        loadData();
-    }
-
-    public UUID createNewGroupId() {
-        return UUID.randomUUID();
     }
 
     public boolean isWirelessBulb(ItemStack item) {
@@ -105,78 +90,23 @@ public class LinkedBulbManager {
     }
 
     public void registerPlacedBulb(Location location, UUID groupId, int bulbIndex, UUID ownerUuid, BulbVariant.BulbType bulbType, int groupSize) {
-        Location normalizedLoc = LocationUtils.normalize(location);
-        BulbGroup group = bulbGroups.computeIfAbsent(groupId, id -> new BulbGroup(id, groupSize, ownerUuid, bulbType));
-        
-        // If the item indicates a larger group size (from extension), expand the group
-        if (groupSize > group.getMaxSize()) {
-            group.extendGroup(groupSize - group.getMaxSize());
-        }
-        
-        group.setLocation(bulbIndex, normalizedLoc);
-        if (ownerUuid != null && group.getOwnerUuid() == null) {
-            group.setOwnerUuid(ownerUuid);
-        }
+        BulbGroup group = registerLocation(location, groupId, bulbIndex, groupSize, ownerUuid,
+                (id, size, owner) -> new BulbGroup(id, size, owner, bulbType));
         if (bulbType != null) {
             group.setBulbType(bulbType);
         }
-        locationToGroupId.put(normalizedLoc, groupId);
         saveData();
     }
 
     public void unregisterBulb(Location location) {
-        Location normalizedLoc = LocationUtils.normalize(location);
-        UUID groupId = locationToGroupId.remove(normalizedLoc);
-        if (groupId != null) {
-            BulbGroup group = bulbGroups.get(groupId);
-            if (group != null) {
-                group.removeLocation(normalizedLoc);
-                if (group.isEmpty()) {
-                    bulbGroups.remove(groupId);
-                }
-            }
-        }
-        saveData();
+        unregisterLocation(location);
     }
 
     /**
      * Unregisters a bulb and returns the group ID if the group was removed (empty after unregister).
      */
     public UUID unregisterBulbAndCheckGroupRemoval(Location location) {
-        Location normalizedLoc = LocationUtils.normalize(location);
-        UUID groupId = locationToGroupId.remove(normalizedLoc);
-        if (groupId != null) {
-            BulbGroup group = bulbGroups.get(groupId);
-            if (group != null) {
-                group.removeLocation(normalizedLoc);
-                if (group.isEmpty()) {
-                    bulbGroups.remove(groupId);
-                    saveData();
-                    return groupId;
-                }
-            }
-        }
-        saveData();
-        return null;
-    }
-
-    public void removeGroup(UUID groupId) {
-        removeGroup(groupId, true);
-    }
-
-    public void removeGroup(UUID groupId, boolean removeBlocks) {
-        BulbGroup group = bulbGroups.remove(groupId);
-        if (group != null) {
-            for (Location loc : group.getLocations()) {
-                if (loc != null) {
-                    locationToGroupId.remove(LocationUtils.normalize(loc));
-                    if (removeBlocks && loc.isChunkLoaded()) {
-                        loc.getBlock().setType(org.bukkit.Material.AIR);
-                    }
-                }
-            }
-        }
-        saveData();
+        return unregisterLocationAndCheckGroupRemoval(location);
     }
 
     /**
@@ -204,17 +134,8 @@ public class LinkedBulbManager {
         if (variantMaterial != null) {
             group.setVariantMaterial(variantMaterial);
         }
-        bulbGroups.put(groupId, group);
+        putGroup(group);
         saveData();
-    }
-
-    public Optional<BulbGroup> getGroupById(UUID groupId) {
-        return Optional.ofNullable(bulbGroups.get(groupId));
-    }
-
-    public Optional<BulbGroup> getGroupByLocation(Location location) {
-        UUID groupId = locationToGroupId.get(LocationUtils.normalize(location));
-        return groupId != null ? Optional.ofNullable(bulbGroups.get(groupId)) : Optional.empty();
     }
 
     public List<Location> getOtherBulbLocations(Location location) {
@@ -224,23 +145,7 @@ public class LinkedBulbManager {
     }
 
     public boolean isWirelessBulbLocation(Location location) {
-        return locationToGroupId.containsKey(LocationUtils.normalize(location));
-    }
-
-    public Collection<BulbGroup> getAllGroups() {
-        return bulbGroups.values();
-    }
-
-    public List<BulbGroup> getGroupsByOwner(UUID ownerUuid) {
-        return bulbGroups.values().stream()
-                .filter(group -> ownerUuid.equals(group.getOwnerUuid()))
-                .collect(Collectors.toList());
-    }
-
-    public List<BulbGroup> getAllPlacedGroups() {
-        return bulbGroups.values().stream()
-                .filter(group -> group.getPlacedCount() > 0)
-                .collect(Collectors.toList());
+        return isWirelessLocation(location);
     }
 
     public void saveData() {

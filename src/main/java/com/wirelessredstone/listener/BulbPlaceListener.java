@@ -15,7 +15,7 @@ import org.bukkit.event.block.BlockPlaceEvent;
 import java.util.List;
 import java.util.UUID;
 
-public class BulbPlaceListener implements Listener {
+public class BulbPlaceListener extends WirelessBlockListener {
 
     private final LinkedBulbManager bulbManager;
 
@@ -45,18 +45,6 @@ public class BulbPlaceListener implements Listener {
         var location = event.getBlock().getLocation();
         bulbManager.registerPlacedBulb(location, groupIdOpt.get(), bulbIndexOpt.get(), ownerUuid, bulbType, groupSize);
 
-        ParticleEffects.spawnTriggerParticles(location, false);
-
-        WirelessRedstonePlugin.getInstance().getWireViewManager().refreshAllPlayers();
-
-        bulbManager.getGroupById(groupIdOpt.get()).ifPresent(group -> {
-            List<Location> otherLocations = group.getOtherLocations(location);
-            if (!otherLocations.isEmpty()) {
-                ParticleEffects.spawnSyncParticles(location, false);
-                for (Location otherLoc : otherLocations) {
-                    ParticleEffects.spawnSyncParticles(otherLoc, false);
-                }
-            }
-        });
+        finishPlacement(bulbManager, groupIdOpt.get(), location, group -> {});
     }
 }

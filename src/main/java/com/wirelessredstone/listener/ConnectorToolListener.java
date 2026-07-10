@@ -398,24 +398,12 @@ public class ConnectorToolListener implements Listener {
             material = convertCopperBulbToWaxedIfNeeded(block);
         }
 
-        // Find the first available slot
-        int slot = -1;
-        for (int i = 0; i < group.getMaxSize(); i++) {
-            if (group.getLocation(i) == null) {
-                slot = i;
-                break;
-            }
+        int[] slots = group.allocateSlots(1, 26);
+        if (slots.length == 0) {
+            player.sendMessage(Component.text("This group has reached the maximum size (26)!", NamedTextColor.RED));
+            return;
         }
-
-        // If group is full, auto-extend it
-        if (slot == -1) {
-            if (group.getMaxSize() >= 26) {
-                player.sendMessage(Component.text("This group has reached the maximum size (26)!", NamedTextColor.RED));
-                return;
-            }
-            group.extendGroup(1);
-            slot = group.getMaxSize() - 1;
-        }
+        int slot = slots[0];
 
         // Register the bulb
         bulbManager.registerPlacedBulb(location, groupId, slot, player.getUniqueId(), bulbType, group.getMaxSize());
@@ -535,45 +523,14 @@ public class ConnectorToolListener implements Listener {
             return;
         }
 
-        // Calculate how many slots we need (1 or 2 for large chest)
         int slotsNeeded = isLargeChest ? 2 : 1;
-        
-        // Find available slots
-        int slot = -1;
-        int slot2 = -1;
-        for (int i = 0; i < group.getMaxSize(); i++) {
-            if (group.getLocation(i) == null) {
-                if (slot == -1) {
-                    slot = i;
-                    if (!isLargeChest) break;
-                } else if (slot2 == -1) {
-                    slot2 = i;
-                    break;
-                }
-            }
+        int[] slots = group.allocateSlots(slotsNeeded, 26);
+        if (slots.length == 0) {
+            player.sendMessage(Component.text("This group has reached the maximum size (26)!", NamedTextColor.RED));
+            return;
         }
-
-        // Count available slots
-        int availableSlots = (slot != -1 ? 1 : 0) + (slot2 != -1 ? 1 : 0);
-        int slotsToExtend = slotsNeeded - availableSlots;
-        
-        // If we need more slots, auto-extend
-        if (slotsToExtend > 0) {
-            if (group.getMaxSize() + slotsToExtend > 26) {
-                player.sendMessage(Component.text("This group has reached the maximum size (26)!", NamedTextColor.RED));
-                return;
-            }
-            int oldSize = group.getMaxSize();
-            group.extendGroup(slotsToExtend);
-            
-            // Fill in the newly created slots
-            if (slot == -1) {
-                slot = oldSize;
-            }
-            if (isLargeChest && slot2 == -1) {
-                slot2 = (slot == oldSize) ? oldSize + 1 : oldSize;
-            }
-        }
+        int slot = slots[0];
+        int slot2 = isLargeChest ? slots[1] : -1;
 
         // Register the chest(s)
         chestManager.registerPlacedChest(location, groupId, slot, player.getUniqueId(), group.getMaxSize(), containerType);

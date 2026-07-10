@@ -17,7 +17,7 @@ import org.bukkit.event.block.BlockBreakEvent;
 import java.util.Optional;
 import java.util.UUID;
 
-public class BulbBreakListener implements Listener {
+public class BulbBreakListener extends WirelessBlockListener {
 
     private final LinkedBulbManager bulbManager;
 
@@ -40,26 +40,7 @@ public class BulbBreakListener implements Listener {
         UUID groupId = groupOpt.map(BulbGroup::getGroupId).orElse(null);
         int remainingCount = groupOpt.map(g -> g.getPlacedCount() - 1).orElse(0);
 
-        ParticleEffects.spawnBreakParticles(location);
-
         bulbManager.unregisterBulb(location);
-
-        if (remainingCount <= 0) {
-            player.sendMessage(Component.text("⚡ ", NamedTextColor.YELLOW)
-                    .append(Component.text("Group ", NamedTextColor.GRAY))
-                    .append(Component.text(groupName, NamedTextColor.AQUA))
-                    .append(Component.text(" has been removed (last block broken)", NamedTextColor.GRAY)));
-        } else {
-            player.sendMessage(Component.text("⚡ ", NamedTextColor.YELLOW)
-                    .append(Component.text("Removed from group ", NamedTextColor.GRAY))
-                    .append(Component.text(groupName, NamedTextColor.AQUA))
-                    .append(Component.text(" (" + remainingCount + " remaining)", NamedTextColor.DARK_GRAY)));
-        }
-
-        WirelessRedstonePlugin plugin = WirelessRedstonePlugin.getInstance();
-        plugin.getWireViewManager().refreshAllPlayers();
-        if (groupId != null) {
-            plugin.getWireViewManager().refreshSingleGroupViewForGroup(groupId);
-        }
+        finishBreak(player, location, groupOpt.orElse(null), remainingCount, "block", NamedTextColor.AQUA);
     }
 }

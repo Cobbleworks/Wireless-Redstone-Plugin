@@ -172,25 +172,30 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
     }
 
     private Optional<BulbGroup> findBulbGroupByName(Player player, String name) {
-        UUID playerUuid = player.getUniqueId();
-        boolean isAdmin = player.hasPermission("wirelessredstone.admin");
-        
-        return bulbManager.getAllGroups().stream()
-                .filter(g -> isAdmin || playerUuid.equals(g.getOwnerUuid()))
-                .filter(g -> matchesGroupName(g.getCustomName(), g.getGroupId(), name))
-                .findFirst();
+        return visibleGroups(player).filter(BulbGroup.class::isInstance)
+                .map(BulbGroup.class::cast)
+                .filter(g -> matchesGroupName(g.getCustomName(), g.getGroupId(), name)).findFirst();
     }
 
     private Optional<ChestGroup> findChestGroupByName(Player player, String name) {
-        if (chestManager == null) return Optional.empty();
-        
-        UUID playerUuid = player.getUniqueId();
-        boolean isAdmin = player.hasPermission("wirelessredstone.admin");
-        
-        return chestManager.getAllGroups().stream()
-                .filter(g -> isAdmin || playerUuid.equals(g.getOwnerUuid()))
-                .filter(g -> matchesGroupName(g.getCustomName(), g.getGroupId(), name))
-                .findFirst();
+        return visibleGroups(player).filter(ChestGroup.class::isInstance)
+                .map(ChestGroup.class::cast)
+                .filter(g -> matchesGroupName(g.getCustomName(), g.getGroupId(), name)).findFirst();
+    }
+
+    private Optional<BaseGroup> findGroupByName(Player player, String name) {
+        return visibleGroups(player)
+                .filter(g -> matchesGroupName(g.getCustomName(), g.getGroupId(), name)).findFirst();
+    }
+
+    private java.util.stream.Stream<BaseGroup> visibleGroups(Player player) {
+        var bulbs = bulbManager.getAllGroups().stream().map(BaseGroup.class::cast);
+        var chests = chestManager == null
+                ? java.util.stream.Stream.<BaseGroup>empty()
+                : chestManager.getAllGroups().stream().map(BaseGroup.class::cast);
+        return java.util.stream.Stream.concat(bulbs, chests)
+                .filter(g -> player.hasPermission("wirelessredstone.admin")
+                        || player.getUniqueId().equals(g.getOwnerUuid()));
     }
 
     private boolean matchesGroupName(String customName, UUID groupId, String searchName) {
@@ -223,38 +228,26 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
             groupName = args[2] + "/" + groupName;
         }
 
-        // Search for bulb group first, then chest group
-        Optional<BulbGroup> bulbGroupOpt = findBulbGroupByName(player, groupName);
-        Optional<ChestGroup> chestGroupOpt = findChestGroupByName(player, groupName);
+        Optional<BaseGroup> groupOpt = findGroupByName(player, groupName);
 
-        if (bulbGroupOpt.isPresent()) {
-            BulbGroup group = bulbGroupOpt.get();
+        if (groupOpt.isPresent()) {
+            BaseGroup group = groupOpt.get();
+            boolean bulb = group instanceof BulbGroup;
+            ConnectorToolFactory.GroupType type = bulb
+                    ? ConnectorToolFactory.GroupType.BULB : ConnectorToolFactory.GroupType.CHEST;
+            NamedTextColor color = bulb
+                    ? WireViewManager.getBulbGroupTextColor(group.getGroupId(), bulbManager.getAllPlacedGroups())
+                    : WireViewManager.getChestGroupTextColor(group.getGroupId(), chestManager.getAllPlacedGroups());
             ItemStack tool = ConnectorToolFactory.createConnectorTool(
-                    group.getGroupId(), 
-                    group.getDisplayName(), 
-                    ConnectorToolFactory.GroupType.BULB,
-                    WireViewManager.getBulbGroupTextColor(group.getGroupId(), bulbManager.getAllPlacedGroups())
-            );
+                    group.getGroupId(), group.getDisplayName(), type, color);
             giveItemToPlayer(player, tool);
             player.sendMessage(Component.text("You received a ", NamedTextColor.GREEN)
                     .append(Component.text("Circuit Tool", NamedTextColor.GREEN).decorate(net.kyori.adventure.text.format.TextDecoration.BOLD))
                     .append(Component.text(" for group ", NamedTextColor.GREEN))
-                    .append(Component.text(group.getDisplayName(), NamedTextColor.AQUA)));
-            player.sendMessage(Component.text("Right-click bulbs/lamps to add, Left-click any wireless block to remove it from its group.", NamedTextColor.GRAY));
-        } else if (chestGroupOpt.isPresent()) {
-            ChestGroup group = chestGroupOpt.get();
-            ItemStack tool = ConnectorToolFactory.createConnectorTool(
-                    group.getGroupId(), 
-                    group.getDisplayName(), 
-                    ConnectorToolFactory.GroupType.CHEST,
-                    WireViewManager.getChestGroupTextColor(group.getGroupId(), chestManager.getAllPlacedGroups())
-            );
-            giveItemToPlayer(player, tool);
-            player.sendMessage(Component.text("You received a ", NamedTextColor.GREEN)
-                    .append(Component.text("Circuit Tool", NamedTextColor.GREEN).decorate(net.kyori.adventure.text.format.TextDecoration.BOLD))
-                    .append(Component.text(" for group ", NamedTextColor.GREEN))
-                    .append(Component.text(group.getDisplayName(), NamedTextColor.GOLD)));
-            player.sendMessage(Component.text("Right-click containers to add, Left-click any wireless block to remove it from its group.", NamedTextColor.GRAY));
+                    .append(Component.text(group.getDisplayName(), color)));
+            String targets = bulb ? "bulbs/lamps" : "containers";
+            player.sendMessage(Component.text("Right-click " + targets
+                    + " to add, Left-click any wireless block to remove it from its group.", NamedTextColor.GRAY));
         } else {
             // No group found - create a creation-mode tool with optional category
             ItemStack tool = ConnectorToolFactory.createCreationModeConnectorTool(groupName);
@@ -310,27 +303,18 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
         // Join remaining args for the new name (handles cases like: modify name Group1 My New Name)
         String newName = String.join(" ", java.util.Arrays.copyOfRange(args, 2, args.length));
 
-        Optional<BulbGroup> bulbGroupOpt = findBulbGroupByName(player, groupName);
-        Optional<ChestGroup> chestGroupOpt = findChestGroupByName(player, groupName);
+        Optional<BaseGroup> groupOpt = findGroupByName(player, groupName);
 
-        if (bulbGroupOpt.isPresent()) {
-            BulbGroup group = bulbGroupOpt.get();
+        if (groupOpt.isPresent()) {
+            BaseGroup group = groupOpt.get();
             String oldName = group.getDisplayName();
             group.setCustomName(newName);
-            bulbManager.saveData();
+            saveGroupData(group);
+            NamedTextColor color = group instanceof BulbGroup ? NamedTextColor.AQUA : NamedTextColor.GOLD;
             player.sendMessage(Component.text("Renamed group ", NamedTextColor.GREEN)
-                    .append(Component.text(oldName, NamedTextColor.AQUA))
+                    .append(Component.text(oldName, color))
                     .append(Component.text(" to ", NamedTextColor.GREEN))
-                    .append(Component.text(newName, NamedTextColor.AQUA)));
-        } else if (chestGroupOpt.isPresent()) {
-            ChestGroup group = chestGroupOpt.get();
-            String oldName = group.getDisplayName();
-            group.setCustomName(newName);
-            chestManager.saveData();
-            player.sendMessage(Component.text("Renamed group ", NamedTextColor.GREEN)
-                    .append(Component.text(oldName, NamedTextColor.GOLD))
-                    .append(Component.text(" to ", NamedTextColor.GREEN))
-                    .append(Component.text(newName, NamedTextColor.GOLD)));
+                    .append(Component.text(newName, color)));
         } else {
             player.sendMessage(Component.text("No group found with name: " + groupName, NamedTextColor.RED));
             player.sendMessage(Component.text("Use /wireless gui to see your groups.", NamedTextColor.GRAY));
@@ -876,48 +860,21 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
     }
 
     private void addGroupNameCompletions(Player player, String input, List<String> completions) {
-        UUID playerUuid = player.getUniqueId();
-        boolean isAdmin = player.hasPermission("wirelessredstone.admin");
-        
-        bulbManager.getAllGroups().stream()
-                .filter(g -> isAdmin || playerUuid.equals(g.getOwnerUuid()))
+        visibleGroups(player)
                 .forEach(g -> {
                     String name = g.getCustomName() != null ? g.getCustomName() : g.getGroupId().toString().substring(0, 8);
                     if (name.toLowerCase().startsWith(input)) {
                         completions.add(name.contains(" ") ? "\"" + name + "\"" : name);
                     }
                 });
-        
-        if (chestManager != null) {
-            chestManager.getAllGroups().stream()
-                    .filter(g -> isAdmin || playerUuid.equals(g.getOwnerUuid()))
-                    .forEach(g -> {
-                        String name = g.getCustomName() != null ? g.getCustomName() : g.getGroupId().toString().substring(0, 8);
-                        if (name.toLowerCase().startsWith(input)) {
-                            completions.add(name.contains(" ") ? "\"" + name + "\"" : name);
-                        }
-                    });
-        }
     }
 
     private void addCategoryNameCompletions(Player player, String input, List<String> completions) {
-        UUID playerUuid = player.getUniqueId();
-        boolean isAdmin = player.hasPermission("wirelessredstone.admin");
-
         Set<String> categoryNames = new HashSet<>();
-        bulbManager.getAllGroups().stream()
-                .filter(g -> isAdmin || playerUuid.equals(g.getOwnerUuid()))
+        visibleGroups(player)
                 .map(g -> GroupNameParser.parse(g.getDisplayName()).categoryName())
                 .filter(Objects::nonNull)
                 .forEach(categoryNames::add);
-
-        if (chestManager != null) {
-            chestManager.getAllGroups().stream()
-                    .filter(g -> isAdmin || playerUuid.equals(g.getOwnerUuid()))
-                    .map(g -> GroupNameParser.parse(g.getDisplayName()).categoryName())
-                    .filter(Objects::nonNull)
-                    .forEach(categoryNames::add);
-        }
 
         categoryNames.stream()
                 .filter(name -> name.toLowerCase().startsWith(input))

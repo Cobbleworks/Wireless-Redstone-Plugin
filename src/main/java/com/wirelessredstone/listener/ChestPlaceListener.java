@@ -20,7 +20,7 @@ import org.bukkit.event.block.BlockPlaceEvent;
 import java.util.List;
 import java.util.UUID;
 
-public class ChestPlaceListener implements Listener {
+public class ChestPlaceListener extends WirelessBlockListener {
 
     private final LinkedChestManager chestManager;
 
@@ -87,21 +87,8 @@ public class ChestPlaceListener implements Listener {
 
         chestManager.registerPlacedChest(location, groupIdOpt.get(), chestIndexOpt.get(), ownerUuid, groupSize, containerType);
 
-        ParticleEffects.spawnTriggerParticles(location, false);
-
-        WirelessRedstonePlugin.getInstance().getWireViewManager().refreshAllPlayers();
-
-        chestManager.getGroupById(groupIdOpt.get()).ifPresent(group -> {
-            List<Location> otherLocations = group.getOtherLocations(location);
-            if (!otherLocations.isEmpty()) {
-                ParticleEffects.spawnSyncParticles(location, false);
-                for (Location otherLoc : otherLocations) {
-                    ParticleEffects.spawnSyncParticles(otherLoc, false);
-                }
-                
-                chestManager.applySharedInventory(location, group);
-            }
-        });
+        finishPlacement(chestManager, groupIdOpt.get(), location,
+                group -> chestManager.applySharedInventory(location, group));
     }
 
     private Location getDoubleChestOtherHalf(Block block) {

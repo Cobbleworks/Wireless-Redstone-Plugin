@@ -161,6 +161,24 @@ public abstract class BaseGroup {
     }
 
     /**
+     * Reserves the requested number of empty slots, extending the group as needed.
+     * Returns an empty array when doing so would exceed the supplied limit.
+     */
+    public int[] allocateSlots(int count, int limit) {
+        if (count < 1) return new int[0];
+        List<Integer> available = new ArrayList<>(count);
+        for (int i = 0; i < maxSize && available.size() < count; i++) {
+            if (locations.get(i) == null) available.add(i);
+        }
+        int missing = count - available.size();
+        if (maxSize + missing > limit) return new int[0];
+        int oldSize = maxSize;
+        extendGroup(missing);
+        for (int i = 0; i < missing; i++) available.add(oldSize + i);
+        return available.stream().mapToInt(Integer::intValue).toArray();
+    }
+
+    /**
      * Removes an empty slot from the group, compacting it.
      * If the slot at the given index is empty, it removes that slot.
      * If the slot is not empty, it clears it first, then removes it.
