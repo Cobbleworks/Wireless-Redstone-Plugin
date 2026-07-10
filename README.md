@@ -34,18 +34,18 @@ Wireless Redstone is an open-source Minecraft plugin that allows players to crea
 ## **Table of Contents**
 
 1. [Getting Started](#getting-started)
-    - [Prerequisites](#prerequisites)
-    - [Installation Steps](#installation-steps)
-    - [First Launch & Configuration](#first-launch--configuration)
-    - [Verifying Installation](#verifying-installation)
+   - [Prerequisites](#prerequisites)
+   - [Installation Steps](#installation-steps)
+   - [First Launch & Configuration](#first-launch--configuration)
+   - [Verifying Installation](#verifying-installation)
 2. [Configuration](#configuration)
-    - [Data Files](#data-files)
+   - [Data Files](#data-files)
 3. [How It Works](#how-it-works)
-    - [Wireless Bulbs and Lamps](#wireless-bulbs-and-lamps)
-    - [Wireless Containers](#wireless-containers)
-    - [Circuit Tool](#circuit-tool)
+   - [Wireless Bulbs and Lamps](#wireless-bulbs-and-lamps)
+   - [Wireless Containers](#wireless-containers)
+   - [Circuit Tool](#circuit-tool)
 4. [Player Commands](#player-commands)
-    - [Command Reference](#command-reference)
+   - [Command Reference](#command-reference)
 5. [Permissions](#permissions)
 6. [Building from Source](#building-from-source)
 7. [License](#license)
@@ -99,12 +99,12 @@ All data files are managed automatically by the plugin. Do not edit them manuall
 
 Wireless Redstone persists all runtime data to YAML files under `plugins/WirelessRedstone/`. These files are written automatically on every change and on server shutdown.
 
-| File | Purpose |
-|------|---------|
-| `config.yml` | Plugin settings |
-| `bulbs.yml` | Bulb/lamp groups, ownership, names, category links, variant material, locations |
-| `chests.yml` | Container groups, shared inventories, ownership, names, category links, locations |
-| `categories.yml` | Category definitions, owners, descriptions, icons |
+| File             | Purpose                                                                           |
+| ---------------- | --------------------------------------------------------------------------------- |
+| `config.yml`     | Plugin settings                                                                   |
+| `bulbs.yml`      | Bulb/lamp groups, ownership, names, category links, variant material, locations   |
+| `chests.yml`     | Container groups, shared inventories, ownership, names, category links, locations |
+| `categories.yml` | Category definitions, owners, descriptions, icons                                 |
 
 > **Note:** Do not edit these files manually while the server is running. Use `/wireless reload` after any manual edits made while the server is stopped.
 
@@ -134,31 +134,32 @@ All commands require the `wirelessredstone.use` permission (operator by default)
 
 ### **Command Reference**
 
-| Command | Description |
-|---------|-------------|
-| `/wireless` | Open management GUI (same as `/wireless gui`) |
-| `/wireless help` | Show command help |
-| `/wireless create` | Ask for a new group name and give a creation-mode Circuit Tool |
-| `/wireless create <groupName>` | Give a Circuit Tool for an existing group, or creation-mode tool for a named new group. Use `category/groupName` to categorize it |
-| `/wireless modify name <groupName> <newName>` | Rename a group |
-| `/wireless recover <groupName>` | Restore saved group blocks destroyed by the environment |
-| `/wireless gui [--all]` | Open management GUI |
-| `/wireless reload` | Reload configuration files (admin only) |
+| Command                                       | Description                                                                                                                       |
+| --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `/wireless`                                   | Open management GUI (same as `/wireless gui`)                                                                                     |
+| `/wireless help`                              | Show command help                                                                                                                 |
+| `/wireless create`                            | Ask for a new group name and give a creation-mode Circuit Tool                                                                    |
+| `/wireless create <groupName>`                | Give a Circuit Tool for an existing group, or creation-mode tool for a named new group. Use `category/groupName` to categorize it |
+| `/wireless modify name <groupName> <newName>` | Rename a group                                                                                                                    |
+| `/wireless recover <groupName>`               | Restore saved group blocks destroyed by the environment                                                                           |
+| `/wireless gui [--all]`                       | Open management GUI                                                                                                               |
+| `/wireless reload`                            | Reload configuration files (admin only)                                                                                           |
 
 ## **Permissions**
 
-| Permission | Description | Default |
-|------------|-------------|---------|
-| `wirelessredstone.use` | Allows using wireless redstone commands | `op` |
-| `wirelessredstone.teleport` | Allows teleporting to bulb locations via GUI | `op` |
-| `wirelessredstone.remove` | Allows removing bulb groups via GUI | `op` |
-| `wirelessredstone.admin` | Allows viewing/managing all players' groups and using admin actions | `op` |
+| Permission                  | Description                                                         | Default |
+| --------------------------- | ------------------------------------------------------------------- | ------- |
+| `wirelessredstone.use`      | Allows using wireless redstone commands                             | `op`    |
+| `wirelessredstone.teleport` | Allows teleporting to bulb locations via GUI                        | `op`    |
+| `wirelessredstone.remove`   | Allows removing bulb groups via GUI                                 | `op`    |
+| `wirelessredstone.admin`    | Allows viewing/managing all players' groups and using admin actions | `op`    |
 
 ## **Building from Source**
 
 Wireless Redstone uses **Apache Maven** as its build system. The plugin is packaged as a standard JAR with no external runtime dependencies.
 
 **Requirements:**
+
 - Java 21 or newer
 - Apache Maven 3.6 or newer
 
@@ -174,53 +175,6 @@ mvn clean package
 ```
 
 The output JAR is written to `target/WirelessRedstone-x.x.x.jar`. Copy it into your server's `plugins/` folder as described in the [Installation Steps](#installation-steps) section.
-
-**Project Structure:**
-
-```
-src/main/
-├── java/com/wirelessredstone/
-│   ├── WirelessRedstonePlugin.java            - Plugin entry point (onEnable / onDisable)
-│   ├── command/
-│   │   └── WirelessCommand.java               - All /wireless subcommands + tab completion
-│   ├── gui/
-│   │   ├── BulbManagerGUI.java                - Main management GUI
-│   │   ├── CategoryAssignmentGUI.java         - Legacy category assignment GUI
-│   │   ├── CategorySelectionGUI.java          - Connector prompt and legacy category GUI
-│   │   └── GroupEntry.java                    - GUI item entry model
-│   ├── listener/
-│   │   ├── BulbBreakListener.java             - Handles wireless bulb block breaks
-│   │   ├── BulbInteractionListener.java       - Handles bulb toggle and sync
-│   │   ├── BulbPlaceListener.java             - Registers placed wireless bulb blocks
-│   │   ├── ChestBreakListener.java            - Handles wireless container block breaks
-│   │   ├── ChestInventoryListener.java        - Shared inventory interception
-│   │   ├── ChestPlaceListener.java            - Registers placed wireless container blocks
-│   │   ├── ChunkLoadListener.java             - Re-applies block states on chunk load
-│   │   ├── CircuitAnalyserListener.java       - Circuit report chat handling
-│   │   ├── ConnectorToolListener.java         - Circuit tool group build/edit
-│   │   ├── GUIListener.java                   - GUI click event handling
-│   │   └── WireViewListener.java              - WireView display toggle
-│   ├── manager/
-│   │   ├── CategoryManager.java               - Category CRUD and YAML persistence
-│   │   ├── LinkedBulbManager.java             - Bulb group CRUD, sync, and file persistence
-│   │   ├── LinkedChestManager.java            - Container group CRUD, sync, and file persistence
-│   │   └── WireViewManager.java               - WireView particle task management
-│   ├── model/
-│   │   ├── BaseGroup.java                     - Common group data (name, owner, category)
-│   │   ├── BulbGroup.java                     - Bulb/lamp group model (variant, locations)
-│   │   ├── Category.java                      - Category model (name, icon, owner)
-│   │   └── ChestGroup.java                    - Container group model (inventory, locations)
-│   ├── task/
-│   │   ├── BulbSyncTask.java                  - Repeating task for bulb state propagation
-│   │   └── ConnectorWireViewTask.java         - Repeating task for circuit tool overlay display
-│   └── util/
-│       ├── BulbUtils.java                     - Copper variant helpers
-│       ├── LocationUtils.java                 - World/coordinate serialization
-│       └── ParticleEffects.java               - Particle rendering utilities
-└── resources/
-    ├── config.yml                             - Plugin configuration
-    └── plugin.yml                             - Plugin metadata, commands, permissions
-```
 
 ## **License**
 
