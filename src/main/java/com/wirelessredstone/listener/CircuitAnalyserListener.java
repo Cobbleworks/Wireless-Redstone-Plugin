@@ -1,7 +1,6 @@
 package com.wirelessredstone.listener;
 
 import com.wirelessredstone.WirelessRedstonePlugin;
-import com.wirelessredstone.item.CircuitAnalyserFactory;
 import com.wirelessredstone.manager.CategoryManager;
 import com.wirelessredstone.manager.LinkedBulbManager;
 import com.wirelessredstone.manager.LinkedChestManager;
@@ -18,18 +17,11 @@ import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
-import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
-import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
-import org.bukkit.event.block.Action;
-import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
-import org.bukkit.inventory.EquipmentSlot;
 
 import java.util.List;
 import java.util.Map;
@@ -38,58 +30,34 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Listener for Circuit Analyser interactions.
- * Handles right-clicks on wireless blocks to display detailed information.
+ * Handles circuit analysis reports and their chat-driven follow-up actions.
  */
 public class CircuitAnalyserListener implements Listener {
 
     private final LinkedBulbManager bulbManager;
     private final LinkedChestManager chestManager;
-    private final CategoryManager categoryManager;
-
-    // Pending rename/category operations from the circuit analyser report
+    // Pending rename/category operations from the circuit report
     private static final Map<UUID, PendingOperation> pendingOperations = new ConcurrentHashMap<>();
 
     private record PendingOperation(UUID groupId, boolean isBulbGroup, OperationType type) {}
-    private enum OperationType { RENAME, CATEGORY }
+    private enum OperationType { RENAME, CATEGORY, DESCRIPTION }
 
     public CircuitAnalyserListener(LinkedBulbManager bulbManager, LinkedChestManager chestManager, CategoryManager categoryManager) {
         this.bulbManager = bulbManager;
         this.chestManager = chestManager;
-        this.categoryManager = categoryManager;
     }
 
-
-    @EventHandler(priority = EventPriority.HIGH)
-    public void onPlayerInteract(PlayerInteractEvent event) {
-        if (event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
-        if (event.getHand() != EquipmentSlot.HAND) return;
-
-        Player player = event.getPlayer();
-        var item = player.getInventory().getItemInMainHand();
-
-        if (!CircuitAnalyserFactory.isCircuitAnalyser(item)) return;
-
-        Block block = event.getClickedBlock();
-        if (block == null) return;
-
-        event.setCancelled(true);
-
-        Location location = block.getLocation();
-
-        // Check if it's a wireless bulb
+    public void displayBlockInfo(Player player, Location location) {
         if (bulbManager.isWirelessBulbLocation(location)) {
             displayBulbInfo(player, location);
             return;
         }
 
-        // Check if it's a wireless chest
         if (chestManager.isWirelessChestLocation(location)) {
             displayChestInfo(player, location);
             return;
         }
 
-        // Not a wireless block
         player.sendMessage(Component.text("⚡ ", NamedTextColor.YELLOW)
                 .append(Component.text("This block is not part of a wireless group.", NamedTextColor.GRAY)));
     }
@@ -127,7 +95,7 @@ public class CircuitAnalyserListener implements Listener {
         // Group Name (clickable to rename) - more prominent
         String fullName = group.getDisplayName();
         String displayName = GroupNameParser.parse(fullName).groupName();
-        String renameCommand = "/wireless analyser-rename " + groupId + " " + (isBulbGroup ? "bulb" : "chest");
+        String renameCommand = "/wireless circuit-rename " + groupId + " " + (isBulbGroup ? "bulb" : "chest");
         player.sendMessage(Component.text("Name: ", NamedTextColor.GRAY)
                 .append(Component.text(displayName, NamedTextColor.WHITE).decoration(TextDecoration.BOLD, true)
                         .hoverEvent(HoverEvent.showText(Component.text("Click to rename", NamedTextColor.YELLOW)))
@@ -137,6 +105,13 @@ public class CircuitAnalyserListener implements Listener {
         String categoryName = GroupNameParser.parse(fullName).categoryName();
         player.sendMessage(Component.text("Category: ", NamedTextColor.GRAY)
                 .append(Component.text(categoryName == null ? "Uncategorized" : categoryName, NamedTextColor.YELLOW)));
+
+        String descriptionCommand = "/wireless circuit-description " + groupId + " " + (isBulbGroup ? "bulb" : "chest");
+        player.sendMessage(Component.text("Description: ", NamedTextColor.GRAY)
+                .append(Component.text(group.getDescription() == null ? "None" : group.getDescription(), NamedTextColor.WHITE)
+                        .hoverEvent(HoverEvent.showText(Component.text("Click to edit description", NamedTextColor.YELLOW)))
+                        .clickEvent(ClickEvent.runCommand(descriptionCommand)))
+                .append(Component.text(" ✎", NamedTextColor.DARK_GRAY)));
 
         // Placed count and state on same line for bulbs
         int placedCount = group.getPlacedCount();
@@ -154,11 +129,11 @@ public class CircuitAnalyserListener implements Listener {
                     .append(Component.text(placedCount + "/" + maxSize, countColor)));
         }
 
-        // Connector Tool button (clickable to get tool)
+        // Circuit Tool button (clickable to get tool)
         String createToolCommand = "/wireless create " + quoteCommandArgument(fullName);
-        player.sendMessage(Component.text("[Get Connector Tool]", NamedTextColor.GREEN)
+        player.sendMessage(Component.text("[Get Circuit Tool]", NamedTextColor.GREEN)
                 .decoration(TextDecoration.BOLD, true)
-                .hoverEvent(HoverEvent.showText(Component.text("Click to receive a Connector Tool for this group", NamedTextColor.YELLOW)))
+                .hoverEvent(HoverEvent.showText(Component.text("Click to receive a Circuit Tool for this group", NamedTextColor.YELLOW)))
                 .clickEvent(ClickEvent.runCommand(createToolCommand)));
 
         // Collapsible locations section
@@ -229,6 +204,8 @@ public class CircuitAnalyserListener implements Listener {
 
         if (operation.type() == OperationType.RENAME) {
             processRename(player, input, group, operation.isBulbGroup());
+        } else if (operation.type() == OperationType.DESCRIPTION) {
+            processDescription(player, input, group, operation.isBulbGroup());
         } else {
             processCategoryChange(player, input, group, operation.isBulbGroup());
         }
@@ -275,8 +252,29 @@ public class CircuitAnalyserListener implements Listener {
         }
     }
 
+    private void processDescription(Player player, String input, BaseGroup group, boolean isBulbGroup) {
+        if (input.length() > 120) {
+            input = input.substring(0, 120);
+        }
+
+        if (input.equalsIgnoreCase("reset") || input.equalsIgnoreCase("clear") || input.equalsIgnoreCase("none")) {
+            group.setDescription(null);
+            player.sendMessage(Component.text("✓ Group description cleared.", NamedTextColor.GREEN));
+        } else {
+            group.setDescription(input);
+            player.sendMessage(Component.text("✓ Group description set to: ", NamedTextColor.GREEN)
+                    .append(Component.text(input, NamedTextColor.WHITE)));
+        }
+
+        if (isBulbGroup) {
+            bulbManager.saveData();
+        } else {
+            chestManager.saveData();
+        }
+    }
+
     /**
-     * Initiates a rename operation for a group from the analyser report.
+     * Initiates a rename operation for a group from the circuit report.
      */
     public static void initiateRename(Player player, UUID groupId, boolean isBulbGroup) {
         pendingOperations.put(player.getUniqueId(), new PendingOperation(groupId, isBulbGroup, OperationType.RENAME));
@@ -288,12 +286,23 @@ public class CircuitAnalyserListener implements Listener {
     }
 
     /**
-     * Initiates a category change operation for a group from the analyser report.
+     * Initiates a category change operation for a group from the circuit report.
      */
     public static void initiateCategoryChange(Player player, UUID groupId, boolean isBulbGroup, CategoryManager categoryManager) {
         player.sendMessage(Component.empty());
         player.sendMessage(Component.text("✎ ", NamedTextColor.YELLOW)
                 .append(Component.text("Rename the group with a prefix like factory/group-name to set its category.", NamedTextColor.GRAY)));
+    }
+
+    /**
+     * Initiates a description change operation for a group from the circuit report.
+     */
+    public static void initiateDescriptionChange(Player player, UUID groupId, boolean isBulbGroup) {
+        pendingOperations.put(player.getUniqueId(), new PendingOperation(groupId, isBulbGroup, OperationType.DESCRIPTION));
+        player.sendMessage(Component.empty());
+        player.sendMessage(Component.text("✎ ", NamedTextColor.YELLOW)
+                .append(Component.text("Enter new description in chat ", NamedTextColor.GRAY))
+                .append(Component.text("(or 'cancel' to abort, 'clear' to remove)", NamedTextColor.DARK_GRAY)));
     }
 
     /**
@@ -317,10 +326,9 @@ public class CircuitAnalyserListener implements Listener {
         // Clean up pending operations
         cancelPendingOperation(playerUuid);
         
-        // Clean up analyser wireview when player leaves
-        var analyserTask = WirelessRedstonePlugin.getInstance().getAnalyserWireViewTask();
-        if (analyserTask != null) {
-            analyserTask.cleanupPlayer(event.getPlayer());
+        var connectorTask = WirelessRedstonePlugin.getInstance().getConnectorWireViewTask();
+        if (connectorTask != null) {
+            connectorTask.cleanupPlayer(event.getPlayer());
         }
     }
 }

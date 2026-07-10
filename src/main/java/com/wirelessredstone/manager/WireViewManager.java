@@ -29,9 +29,8 @@ public class WireViewManager {
     private final Map<UUID, UUID> playerSingleGroupView = new ConcurrentHashMap<>();
 
     private static final String WIREVIEW_TEAM_PREFIX = "wv_";
-    private static final String WIREVIEW_CHEST_TEAM_PREFIX = "wvc_";
     private static final String WIREVIEW_SINGLE_TEAM = "wv_single";
-    private static final NamedTextColor[] BULB_GROUP_COLORS = {
+    private static final GroupViewStyle BULB_STYLE = new GroupViewStyle("b_", new NamedTextColor[]{
         NamedTextColor.AQUA,
         NamedTextColor.GOLD,
         NamedTextColor.GREEN,
@@ -40,7 +39,16 @@ public class WireViewManager {
         NamedTextColor.YELLOW,
         NamedTextColor.WHITE,
         NamedTextColor.BLUE
-    };
+    });
+    private static final GroupViewStyle CHEST_STYLE = new GroupViewStyle("c_", new NamedTextColor[]{
+        NamedTextColor.DARK_AQUA,
+        NamedTextColor.DARK_GREEN,
+        NamedTextColor.DARK_RED,
+        NamedTextColor.DARK_PURPLE,
+        NamedTextColor.DARK_BLUE,
+        NamedTextColor.DARK_GRAY,
+        NamedTextColor.GRAY
+    });
 
     public WireViewManager(WirelessRedstonePlugin plugin, LinkedBulbManager bulbManager, LinkedChestManager chestManager) {
         this.plugin = plugin;
@@ -87,44 +95,17 @@ public class WireViewManager {
         playerGlowEntities.put(player.getUniqueId(), entityIds);
 
         Scoreboard scoreboard = player.getScoreboard();
-        int colorIndex = 0;
-        // Spawn glow entities for bulb groups
-        for (BulbGroup group : bulbManager.getAllPlacedGroups()) {
-            NamedTextColor groupColor = BULB_GROUP_COLORS[colorIndex % BULB_GROUP_COLORS.length];
-            colorIndex++;
+        renderGroups(player, scoreboard, entityIds, bulbManager.getAllPlacedGroups(), BULB_STYLE);
+        renderGroups(player, scoreboard, entityIds, chestManager.getAllPlacedGroups(), CHEST_STYLE);
+    }
 
-            String teamName = WIREVIEW_TEAM_PREFIX + group.getGroupId().toString().substring(0, 8);
-            Team team = scoreboard.getTeam(teamName);
-            if (team == null) {
-                team = scoreboard.registerNewTeam(teamName);
-            }
-            team.color(groupColor);
-
-            for (Location loc : group.getPlacedLocations()) {
-                Entity entity = spawnGlowEntity(loc, player, team);
-                if (entity != null) {
-                    entityIds.add(entity.getUniqueId());
-                }
-            }
-        }
-
-        // Spawn glow entities for chest groups with different color palette
-        int chestColorIndex = 0;
-        NamedTextColor[] chestColors = {
-            NamedTextColor.DARK_AQUA,
-            NamedTextColor.DARK_GREEN,
-            NamedTextColor.DARK_RED,
-            NamedTextColor.DARK_PURPLE,
-            NamedTextColor.DARK_BLUE,
-            NamedTextColor.DARK_GRAY,
-            NamedTextColor.GRAY
-        };
-
-        for (ChestGroup group : chestManager.getAllPlacedGroups()) {
-            NamedTextColor groupColor = chestColors[chestColorIndex % chestColors.length];
-            chestColorIndex++;
-
-            String teamName = WIREVIEW_CHEST_TEAM_PREFIX + group.getGroupId().toString().substring(0, 8);
+    private void renderGroups(Player player, Scoreboard scoreboard, Set<UUID> entityIds,
+                              List<? extends BaseGroup> groups, GroupViewStyle style) {
+        for (int colorIndex = 0; colorIndex < groups.size(); colorIndex++) {
+            BaseGroup group = groups.get(colorIndex);
+            NamedTextColor groupColor = style.colors()[colorIndex % style.colors().length];
+            String teamName = WIREVIEW_TEAM_PREFIX + style.teamSuffix()
+                    + group.getGroupId().toString().substring(0, 8);
             Team team = scoreboard.getTeam(teamName);
             if (team == null) {
                 team = scoreboard.registerNewTeam(teamName);
@@ -166,15 +147,26 @@ public class WireViewManager {
     }
 
     public static Color getBulbGroupParticleColor(UUID groupId, List<BulbGroup> groups) {
-        int colorIndex = 0;
-        for (BulbGroup group : groups) {
-            if (group.getGroupId().equals(groupId)) {
-                NamedTextColor color = BULB_GROUP_COLORS[colorIndex % BULB_GROUP_COLORS.length];
-                return Color.fromRGB(color.value());
+        return Color.fromRGB(getBulbGroupTextColor(groupId, groups).value());
+    }
+
+    public static NamedTextColor getBulbGroupTextColor(UUID groupId, List<BulbGroup> groups) {
+        return getGroupTextColor(groupId, groups, BULB_STYLE);
+    }
+
+    public static NamedTextColor getChestGroupTextColor(UUID groupId, List<ChestGroup> groups) {
+        return getGroupTextColor(groupId, groups, CHEST_STYLE);
+    }
+
+    private static NamedTextColor getGroupTextColor(UUID groupId,
+                                                     List<? extends BaseGroup> groups,
+                                                     GroupViewStyle style) {
+        for (int i = 0; i < groups.size(); i++) {
+            if (groups.get(i).getGroupId().equals(groupId)) {
+                return style.colors()[i % style.colors().length];
             }
-            colorIndex++;
         }
-        return Color.fromRGB(NamedTextColor.AQUA.value());
+        return style.colors()[0];
     }
 
     private void removeAllGlowEntities(Player player) {
@@ -192,12 +184,14 @@ public class WireViewManager {
         Scoreboard scoreboard = player.getScoreboard();
         Set<Team> teamsToRemove = new HashSet<>();
         for (Team team : scoreboard.getTeams()) {
-            if (team.getName().startsWith(WIREVIEW_TEAM_PREFIX) || team.getName().startsWith(WIREVIEW_CHEST_TEAM_PREFIX)) {
+            if (team.getName().startsWith(WIREVIEW_TEAM_PREFIX)) {
                 teamsToRemove.add(team);
             }
         }
         teamsToRemove.forEach(Team::unregister);
     }
+
+    private record GroupViewStyle(String teamSuffix, NamedTextColor[] colors) {}
 
     public void cleanupPlayer(Player player) {
         disableWireView(player);
@@ -229,7 +223,7 @@ public class WireViewManager {
 
     /**
      * Enables wire view for a single specific group.
-     * Used by the Connector Tool to show only the group being edited.
+     * Legacy single-group overlay support.
      */
     public void enableSingleGroupView(Player player, UUID groupId, boolean isBulbGroup) {
         UUID playerId = player.getUniqueId();

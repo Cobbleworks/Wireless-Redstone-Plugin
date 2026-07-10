@@ -23,7 +23,7 @@ import org.bukkit.inventory.ItemStack;
 import java.util.Optional;
 import java.util.UUID;
 
-public class ChestBreakListener implements Listener {
+public class ChestBreakListener extends WirelessBlockListener {
 
     private final LinkedChestManager chestManager;
     private static final int SINGLE_CHEST_SIZE = 27;
@@ -66,32 +66,20 @@ public class ChestBreakListener implements Listener {
             clearContainerInventory(block);
         }
 
-        ParticleEffects.spawnBreakParticles(location);
-
         chestManager.unregisterChest(location);
         if (doubleChestBreak != null) {
             chestManager.unregisterChest(doubleChestBreak.otherLocation());
         }
 
-        if (remainingCount <= 0) {
-            player.sendMessage(Component.text("⚡ ", NamedTextColor.YELLOW)
-                    .append(Component.text("Group ", NamedTextColor.GRAY))
-                    .append(Component.text(groupName, NamedTextColor.GOLD))
-                    .append(Component.text(" has been removed (last container broken)", NamedTextColor.GRAY)));
-        } else {
-            player.sendMessage(Component.text("⚡ ", NamedTextColor.YELLOW)
-                    .append(Component.text("Removed from group ", NamedTextColor.GRAY))
-                    .append(Component.text(groupName, NamedTextColor.GOLD))
-                    .append(Component.text(" (" + remainingCount + " remaining)", NamedTextColor.DARK_GRAY)));
+        finishBreak(player, location, groupOpt.orElse(null), remainingCount, "container", NamedTextColor.GOLD);
+        if (remainingCount > 0) {
             if (doubleChestBreak != null) {
                 player.sendMessage(Component.text("The remaining half of this double chest was detached from the wireless group.", NamedTextColor.GRAY));
             }
         }
 
         WirelessRedstonePlugin plugin = WirelessRedstonePlugin.getInstance();
-        plugin.getWireViewManager().refreshAllPlayers();
         if (groupId != null) {
-            plugin.getWireViewManager().refreshSingleGroupViewForGroup(groupId);
             if (remainingCount > 0) {
                 plugin.getServer().getScheduler().runTask(plugin, () -> chestManager.syncGroupToPlacedContainers(groupId));
             }

@@ -3,7 +3,6 @@ package com.wirelessredstone.gui;
 import com.wirelessredstone.manager.CategoryManager;
 import com.wirelessredstone.manager.LinkedBulbManager;
 import com.wirelessredstone.manager.LinkedChestManager;
-import com.wirelessredstone.item.CircuitAnalyserFactory;
 import com.wirelessredstone.model.BulbGroup;
 import com.wirelessredstone.model.Category;
 import com.wirelessredstone.model.ChestGroup;
@@ -162,7 +161,6 @@ public class BulbManagerGUI implements InventoryHolder {
         }
 
         inventory.setItem(46, createConnectorToolItem());
-        inventory.setItem(47, createCircuitAnalyserItem());
 
         if (categoryName != null) {
             inventory.setItem(52, createBackToAllGroupsItem());
@@ -194,6 +192,12 @@ public class BulbManagerGUI implements InventoryHolder {
                 .decoration(TextDecoration.BOLD, true));
 
         List<Component> lore = new ArrayList<>();
+
+        if (group.getDescription() != null) {
+            lore.add(Component.text(group.getDescription(), NamedTextColor.GRAY)
+                    .decoration(TextDecoration.ITALIC, true));
+        }
+
         lore.add(Component.empty());
 
         if (categoryName == null && group.getCategoryName() != null) {
@@ -201,7 +205,7 @@ public class BulbManagerGUI implements InventoryHolder {
                     .append(Component.text(group.getCategoryName(), NamedTextColor.YELLOW))
                     .decoration(TextDecoration.ITALIC, false));
         }
-        
+
         lore.add(Component.text("Type: ", NamedTextColor.GRAY)
                 .append(Component.text(group.getTypeDisplayName(), NamedTextColor.WHITE))
                 .decoration(TextDecoration.ITALIC, false));
@@ -378,27 +382,13 @@ public class BulbManagerGUI implements InventoryHolder {
     private ItemStack createConnectorToolItem() {
         ItemStack item = new ItemStack(Material.SHEARS);
         ItemMeta meta = item.getItemMeta();
-        meta.displayName(Component.text("Get Connector Tool", NamedTextColor.GREEN)
+        meta.displayName(Component.text("Get Circuit Tool", NamedTextColor.GREEN)
                 .decoration(TextDecoration.ITALIC, false)
                 .decoration(TextDecoration.BOLD, true));
         meta.lore(List.of(
-                Component.text("Click to create a connector", NamedTextColor.GRAY)
+                Component.text("Click to create a circuit", NamedTextColor.GRAY)
                         .decoration(TextDecoration.ITALIC, false),
                 Component.text("tool for a new/existing group", NamedTextColor.GRAY)
-                        .decoration(TextDecoration.ITALIC, false)
-        ));
-        item.setItemMeta(meta);
-        return item;
-    }
-
-    private ItemStack createCircuitAnalyserItem() {
-        ItemStack item = new ItemStack(Material.AMETHYST_SHARD);
-        ItemMeta meta = item.getItemMeta();
-        meta.displayName(Component.text("Get Circuit Analyser", NamedTextColor.LIGHT_PURPLE)
-                .decoration(TextDecoration.ITALIC, false)
-                .decoration(TextDecoration.BOLD, true));
-        meta.lore(List.of(
-                Component.text("Click to receive the analyser", NamedTextColor.GRAY)
                         .decoration(TextDecoration.ITALIC, false)
         ));
         item.setItemMeta(meta);
@@ -453,12 +443,6 @@ public class BulbManagerGUI implements InventoryHolder {
 
         if (slot == 46) {
             CategorySelectionGUI.startConnectorToolPrompt(player, categoryName);
-            return;
-        }
-
-        if (slot == 47) {
-            giveItemToPlayer(CircuitAnalyserFactory.createCircuitAnalyser());
-            player.sendMessage(Component.text("You received a Circuit Analyser!", NamedTextColor.GREEN));
             return;
         }
 
@@ -517,11 +501,17 @@ public class BulbManagerGUI implements InventoryHolder {
         player.sendMessage(Component.text("Name: ", NamedTextColor.GRAY)
                 .append(Component.text(displayName, NamedTextColor.WHITE).decoration(TextDecoration.BOLD, true)
                         .hoverEvent(HoverEvent.showText(Component.text("Click to rename", NamedTextColor.YELLOW)))
-                        .clickEvent(ClickEvent.runCommand("/wireless analyser-rename " + groupId + " " + groupType)))
+                        .clickEvent(ClickEvent.runCommand("/wireless circuit-rename " + groupId + " " + groupType)))
                 .append(Component.text(" ✎", NamedTextColor.DARK_GRAY)));
 
         player.sendMessage(Component.text("Category: ", NamedTextColor.GRAY)
                 .append(Component.text(getCategoryDisplayName(group), NamedTextColor.YELLOW)));
+
+        player.sendMessage(Component.text("Description: ", NamedTextColor.GRAY)
+                .append(Component.text(group.getDescription() == null ? "None" : group.getDescription(), NamedTextColor.WHITE)
+                        .hoverEvent(HoverEvent.showText(Component.text("Click to edit description", NamedTextColor.YELLOW)))
+                        .clickEvent(ClickEvent.runCommand("/wireless circuit-description " + groupId + " " + groupType)))
+                .append(Component.text(" ✎", NamedTextColor.DARK_GRAY)));
 
         player.sendMessage(Component.text("Type: ", NamedTextColor.GRAY)
                 .append(Component.text(group.getTypeDisplayName(), typeColor)));
@@ -539,9 +529,9 @@ public class BulbManagerGUI implements InventoryHolder {
         }
         player.sendMessage(placedLine);
 
-        player.sendMessage(Component.text("[Get Connector Tool]", NamedTextColor.GREEN)
+        player.sendMessage(Component.text("[Get Circuit Tool]", NamedTextColor.GREEN)
                 .decoration(TextDecoration.BOLD, true)
-                .hoverEvent(HoverEvent.showText(Component.text("Click to receive a Connector Tool for this group", NamedTextColor.YELLOW)))
+                .hoverEvent(HoverEvent.showText(Component.text("Click to receive a Circuit Tool for this group", NamedTextColor.YELLOW)))
                 .clickEvent(ClickEvent.runCommand("/wireless create " + quoteCommandArgument(fullName))));
 
         player.sendMessage(Component.text("Blocks:", NamedTextColor.GRAY)

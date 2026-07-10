@@ -22,11 +22,9 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
-public class LinkedChestManager {
+public class LinkedChestManager extends LinkedGroupManager<ChestGroup> {
 
-    private final WirelessRedstonePlugin plugin;
-    private final Map<UUID, ChestGroup> chestGroups = new ConcurrentHashMap<>();
-    private final Map<Location, UUID> locationToGroupId = new ConcurrentHashMap<>();
+    private final Map<UUID, ChestGroup> chestGroups = groups;
     
     public static final NamespacedKey WIRELESS_CHEST_KEY;
     public static final NamespacedKey CHEST_GROUP_ID_KEY;
@@ -45,21 +43,8 @@ public class LinkedChestManager {
     }
 
     public LinkedChestManager(WirelessRedstonePlugin plugin) {
-        this.plugin = plugin;
+        super(plugin);
         loadData();
-    }
-
-    /**
-     * Reloads all chest data from disk, clearing existing data first.
-     */
-    public void reloadData() {
-        chestGroups.clear();
-        locationToGroupId.clear();
-        loadData();
-    }
-
-    public UUID createNewGroupId() {
-        return UUID.randomUUID();
     }
 
     public boolean isWirelessChest(ItemStack item) {
@@ -109,75 +94,20 @@ public class LinkedChestManager {
     }
 
     public void registerPlacedChest(Location location, UUID groupId, int chestIndex, UUID ownerUuid, int groupSize, ChestVariant.ContainerType containerType) {
-        Location normalizedLoc = LocationUtils.normalize(location);
-        ChestGroup group = chestGroups.computeIfAbsent(groupId, id -> new ChestGroup(id, groupSize, ownerUuid, containerType));
-        
-        // If the item indicates a larger group size (from extension), expand the group
-        if (groupSize > group.getMaxSize()) {
-            group.extendGroup(groupSize - group.getMaxSize());
-        }
-        
-        group.setLocation(chestIndex, normalizedLoc);
-        if (ownerUuid != null && group.getOwnerUuid() == null) {
-            group.setOwnerUuid(ownerUuid);
-        }
+        ChestGroup group = registerLocation(location, groupId, chestIndex, groupSize, ownerUuid,
+                (id, size, owner) -> new ChestGroup(id, size, owner, containerType));
         if (containerType != null && group.getContainerType() == null) {
             group.setContainerType(containerType);
         }
-        locationToGroupId.put(normalizedLoc, groupId);
         saveData();
     }
 
     public void unregisterChest(Location location) {
-        Location normalizedLoc = LocationUtils.normalize(location);
-        UUID groupId = locationToGroupId.remove(normalizedLoc);
-        if (groupId != null) {
-            ChestGroup group = chestGroups.get(groupId);
-            if (group != null) {
-                group.removeLocation(normalizedLoc);
-                if (group.isEmpty()) {
-                    chestGroups.remove(groupId);
-                }
-            }
-        }
-        saveData();
+        unregisterLocation(location);
     }
 
     public UUID unregisterChestAndCheckGroupRemoval(Location location) {
-        Location normalizedLoc = LocationUtils.normalize(location);
-        UUID groupId = locationToGroupId.remove(normalizedLoc);
-        if (groupId != null) {
-            ChestGroup group = chestGroups.get(groupId);
-            if (group != null) {
-                group.removeLocation(normalizedLoc);
-                if (group.isEmpty()) {
-                    chestGroups.remove(groupId);
-                    saveData();
-                    return groupId;
-                }
-            }
-        }
-        saveData();
-        return null;
-    }
-
-    public void removeGroup(UUID groupId) {
-        removeGroup(groupId, true);
-    }
-
-    public void removeGroup(UUID groupId, boolean removeBlocks) {
-        ChestGroup group = chestGroups.remove(groupId);
-        if (group != null) {
-            for (Location loc : group.getLocations()) {
-                if (loc != null) {
-                    locationToGroupId.remove(LocationUtils.normalize(loc));
-                    if (removeBlocks && loc.isChunkLoaded()) {
-                        loc.getBlock().setType(Material.AIR);
-                    }
-                }
-            }
-        }
-        saveData();
+        return unregisterLocationAndCheckGroupRemoval(location);
     }
 
     /**
@@ -205,37 +135,12 @@ public class LinkedChestManager {
         if (variantMaterial != null) {
             group.setVariantMaterial(variantMaterial);
         }
-        chestGroups.put(groupId, group);
+        putGroup(group);
         saveData();
     }
 
-    public Optional<ChestGroup> getGroupById(UUID groupId) {
-        return Optional.ofNullable(chestGroups.get(groupId));
-    }
-
-    public Optional<ChestGroup> getGroupByLocation(Location location) {
-        UUID groupId = locationToGroupId.get(LocationUtils.normalize(location));
-        return groupId != null ? Optional.ofNullable(chestGroups.get(groupId)) : Optional.empty();
-    }
-
     public boolean isWirelessChestLocation(Location location) {
-        return locationToGroupId.containsKey(LocationUtils.normalize(location));
-    }
-
-    public Collection<ChestGroup> getAllGroups() {
-        return chestGroups.values();
-    }
-
-    public List<ChestGroup> getGroupsByOwner(UUID ownerUuid) {
-        return chestGroups.values().stream()
-                .filter(group -> ownerUuid.equals(group.getOwnerUuid()))
-                .collect(Collectors.toList());
-    }
-
-    public List<ChestGroup> getAllPlacedGroups() {
-        return chestGroups.values().stream()
-                .filter(group -> group.getPlacedCount() > 0)
-                .collect(Collectors.toList());
+        return isWirelessLocation(location);
     }
 
     public void syncInventoryToGroup(Location sourceLocation, ItemStack[] contents) {
@@ -310,6 +215,9 @@ public class LinkedChestManager {
             if (group.getCustomName() != null) {
                 config.set(basePath + ".customName", group.getCustomName());
             }
+            if (group.getDescription() != null) {
+                config.set(basePath + ".description", group.getDescription());
+            }
             if (group.getCustomIcon() != null) {
                 config.set(basePath + ".customIcon", group.getCustomIcon().name());
             }
@@ -376,6 +284,7 @@ public class LinkedChestManager {
             ChestGroup group = new ChestGroup(groupId, maxSize, ownerUuid, containerType);
             group.setInventorySize(groupInventorySize);
             group.setCustomName(config.getString(basePath + ".customName"));
+            group.setDescription(config.getString(basePath + ".description"));
             
             String customIconStr = config.getString(basePath + ".customIcon");
             if (customIconStr != null) {

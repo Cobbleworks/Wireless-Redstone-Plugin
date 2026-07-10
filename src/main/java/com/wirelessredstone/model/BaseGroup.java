@@ -17,6 +17,7 @@ public abstract class BaseGroup {
     protected int maxSize;
     protected UUID ownerUuid;
     protected String customName;
+    protected String description;
     protected Material customIcon;
     protected UUID categoryId;
 
@@ -128,6 +129,14 @@ public abstract class BaseGroup {
         return customName != null ? customName : groupId.toString().substring(0, 8);
     }
 
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description != null && !description.isBlank() ? description : null;
+    }
+
     public Material getCustomIcon() {
         return customIcon;
     }
@@ -149,6 +158,24 @@ public abstract class BaseGroup {
             locations.add(null);
         }
         maxSize += extraSlots;
+    }
+
+    /**
+     * Reserves the requested number of empty slots, extending the group as needed.
+     * Returns an empty array when doing so would exceed the supplied limit.
+     */
+    public int[] allocateSlots(int count, int limit) {
+        if (count < 1) return new int[0];
+        List<Integer> available = new ArrayList<>(count);
+        for (int i = 0; i < maxSize && available.size() < count; i++) {
+            if (locations.get(i) == null) available.add(i);
+        }
+        int missing = count - available.size();
+        if (maxSize + missing > limit) return new int[0];
+        int oldSize = maxSize;
+        extendGroup(missing);
+        for (int i = 0; i < missing; i++) available.add(oldSize + i);
+        return available.stream().mapToInt(Integer::intValue).toArray();
     }
 
     /**

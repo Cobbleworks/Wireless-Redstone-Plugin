@@ -5,12 +5,12 @@ import com.wirelessredstone.gui.BulbManagerGUI;
 import com.wirelessredstone.gui.CategorySelectionGUI;
 import com.wirelessredstone.item.BulbVariant;
 import com.wirelessredstone.item.ChestVariant;
-import com.wirelessredstone.item.CircuitAnalyserFactory;
 import com.wirelessredstone.item.ConnectorToolFactory;
 import com.wirelessredstone.listener.CircuitAnalyserListener;
 import com.wirelessredstone.manager.CategoryManager;
 import com.wirelessredstone.manager.LinkedBulbManager;
 import com.wirelessredstone.manager.LinkedChestManager;
+import com.wirelessredstone.manager.WireViewManager;
 import com.wirelessredstone.model.BaseGroup;
 import com.wirelessredstone.model.BulbGroup;
 import com.wirelessredstone.model.ChestGroup;
@@ -19,7 +19,6 @@ import com.wirelessredstone.util.GroupNameParser;
 import com.wirelessredstone.util.ParticleEffects;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
-import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
@@ -154,13 +153,13 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
         switch (subCommand) {
             case "help", "?" -> sendUsage(player);
             case "create" -> handleCreateCommand(player, parsedArgs);
-            case "analyze" -> handleAnalyzeCommand(player, parsedArgs);
             case "modify" -> handleModifyCommand(player, parsedArgs);
             case "recover" -> handleRecoverCommand(player, parsedArgs);
             case "gui", "manage", "list" -> handleGUICommand(player, parsedArgs);
             case "reload" -> handleReloadCommand(player);
-            case "analyser-rename" -> handleAnalyserRenameCommand(player, parsedArgs);
-            case "analyser-category" -> handleAnalyserCategoryCommand(player, parsedArgs);
+            case "circuit-rename" -> handleCircuitRenameCommand(player, parsedArgs);
+            case "circuit-category" -> handleCircuitCategoryCommand(player, parsedArgs);
+            case "circuit-description" -> handleCircuitDescriptionCommand(player, parsedArgs);
             case "teleport" -> handleTeleportCommand(player, parsedArgs);
             default -> {
                 player.sendMessage(Component.text("Unknown subcommand. Use ", NamedTextColor.RED)
@@ -173,25 +172,30 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
     }
 
     private Optional<BulbGroup> findBulbGroupByName(Player player, String name) {
-        UUID playerUuid = player.getUniqueId();
-        boolean isAdmin = player.hasPermission("wirelessredstone.admin");
-        
-        return bulbManager.getAllGroups().stream()
-                .filter(g -> isAdmin || playerUuid.equals(g.getOwnerUuid()))
-                .filter(g -> matchesGroupName(g.getCustomName(), g.getGroupId(), name))
-                .findFirst();
+        return visibleGroups(player).filter(BulbGroup.class::isInstance)
+                .map(BulbGroup.class::cast)
+                .filter(g -> matchesGroupName(g.getCustomName(), g.getGroupId(), name)).findFirst();
     }
 
     private Optional<ChestGroup> findChestGroupByName(Player player, String name) {
-        if (chestManager == null) return Optional.empty();
-        
-        UUID playerUuid = player.getUniqueId();
-        boolean isAdmin = player.hasPermission("wirelessredstone.admin");
-        
-        return chestManager.getAllGroups().stream()
-                .filter(g -> isAdmin || playerUuid.equals(g.getOwnerUuid()))
-                .filter(g -> matchesGroupName(g.getCustomName(), g.getGroupId(), name))
-                .findFirst();
+        return visibleGroups(player).filter(ChestGroup.class::isInstance)
+                .map(ChestGroup.class::cast)
+                .filter(g -> matchesGroupName(g.getCustomName(), g.getGroupId(), name)).findFirst();
+    }
+
+    private Optional<BaseGroup> findGroupByName(Player player, String name) {
+        return visibleGroups(player)
+                .filter(g -> matchesGroupName(g.getCustomName(), g.getGroupId(), name)).findFirst();
+    }
+
+    private java.util.stream.Stream<BaseGroup> visibleGroups(Player player) {
+        var bulbs = bulbManager.getAllGroups().stream().map(BaseGroup.class::cast);
+        var chests = chestManager == null
+                ? java.util.stream.Stream.<BaseGroup>empty()
+                : chestManager.getAllGroups().stream().map(BaseGroup.class::cast);
+        return java.util.stream.Stream.concat(bulbs, chests)
+                .filter(g -> player.hasPermission("wirelessredstone.admin")
+                        || player.getUniqueId().equals(g.getOwnerUuid()));
     }
 
     private boolean matchesGroupName(String customName, UUID groupId, String searchName) {
@@ -210,7 +214,7 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
     /**
      * Handles /wireless create [groupName].
      * Without arguments, starts the same chat prompt used by the GUI connector action.
-     * With a name, creates a connector tool for the specified group (or creates a new group if it doesn't exist).
+     * With a name, creates a circuit tool for the specified group (or creates a new group if it doesn't exist).
      * Use category/group-name to make the group appear under a category.
      */
     private void handleCreateCommand(Player player, String[] args) {
@@ -224,42 +228,32 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
             groupName = args[2] + "/" + groupName;
         }
 
-        // Search for bulb group first, then chest group
-        Optional<BulbGroup> bulbGroupOpt = findBulbGroupByName(player, groupName);
-        Optional<ChestGroup> chestGroupOpt = findChestGroupByName(player, groupName);
+        Optional<BaseGroup> groupOpt = findGroupByName(player, groupName);
 
-        if (bulbGroupOpt.isPresent()) {
-            BulbGroup group = bulbGroupOpt.get();
+        if (groupOpt.isPresent()) {
+            BaseGroup group = groupOpt.get();
+            boolean bulb = group instanceof BulbGroup;
+            ConnectorToolFactory.GroupType type = bulb
+                    ? ConnectorToolFactory.GroupType.BULB : ConnectorToolFactory.GroupType.CHEST;
+            NamedTextColor color = bulb
+                    ? WireViewManager.getBulbGroupTextColor(group.getGroupId(), bulbManager.getAllPlacedGroups())
+                    : WireViewManager.getChestGroupTextColor(group.getGroupId(), chestManager.getAllPlacedGroups());
             ItemStack tool = ConnectorToolFactory.createConnectorTool(
-                    group.getGroupId(), 
-                    group.getDisplayName(), 
-                    ConnectorToolFactory.GroupType.BULB
-            );
+                    group.getGroupId(), group.getDisplayName(), type, color);
             giveItemToPlayer(player, tool);
             player.sendMessage(Component.text("You received a ", NamedTextColor.GREEN)
-                    .append(Component.text("Connector Tool", NamedTextColor.GREEN).decorate(net.kyori.adventure.text.format.TextDecoration.BOLD))
+                    .append(Component.text("Circuit Tool", NamedTextColor.GREEN).decorate(net.kyori.adventure.text.format.TextDecoration.BOLD))
                     .append(Component.text(" for group ", NamedTextColor.GREEN))
-                    .append(Component.text(group.getDisplayName(), NamedTextColor.AQUA)));
-            player.sendMessage(Component.text("Right-click bulbs/lamps to add, Left-click to remove.", NamedTextColor.GRAY));
-        } else if (chestGroupOpt.isPresent()) {
-            ChestGroup group = chestGroupOpt.get();
-            ItemStack tool = ConnectorToolFactory.createConnectorTool(
-                    group.getGroupId(), 
-                    group.getDisplayName(), 
-                    ConnectorToolFactory.GroupType.CHEST
-            );
-            giveItemToPlayer(player, tool);
-            player.sendMessage(Component.text("You received a ", NamedTextColor.GREEN)
-                    .append(Component.text("Connector Tool", NamedTextColor.GREEN).decorate(net.kyori.adventure.text.format.TextDecoration.BOLD))
-                    .append(Component.text(" for group ", NamedTextColor.GREEN))
-                    .append(Component.text(group.getDisplayName(), NamedTextColor.GOLD)));
-            player.sendMessage(Component.text("Right-click containers to add, Left-click to remove.", NamedTextColor.GRAY));
+                    .append(Component.text(group.getDisplayName(), color)));
+            String targets = bulb ? "bulbs/lamps" : "containers";
+            player.sendMessage(Component.text("Right-click " + targets
+                    + " to add, Left-click any wireless block to remove it from its group.", NamedTextColor.GRAY));
         } else {
             // No group found - create a creation-mode tool with optional category
             ItemStack tool = ConnectorToolFactory.createCreationModeConnectorTool(groupName);
             giveItemToPlayer(player, tool);
             player.sendMessage(Component.text("You received a ", NamedTextColor.GREEN)
-                    .append(Component.text("Connector Tool", NamedTextColor.GREEN).decorate(net.kyori.adventure.text.format.TextDecoration.BOLD))
+                    .append(Component.text("Circuit Tool", NamedTextColor.GREEN).decorate(net.kyori.adventure.text.format.TextDecoration.BOLD))
                     .append(Component.text(" in ", NamedTextColor.GREEN))
                     .append(Component.text("creation mode", NamedTextColor.LIGHT_PURPLE)));
             player.sendMessage(Component.text("Right-click a bulb, lamp, or chest to create group \"", NamedTextColor.GRAY)
@@ -269,49 +263,6 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
                 player.sendMessage(Component.text("Category: ", NamedTextColor.GRAY)
                         .append(Component.text(GroupNameParser.parse(groupName).categoryName(), NamedTextColor.YELLOW)));
             }
-        }
-    }
-
-    /**
-     * Handles /wireless analyze [player]
-     * Gives the executing player (or specified player) a Circuit Analyser tool.
-     */
-    private void handleAnalyzeCommand(Player player, String[] args) {
-        Player target = player;
-        
-        if (args.length >= 2) {
-            if (!player.hasPermission("wirelessredstone.admin")) {
-                player.sendMessage(Component.text("You don't have permission to give Circuit Analysers to other players!", NamedTextColor.RED));
-                return;
-            }
-            
-            target = Bukkit.getPlayer(args[1]);
-            if (target == null) {
-                player.sendMessage(Component.text("Player not found: " + args[1], NamedTextColor.RED));
-                return;
-            }
-        }
-        
-        ItemStack analyser = CircuitAnalyserFactory.createCircuitAnalyser();
-        
-        if (target.getInventory().firstEmpty() != -1) {
-            target.getInventory().addItem(analyser);
-        } else {
-            target.getWorld().dropItemNaturally(target.getLocation(), analyser);
-        }
-        
-        if (target == player) {
-            player.sendMessage(Component.text("You received a ", NamedTextColor.GREEN)
-                    .append(Component.text("Circuit Analyser", NamedTextColor.LIGHT_PURPLE))
-                    .append(Component.text("!", NamedTextColor.GREEN)));
-            player.sendMessage(Component.text("Right-click any wireless block to analyze it.", NamedTextColor.GRAY));
-        } else {
-            player.sendMessage(Component.text("Gave a Circuit Analyser to ", NamedTextColor.GREEN)
-                    .append(Component.text(target.getName(), NamedTextColor.AQUA)));
-            target.sendMessage(Component.text("You received a ", NamedTextColor.GREEN)
-                    .append(Component.text("Circuit Analyser", NamedTextColor.LIGHT_PURPLE))
-                    .append(Component.text(" from ", NamedTextColor.GREEN))
-                    .append(Component.text(player.getName(), NamedTextColor.AQUA)));
         }
     }
 
@@ -352,27 +303,18 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
         // Join remaining args for the new name (handles cases like: modify name Group1 My New Name)
         String newName = String.join(" ", java.util.Arrays.copyOfRange(args, 2, args.length));
 
-        Optional<BulbGroup> bulbGroupOpt = findBulbGroupByName(player, groupName);
-        Optional<ChestGroup> chestGroupOpt = findChestGroupByName(player, groupName);
+        Optional<BaseGroup> groupOpt = findGroupByName(player, groupName);
 
-        if (bulbGroupOpt.isPresent()) {
-            BulbGroup group = bulbGroupOpt.get();
+        if (groupOpt.isPresent()) {
+            BaseGroup group = groupOpt.get();
             String oldName = group.getDisplayName();
             group.setCustomName(newName);
-            bulbManager.saveData();
+            saveGroupData(group);
+            NamedTextColor color = group instanceof BulbGroup ? NamedTextColor.AQUA : NamedTextColor.GOLD;
             player.sendMessage(Component.text("Renamed group ", NamedTextColor.GREEN)
-                    .append(Component.text(oldName, NamedTextColor.AQUA))
+                    .append(Component.text(oldName, color))
                     .append(Component.text(" to ", NamedTextColor.GREEN))
-                    .append(Component.text(newName, NamedTextColor.AQUA)));
-        } else if (chestGroupOpt.isPresent()) {
-            ChestGroup group = chestGroupOpt.get();
-            String oldName = group.getDisplayName();
-            group.setCustomName(newName);
-            chestManager.saveData();
-            player.sendMessage(Component.text("Renamed group ", NamedTextColor.GREEN)
-                    .append(Component.text(oldName, NamedTextColor.GOLD))
-                    .append(Component.text(" to ", NamedTextColor.GREEN))
-                    .append(Component.text(newName, NamedTextColor.GOLD)));
+                    .append(Component.text(newName, color)));
         } else {
             player.sendMessage(Component.text("No group found with name: " + groupName, NamedTextColor.RED));
             player.sendMessage(Component.text("Use /wireless gui to see your groups.", NamedTextColor.GRAY));
@@ -451,7 +393,7 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
         }
 
         bulbManager.saveData();
-        WirelessRedstonePlugin.getInstance().getWireViewManager().refreshSingleGroupViewForGroup(group.getGroupId());
+        WirelessRedstonePlugin.getInstance().getWireViewManager().refreshAllPlayers();
         sendRecoverSummary(player, group, restored, skippedUnplaced, skippedOccupied, skippedUnloaded, NamedTextColor.AQUA, "block");
     }
 
@@ -496,7 +438,7 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
         }
 
         chestManager.saveData();
-        WirelessRedstonePlugin.getInstance().getWireViewManager().refreshSingleGroupViewForGroup(group.getGroupId());
+        WirelessRedstonePlugin.getInstance().getWireViewManager().refreshAllPlayers();
         sendRecoverSummary(player, group, restored, skippedUnplaced, skippedOccupied, skippedUnloaded, NamedTextColor.GOLD, "container");
     }
 
@@ -522,7 +464,7 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
         }
 
         if (skippedUnplaced > 0) {
-            player.sendMessage(Component.text(skippedUnplaced + " empty slot(s) have no saved position. Use a Connector Tool to add new blocks.", NamedTextColor.GRAY));
+            player.sendMessage(Component.text(skippedUnplaced + " empty slot(s) have no saved position. Use a Circuit Tool to add new blocks.", NamedTextColor.GRAY));
         }
         if (skippedOccupied > 0) {
             player.sendMessage(Component.text(skippedOccupied + " saved position(s) were occupied by another block and were skipped.", NamedTextColor.GRAY));
@@ -764,10 +706,10 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
     }
 
     /**
-     * Handles the analyser-rename command triggered from the circuit analyser report.
+     * Handles the circuit-rename command triggered from the circuit report.
      * This initiates a chat input capture for renaming a group.
      */
-    private void handleAnalyserRenameCommand(Player player, String[] args) {
+    private void handleCircuitRenameCommand(Player player, String[] args) {
         if (args.length < 3) {
             return; // Silent fail - this is an internal command
         }
@@ -782,10 +724,10 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
     }
 
     /**
-     * Handles the analyser-category command triggered from the circuit analyser report.
+     * Handles the circuit-category command triggered from the circuit report.
      * This initiates a chat input capture for changing a group's category.
      */
-    private void handleAnalyserCategoryCommand(Player player, String[] args) {
+    private void handleCircuitCategoryCommand(Player player, String[] args) {
         if (args.length < 3) {
             return; // Silent fail - this is an internal command
         }
@@ -794,6 +736,24 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
             UUID groupId = UUID.fromString(args[1]);
             boolean isBulbGroup = args[2].equalsIgnoreCase("bulb");
             CircuitAnalyserListener.initiateCategoryChange(player, groupId, isBulbGroup, categoryManager);
+        } catch (IllegalArgumentException e) {
+            // Invalid UUID - silent fail
+        }
+    }
+
+    /**
+     * Handles the circuit-description command triggered from the circuit report.
+     * This initiates a chat input capture for changing a group's description.
+     */
+    private void handleCircuitDescriptionCommand(Player player, String[] args) {
+        if (args.length < 3) {
+            return; // Silent fail - this is an internal command
+        }
+
+        try {
+            UUID groupId = UUID.fromString(args[1]);
+            boolean isBulbGroup = args[2].equalsIgnoreCase("bulb");
+            CircuitAnalyserListener.initiateDescriptionChange(player, groupId, isBulbGroup);
         } catch (IllegalArgumentException e) {
             // Invalid UUID - silent fail
         }
@@ -811,11 +771,9 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
         player.sendMessage(Component.text("=== Wireless Redstone Commands ===", NamedTextColor.GOLD));
 
         player.sendMessage(Component.text("/wireless create", NamedTextColor.YELLOW)
-                .append(Component.text(" - Enter a new group name and receive a Connector Tool", NamedTextColor.GRAY)));
+                .append(Component.text(" - Enter a new group name and receive a Circuit Tool", NamedTextColor.GRAY)));
         player.sendMessage(Component.text("/wireless create <groupName>", NamedTextColor.YELLOW)
-                .append(Component.text(" - Get a Connector Tool directly; use category/group for categories", NamedTextColor.GRAY)));
-        player.sendMessage(Component.text("/wireless analyze [player]", NamedTextColor.YELLOW)
-                .append(Component.text(" - Get a Circuit Analyser tool", NamedTextColor.GRAY)));
+                .append(Component.text(" - Get a Circuit Tool directly; use category/group for categories", NamedTextColor.GRAY)));
         
         // Group management
         player.sendMessage(Component.text("/wireless modify name <groupName> <newName>", NamedTextColor.YELLOW)
@@ -839,7 +797,7 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
         if (args.length == 1) {
             String input = args[0].toLowerCase();
             List<String> subCommands = new ArrayList<>(List.of(
-                    "create", "analyze", "modify", "recover",
+                    "create", "modify", "recover",
                     "gui", "manage", "list"
             ));
             if (sender.hasPermission("wirelessredstone.admin")) {
@@ -859,16 +817,6 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
                 if (args.length == 2 && sender instanceof Player player) {
                     // Suggest existing group names
                     addGroupNameCompletions(player, input, completions);
-                }
-            }
-            // /wireless analyze [player]
-            else if (subCommand.equals("analyze")) {
-                if (args.length == 2 && sender.hasPermission("wirelessredstone.admin")) {
-                    for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
-                        if (onlinePlayer.getName().toLowerCase().startsWith(input)) {
-                            completions.add(onlinePlayer.getName());
-                        }
-                    }
                 }
             }
             // /wireless modify <name|category> <groupName> <newValue>
@@ -912,48 +860,21 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
     }
 
     private void addGroupNameCompletions(Player player, String input, List<String> completions) {
-        UUID playerUuid = player.getUniqueId();
-        boolean isAdmin = player.hasPermission("wirelessredstone.admin");
-        
-        bulbManager.getAllGroups().stream()
-                .filter(g -> isAdmin || playerUuid.equals(g.getOwnerUuid()))
+        visibleGroups(player)
                 .forEach(g -> {
                     String name = g.getCustomName() != null ? g.getCustomName() : g.getGroupId().toString().substring(0, 8);
                     if (name.toLowerCase().startsWith(input)) {
                         completions.add(name.contains(" ") ? "\"" + name + "\"" : name);
                     }
                 });
-        
-        if (chestManager != null) {
-            chestManager.getAllGroups().stream()
-                    .filter(g -> isAdmin || playerUuid.equals(g.getOwnerUuid()))
-                    .forEach(g -> {
-                        String name = g.getCustomName() != null ? g.getCustomName() : g.getGroupId().toString().substring(0, 8);
-                        if (name.toLowerCase().startsWith(input)) {
-                            completions.add(name.contains(" ") ? "\"" + name + "\"" : name);
-                        }
-                    });
-        }
     }
 
     private void addCategoryNameCompletions(Player player, String input, List<String> completions) {
-        UUID playerUuid = player.getUniqueId();
-        boolean isAdmin = player.hasPermission("wirelessredstone.admin");
-
         Set<String> categoryNames = new HashSet<>();
-        bulbManager.getAllGroups().stream()
-                .filter(g -> isAdmin || playerUuid.equals(g.getOwnerUuid()))
+        visibleGroups(player)
                 .map(g -> GroupNameParser.parse(g.getDisplayName()).categoryName())
                 .filter(Objects::nonNull)
                 .forEach(categoryNames::add);
-
-        if (chestManager != null) {
-            chestManager.getAllGroups().stream()
-                    .filter(g -> isAdmin || playerUuid.equals(g.getOwnerUuid()))
-                    .map(g -> GroupNameParser.parse(g.getDisplayName()).categoryName())
-                    .filter(Objects::nonNull)
-                    .forEach(categoryNames::add);
-        }
 
         categoryNames.stream()
                 .filter(name -> name.toLowerCase().startsWith(input))

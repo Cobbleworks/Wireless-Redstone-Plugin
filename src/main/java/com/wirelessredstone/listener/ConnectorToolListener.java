@@ -6,6 +6,7 @@ import com.wirelessredstone.item.ChestVariant;
 import com.wirelessredstone.item.ConnectorToolFactory;
 import com.wirelessredstone.manager.LinkedBulbManager;
 import com.wirelessredstone.manager.LinkedChestManager;
+import com.wirelessredstone.manager.WireViewManager;
 import com.wirelessredstone.model.BulbGroup;
 import com.wirelessredstone.model.ChestGroup;
 import com.wirelessredstone.util.BulbUtils;
@@ -14,6 +15,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.FluidCollisionMode;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.Container;
@@ -26,25 +28,35 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
+import org.bukkit.event.block.BlockDamageEvent;
+import org.bukkit.event.player.PlayerAnimationEvent;
+import org.bukkit.event.player.PlayerAnimationType;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Listener for Connector Tool interactions.
+ * Listener for Circuit Tool interactions.
  * Handles right-click to add blocks to a group and left-click to remove blocks from a group.
  */
 public class ConnectorToolListener implements Listener {
 
     private final LinkedBulbManager bulbManager;
     private final LinkedChestManager chestManager;
+    private final CircuitAnalyserListener circuitAnalyserListener;
+    private final Set<UUID> handledLeftClickPlayers = ConcurrentHashMap.newKeySet();
+    private final Set<UUID> handledExplicitClickPlayers = ConcurrentHashMap.newKeySet();
 
-    public ConnectorToolListener(LinkedBulbManager bulbManager, LinkedChestManager chestManager) {
+    public ConnectorToolListener(LinkedBulbManager bulbManager, LinkedChestManager chestManager,
+                                 CircuitAnalyserListener circuitAnalyserListener) {
         this.bulbManager = bulbManager;
         this.chestManager = chestManager;
+        this.circuitAnalyserListener = circuitAnalyserListener;
     }
 
     @EventHandler(priority = EventPriority.HIGH)
@@ -62,6 +74,7 @@ public class ConnectorToolListener implements Listener {
         event.setCancelled(true);
 
         Location location = block.getLocation();
+        markExplicitClick(player);
 
         // Check if this is a creation mode tool
         if (ConnectorToolFactory.isCreationMode(item)) {
@@ -78,17 +91,100 @@ public class ConnectorToolListener implements Listener {
         ConnectorToolFactory.GroupType groupType = ConnectorToolFactory.getGroupType(item);
 
         if (groupId == null || groupType == null) {
-            player.sendMessage(Component.text("Invalid connector tool!", NamedTextColor.RED));
+            player.sendMessage(Component.text("Invalid circuit tool!", NamedTextColor.RED));
             return;
         }
 
         if (event.getAction() == Action.RIGHT_CLICK_BLOCK) {
-            // Add block to group
+            if (displayExistingGroupInfo(player, location)) {
+                return;
+            }
             handleAddBlock(player, location, block, groupId, groupType);
         } else if (event.getAction() == Action.LEFT_CLICK_BLOCK) {
-            // Remove block from group
-            handleRemoveBlock(player, location, groupId, groupType);
+            handleLeftClickRemove(player, location);
         }
+    }
+
+    /**
+     * Fallback for servers that expose a left click as block damage rather than a
+     * PlayerInteractEvent.
+     */
+    @EventHandler(priority = EventPriority.HIGH)
+    public void onBlockDamage(BlockDamageEvent event) {
+        Player player = event.getPlayer();
+        ItemStack item = player.getInventory().getItemInMainHand();
+        if (!isEditingTool(item)) return;
+
+        Block block = event.getBlock();
+        event.setCancelled(true);
+        markExplicitClick(player);
+        handleLeftClickRemove(player, block.getLocation());
+    }
+
+    /**
+     * Chests can suppress both LEFT_CLICK_BLOCK and BlockDamageEvent on some
+     * Paper/client combinations. An arm swing is still sent, so resolve the block
+     * the player is looking at and route it through the same removal operation.
+     */
+    @EventHandler(priority = EventPriority.HIGH)
+    public void onPlayerAnimation(PlayerAnimationEvent event) {
+        if (event.getAnimationType() != PlayerAnimationType.ARM_SWING) return;
+
+        Player player = event.getPlayer();
+        if (!isEditingTool(player.getInventory().getItemInMainHand())) return;
+
+        Block target = player.getTargetBlockExact(6, FluidCollisionMode.NEVER);
+        if (target == null || !isWirelessLocation(target.getLocation())) return;
+
+        Location location = target.getLocation();
+        WirelessRedstonePlugin plugin = WirelessRedstonePlugin.getInstance();
+        plugin.getServer().getScheduler().runTask(plugin, () -> {
+            if (!player.isOnline() || handledExplicitClickPlayers.contains(player.getUniqueId())) {
+                return;
+            }
+            if (isEditingTool(player.getInventory().getItemInMainHand())
+                    && isWirelessLocation(location)) {
+                handleLeftClickRemove(player, location);
+            }
+        });
+    }
+
+    private boolean isEditingTool(ItemStack item) {
+        return ConnectorToolFactory.isConnectorTool(item)
+                && !ConnectorToolFactory.isCreationMode(item);
+    }
+
+    private boolean isWirelessLocation(Location location) {
+        return bulbManager.isWirelessBulbLocation(location)
+                || chestManager.isWirelessChestLocation(location);
+    }
+
+    private void markExplicitClick(Player player) {
+        UUID playerId = player.getUniqueId();
+        handledExplicitClickPlayers.add(playerId);
+        WirelessRedstonePlugin plugin = WirelessRedstonePlugin.getInstance();
+        plugin.getServer().getScheduler().runTaskLater(plugin,
+                () -> handledExplicitClickPlayers.remove(playerId), 2L);
+    }
+
+    private void handleLeftClickRemove(Player player, Location location) {
+        UUID playerId = player.getUniqueId();
+        if (!handledLeftClickPlayers.add(playerId)) return;
+
+        WirelessRedstonePlugin plugin = WirelessRedstonePlugin.getInstance();
+        plugin.getServer().getScheduler().runTask(plugin,
+                () -> handledLeftClickPlayers.remove(playerId));
+
+        handleRemoveBlock(player, location);
+    }
+
+    private boolean displayExistingGroupInfo(Player player, Location location) {
+        if (bulbManager.isWirelessBulbLocation(location) || chestManager.isWirelessChestLocation(location)) {
+            circuitAnalyserListener.displayBlockInfo(player, location);
+            return true;
+        }
+
+        return false;
     }
 
     private void handleCreationModeAdd(Player player, Location location, Block block, ItemStack tool) {
@@ -136,7 +232,11 @@ public class ConnectorToolListener implements Listener {
         bulbManager.registerPlacedBulb(location, groupId, 0, player.getUniqueId(), bulbType, 1);
 
         // Transform the tool from creation mode to regular mode
-        ItemStack newTool = ConnectorToolFactory.createConnectorTool(groupId, groupName, ConnectorToolFactory.GroupType.BULB);
+        ItemStack newTool = ConnectorToolFactory.createConnectorTool(
+                groupId,
+                groupName,
+                ConnectorToolFactory.GroupType.BULB,
+                WireViewManager.getBulbGroupTextColor(groupId, bulbManager.getAllPlacedGroups()));
         player.getInventory().setItemInMainHand(newTool);
 
         ParticleEffects.spawnConnectParticles(location);
@@ -145,6 +245,8 @@ public class ConnectorToolListener implements Listener {
                 .append(Component.text(" with first ", NamedTextColor.GREEN))
                 .append(Component.text(bulbType == BulbVariant.BulbType.REDSTONE_LAMP ? "lamp" : "bulb", NamedTextColor.YELLOW))
                 .append(Component.text(" at slot A (1/1)", NamedTextColor.GRAY)));
+
+        refreshCircuitOverlay();
     }
 
     private void createChestGroupFromTool(Player player, Location location, Block block, String groupName,
@@ -197,7 +299,11 @@ public class ConnectorToolListener implements Listener {
         }
 
         // Transform the tool from creation mode to regular mode
-        ItemStack newTool = ConnectorToolFactory.createConnectorTool(groupId, groupName, ConnectorToolFactory.GroupType.CHEST);
+        ItemStack newTool = ConnectorToolFactory.createConnectorTool(
+                groupId,
+                groupName,
+                ConnectorToolFactory.GroupType.CHEST,
+                WireViewManager.getChestGroupTextColor(groupId, chestManager.getAllPlacedGroups()));
         player.getInventory().setItemInMainHand(newTool);
 
         ParticleEffects.spawnConnectParticles(location);
@@ -210,6 +316,8 @@ public class ConnectorToolListener implements Listener {
                 .append(Component.text(" with first ", NamedTextColor.GREEN))
                 .append(Component.text(containerLabel, NamedTextColor.YELLOW))
                 .append(Component.text(sizeText, NamedTextColor.GRAY)));
+
+        refreshCircuitOverlay();
     }
 
     /**
@@ -232,11 +340,19 @@ public class ConnectorToolListener implements Listener {
         }
     }
 
-    private void handleRemoveBlock(Player player, Location location, UUID groupId, ConnectorToolFactory.GroupType groupType) {
-        if (groupType == ConnectorToolFactory.GroupType.BULB) {
-            removeBulbFromGroup(player, location, groupId);
-        } else {
-            removeChestFromGroup(player, location, groupId);
+    private void handleRemoveBlock(Player player, Location location) {
+        try {
+            if (bulbManager.getGroupByLocation(location).isPresent()) {
+                removeBulbFromGroup(player, location);
+            } else if (chestManager.getGroupByLocation(location).isPresent()) {
+                removeChestFromGroup(player, location);
+            } else {
+                player.sendMessage(Component.text("This block is not part of any wireless group!", NamedTextColor.RED));
+            }
+        } catch (Exception e) {
+            WirelessRedstonePlugin.getInstance().getLogger().log(java.util.logging.Level.SEVERE,
+                    "Error removing block at " + location + " via circuit tool", e);
+            player.sendMessage(Component.text("⚠ An internal error occurred while removing this block. Check the console.", NamedTextColor.RED));
         }
     }
 
@@ -282,24 +398,12 @@ public class ConnectorToolListener implements Listener {
             material = convertCopperBulbToWaxedIfNeeded(block);
         }
 
-        // Find the first available slot
-        int slot = -1;
-        for (int i = 0; i < group.getMaxSize(); i++) {
-            if (group.getLocation(i) == null) {
-                slot = i;
-                break;
-            }
+        int[] slots = group.allocateSlots(1, 26);
+        if (slots.length == 0) {
+            player.sendMessage(Component.text("This group has reached the maximum size (26)!", NamedTextColor.RED));
+            return;
         }
-
-        // If group is full, auto-extend it
-        if (slot == -1) {
-            if (group.getMaxSize() >= 26) {
-                player.sendMessage(Component.text("This group has reached the maximum size (26)!", NamedTextColor.RED));
-                return;
-            }
-            group.extendGroup(1);
-            slot = group.getMaxSize() - 1;
-        }
+        int slot = slots[0];
 
         // Register the bulb
         bulbManager.registerPlacedBulb(location, groupId, slot, player.getUniqueId(), bulbType, group.getMaxSize());
@@ -324,8 +428,7 @@ public class ConnectorToolListener implements Listener {
                 .append(Component.text(String.valueOf(slotLabel), NamedTextColor.YELLOW))
                 .append(Component.text(" (" + group.getPlacedCount() + "/" + group.getMaxSize() + ")", NamedTextColor.GRAY)));
 
-        // Refresh wire view for players viewing this group
-        WirelessRedstonePlugin.getInstance().getWireViewManager().refreshSingleGroupViewForGroup(groupId);
+        refreshCircuitOverlay();
     }
 
     private Material convertCopperBulbToWaxedIfNeeded(Block block) {
@@ -357,7 +460,6 @@ public class ConnectorToolListener implements Listener {
         if (existingGroupOpt.isPresent()) {
             ChestGroup existingGroup = existingGroupOpt.get();
             if (existingGroup.getGroupId().equals(groupId)) {
-                removeChestFromGroup(player, location, groupId);
                 return;
             }
 
@@ -421,45 +523,14 @@ public class ConnectorToolListener implements Listener {
             return;
         }
 
-        // Calculate how many slots we need (1 or 2 for large chest)
         int slotsNeeded = isLargeChest ? 2 : 1;
-        
-        // Find available slots
-        int slot = -1;
-        int slot2 = -1;
-        for (int i = 0; i < group.getMaxSize(); i++) {
-            if (group.getLocation(i) == null) {
-                if (slot == -1) {
-                    slot = i;
-                    if (!isLargeChest) break;
-                } else if (slot2 == -1) {
-                    slot2 = i;
-                    break;
-                }
-            }
+        int[] slots = group.allocateSlots(slotsNeeded, 26);
+        if (slots.length == 0) {
+            player.sendMessage(Component.text("This group has reached the maximum size (26)!", NamedTextColor.RED));
+            return;
         }
-
-        // Count available slots
-        int availableSlots = (slot != -1 ? 1 : 0) + (slot2 != -1 ? 1 : 0);
-        int slotsToExtend = slotsNeeded - availableSlots;
-        
-        // If we need more slots, auto-extend
-        if (slotsToExtend > 0) {
-            if (group.getMaxSize() + slotsToExtend > 26) {
-                player.sendMessage(Component.text("This group has reached the maximum size (26)!", NamedTextColor.RED));
-                return;
-            }
-            int oldSize = group.getMaxSize();
-            group.extendGroup(slotsToExtend);
-            
-            // Fill in the newly created slots
-            if (slot == -1) {
-                slot = oldSize;
-            }
-            if (isLargeChest && slot2 == -1) {
-                slot2 = (slot == oldSize) ? oldSize + 1 : oldSize;
-            }
-        }
+        int slot = slots[0];
+        int slot2 = isLargeChest ? slots[1] : -1;
 
         // Register the chest(s)
         chestManager.registerPlacedChest(location, groupId, slot, player.getUniqueId(), group.getMaxSize(), containerType);
@@ -489,11 +560,10 @@ public class ConnectorToolListener implements Listener {
                     .append(Component.text(" (" + group.getPlacedCount() + "/" + group.getMaxSize() + ")", NamedTextColor.GRAY)));
         }
 
-        // Refresh wire view for players viewing this group
-        WirelessRedstonePlugin.getInstance().getWireViewManager().refreshSingleGroupViewForGroup(groupId);
+        refreshCircuitOverlay();
     }
 
-    private void removeBulbFromGroup(Player player, Location location, UUID groupId) {
+    private void removeBulbFromGroup(Player player, Location location) {
         // Check if this location is part of the group
         Optional<BulbGroup> groupOpt = bulbManager.getGroupByLocation(location);
         if (groupOpt.isEmpty()) {
@@ -502,12 +572,6 @@ public class ConnectorToolListener implements Listener {
         }
 
         BulbGroup group = groupOpt.get();
-        if (!group.getGroupId().equals(groupId)) {
-            player.sendMessage(Component.text("This block is not part of the selected group!", NamedTextColor.RED));
-            player.sendMessage(Component.text("It belongs to: " + group.getDisplayName(), NamedTextColor.GRAY));
-            return;
-        }
-
         int slot = group.getLocationIndex(location);
         char slotLabel = slot >= 0 ? (char) ('A' + slot) : '?';
 
@@ -527,11 +591,10 @@ public class ConnectorToolListener implements Listener {
                 .append(Component.text(String.valueOf(slotLabel), NamedTextColor.YELLOW))
                 .append(Component.text(", group now has " + group.getMaxSize() + " slots)", NamedTextColor.GRAY)));
 
-        // Refresh wire view for players viewing this group
-        WirelessRedstonePlugin.getInstance().getWireViewManager().refreshSingleGroupViewForGroup(groupId);
+        refreshCircuitOverlay();
     }
 
-    private void removeChestFromGroup(Player player, Location location, UUID groupId) {
+    private void removeChestFromGroup(Player player, Location location) {
         // Check if this location is part of the group
         Optional<ChestGroup> groupOpt = chestManager.getGroupByLocation(location);
         if (groupOpt.isEmpty()) {
@@ -540,12 +603,6 @@ public class ConnectorToolListener implements Listener {
         }
 
         ChestGroup group = groupOpt.get();
-        if (!group.getGroupId().equals(groupId)) {
-            player.sendMessage(Component.text("This container is not part of the selected group!", NamedTextColor.RED));
-            player.sendMessage(Component.text("It belongs to: " + group.getDisplayName(), NamedTextColor.GRAY));
-            return;
-        }
-
         Location otherHalfLocation = getDoubleChestOtherHalf(location.getBlock());
         boolean isLargeChest = otherHalfLocation != null && group.hasLocation(otherHalfLocation);
         int slot = group.getLocationIndex(location);
@@ -571,8 +628,11 @@ public class ConnectorToolListener implements Listener {
                 .append(Component.text(slotText, NamedTextColor.YELLOW))
                 .append(Component.text(", group now has " + group.getMaxSize() + " slots)", NamedTextColor.GRAY)));
 
-        // Refresh wire view for players viewing this group
-        WirelessRedstonePlugin.getInstance().getWireViewManager().refreshSingleGroupViewForGroup(groupId);
+        refreshCircuitOverlay();
+    }
+
+    private void refreshCircuitOverlay() {
+        WirelessRedstonePlugin.getInstance().getWireViewManager().refreshAllPlayers();
     }
 
     private ChestVariant.ContainerType getContainerTypeFromMaterial(Material material) {
