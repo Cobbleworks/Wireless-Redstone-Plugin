@@ -15,6 +15,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.FluidCollisionMode;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.Container;
@@ -27,12 +28,17 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
+import org.bukkit.event.block.BlockDamageEvent;
+import org.bukkit.event.player.PlayerAnimationEvent;
+import org.bukkit.event.player.PlayerAnimationType;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Listener for Circuit Tool interactions.
@@ -43,6 +49,7 @@ public class ConnectorToolListener implements Listener {
     private final LinkedBulbManager bulbManager;
     private final LinkedChestManager chestManager;
     private final CircuitAnalyserListener circuitAnalyserListener;
+    private final Set<UUID> handledLeftClickPlayers = ConcurrentHashMap.newKeySet();
 
     public ConnectorToolListener(LinkedBulbManager bulbManager, LinkedChestManager chestManager,
                                  CircuitAnalyserListener circuitAnalyserListener) {
@@ -92,8 +99,63 @@ public class ConnectorToolListener implements Listener {
             }
             handleAddBlock(player, location, block, groupId, groupType);
         } else if (event.getAction() == Action.LEFT_CLICK_BLOCK) {
-            handleRemoveBlock(player, location);
+            handleLeftClickRemove(player, location);
         }
+    }
+
+    /**
+     * Fallback for servers that expose a left click as block damage rather than a
+     * PlayerInteractEvent.
+     */
+    @EventHandler(priority = EventPriority.HIGH)
+    public void onBlockDamage(BlockDamageEvent event) {
+        Player player = event.getPlayer();
+        ItemStack item = player.getInventory().getItemInMainHand();
+        if (!isEditingTool(item)) return;
+
+        Block block = event.getBlock();
+        event.setCancelled(true);
+        handleLeftClickRemove(player, block.getLocation());
+    }
+
+    /**
+     * Chests can suppress both LEFT_CLICK_BLOCK and BlockDamageEvent on some
+     * Paper/client combinations. An arm swing is still sent, so resolve the block
+     * the player is looking at and route it through the same removal operation.
+     */
+    @EventHandler(priority = EventPriority.HIGH)
+    public void onPlayerAnimation(PlayerAnimationEvent event) {
+        if (event.getAnimationType() != PlayerAnimationType.ARM_SWING) return;
+
+        Player player = event.getPlayer();
+        if (!isEditingTool(player.getInventory().getItemInMainHand())) return;
+
+        Block target = player.getTargetBlockExact(6, FluidCollisionMode.NEVER);
+        if (target == null || !isWirelessLocation(target.getLocation())) return;
+
+        event.setCancelled(true);
+        handleLeftClickRemove(player, target.getLocation());
+    }
+
+    private boolean isEditingTool(ItemStack item) {
+        return ConnectorToolFactory.isConnectorTool(item)
+                && !ConnectorToolFactory.isCreationMode(item);
+    }
+
+    private boolean isWirelessLocation(Location location) {
+        return bulbManager.isWirelessBulbLocation(location)
+                || chestManager.isWirelessChestLocation(location);
+    }
+
+    private void handleLeftClickRemove(Player player, Location location) {
+        UUID playerId = player.getUniqueId();
+        if (!handledLeftClickPlayers.add(playerId)) return;
+
+        WirelessRedstonePlugin plugin = WirelessRedstonePlugin.getInstance();
+        plugin.getServer().getScheduler().runTask(plugin,
+                () -> handledLeftClickPlayers.remove(playerId));
+
+        handleRemoveBlock(player, location);
     }
 
     private boolean displayExistingGroupInfo(Player player, Location location) {
