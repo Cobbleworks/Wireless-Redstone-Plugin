@@ -1,13 +1,14 @@
 # Maven build output
 target/
 
-# IDE files (optional, remove if you want them in git)
+# IDE metadata
 .idea/
+.vscode/
 *.iml
 .classpath
 .project
 .settings/
 
-# OS junk
+# Operating-system files
 .DS_Store
 Thumbs.db

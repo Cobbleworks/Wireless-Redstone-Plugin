@@ -3,7 +3,8 @@ version: ${project.version}
 main: com.wirelessredstone.WirelessRedstonePlugin
 api-version: "1.21"
 description: Wireless Redstone plugin with linked copper bulbs and redstone lamps
-author: Developer
+author: Cobbleworks
+website: https://github.com/Cobbleworks/Wireless-Redstone-Plugin
 
 commands:
   wireless:
