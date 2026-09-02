@@ -1,10 +1,10 @@
 <p align="center">
-  <img src="images/plugin-logo.png" alt="Wireless Redstone Plugin" width="200" height="200" />
+  <img src="images/plugin-banner.png" alt="Cobbleworks - Wireless Redstone Plugin banner" width="818" />
 </p>
-<h1 align="center">Wireless Redstone Plugin</h1>
+<h1 align="center">Cobbleworks - Wireless Redstone Plugin</h1>
 <p align="center">
-  <b>Wirelessly link copper bulbs, redstone lamps, and container blocks.</b><br>
-  <b>State and inventory synchronization across any distance with GUI management.</b>
+  <b>Link copper bulbs, redstone lamps, and supported containers without physical redstone wiring.</b><br>
+  <b>Synchronize block states or shared inventories across distance through named groups and in-game tools.</b>
 </p>
 <p align="center">
   <a href="https://github.com/Cobbleworks/Wireless-Redstone-Plugin/releases"><img src="https://img.shields.io/github/v/release/Cobbleworks/Wireless-Redstone-Plugin?include_prereleases&style=flat-square&color=4CAF50" alt="Latest Release"></a>&nbsp;&nbsp;<a href="https://github.com/Cobbleworks/Wireless-Redstone-Plugin/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue?style=flat-square" alt="License"></a>&nbsp;&nbsp;<img src="https://img.shields.io/badge/Java-21+-orange?style=flat-square" alt="Java Version">&nbsp;&nbsp;<img src="https://img.shields.io/badge/Minecraft-1.21+-green?style=flat-square" alt="Minecraft Version">&nbsp;&nbsp;<img src="https://img.shields.io/badge/Platform-Paper-yellow?style=flat-square" alt="Platform">&nbsp;&nbsp;<img src="https://img.shields.io/badge/Status-Active-brightgreen?style=flat-square" alt="Status">&nbsp;&nbsp;<a href="https://github.com/Cobbleworks/Wireless-Redstone-Plugin/issues"><img src="https://img.shields.io/github/issues/Cobbleworks/Wireless-Redstone-Plugin?style=flat-square&color=orange" alt="Open Issues"></a>
@@ -12,7 +12,7 @@
 
 Wireless Redstone is an open-source Minecraft plugin that allows players to create named groups of wirelessly linked blocks that synchronize their states or inventories across any distance. Link copper bulbs and redstone lamps into groups that toggle together, or link chests, shulker boxes, and copper chests into shared inventory groups that update in real time. All group data is saved persistently and survives server restarts, with full GUI-based management, a unified circuit tool for rapid assignment and inspection, and hopper-compatible container support.
 
-### **Core Features**
+## **Core Features**
 
 - **Wireless Bulbs and Lamps:** Create linked groups of copper bulbs or redstone lamps that synchronize state across any distance (2-26 blocks per group)
 - **Wireless Containers:** Create linked groups of chests, barrels, shulker boxes, or copper chests that share inventory in real time
@@ -24,7 +24,7 @@ Wireless Redstone is an open-source Minecraft plugin that allows players to crea
 - **Hopper Compatible:** Wireless containers work seamlessly with hoppers for automated item transfer and sorting systems
 - **Persistent Data:** All group data is saved automatically and survives server restarts
 
-### **Supported Platforms**
+## **Supported Platforms**
 
 - **Server Software:** `Paper` and compatible Paper forks
 - **Minecraft Versions:** `1.21` and higher
@@ -33,24 +33,26 @@ Wireless Redstone is an open-source Minecraft plugin that allows players to crea
 
 ## **Table of Contents**
 
-1. [Getting Started](#getting-started)
+1. [Core Features](#core-features)
+2. [Supported Platforms](#supported-platforms)
+3. [Getting Started](#getting-started)
    - [Prerequisites](#prerequisites)
    - [Installation Steps](#installation-steps)
    - [First Launch & Configuration](#first-launch--configuration)
    - [Verifying Installation](#verifying-installation)
-2. [Third-Party Plugins](#third-party-plugins)
-3. [Configuration](#configuration)
+4. [Third-Party Plugins](#third-party-plugins)
+5. [Configuration](#configuration)
    - [Data Files](#data-files)
-4. [How It Works](#how-it-works)
+6. [How It Works](#how-it-works)
    - [Wireless Bulbs and Lamps](#wireless-bulbs-and-lamps)
    - [Wireless Containers](#wireless-containers)
    - [Circuit Tool](#circuit-tool)
-5. [Player Commands](#player-commands)
+7. [Player Commands](#player-commands)
    - [Command Reference](#command-reference)
-6. [Permissions](#permissions)
-7. [Building from Source](#building-from-source)
-8. [License](#license)
-9. [Screenshots](#screenshots)
+8. [Permissions](#permissions)
+9. [Building from Source](#building-from-source)
+10. [License](#license)
+11. [Screenshots](#screenshots)
 
 ## **Getting Started**
 
