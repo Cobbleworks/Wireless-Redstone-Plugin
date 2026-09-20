@@ -1,8 +1,10 @@
 package com.wirelessredstone.gui;
 
+import com.wirelessredstone.WirelessRedstonePlugin;
 import com.wirelessredstone.manager.CategoryManager;
 import com.wirelessredstone.manager.LinkedBulbManager;
 import com.wirelessredstone.manager.LinkedChestManager;
+import com.wirelessredstone.manager.MenuOrderManager;
 import com.wirelessredstone.model.BulbGroup;
 import com.wirelessredstone.model.Category;
 import com.wirelessredstone.model.ChestGroup;
@@ -117,6 +119,7 @@ public class BulbManagerGUI implements InventoryHolder {
             groups.stream()
                     .filter(group -> group.getCategoryName() == null)
                     .forEach(group -> entries.add(new GroupGuiEntry(group)));
+            applySavedOrder();
             return;
         }
 
@@ -125,6 +128,32 @@ public class BulbManagerGUI implements InventoryHolder {
                 .filter(group -> targetKey.equals(group.getCategoryKey()))
                 .toList();
         groups.forEach(group -> entries.add(new GroupGuiEntry(group)));
+        applySavedOrder();
+    }
+
+    private void applySavedOrder() {
+        if (showAllGroups) return;
+        List<String> savedOrder = WirelessRedstonePlugin.getInstance().getMenuOrderManager()
+                .getOrder(player.getUniqueId(), getOrderContext());
+        if (savedOrder.isEmpty()) return;
+
+        Map<String, Integer> positions = new HashMap<>();
+        for (int i = 0; i < savedOrder.size(); i++) positions.putIfAbsent(savedOrder.get(i), i);
+        entries.sort(Comparator.comparingInt(entry -> positions.getOrDefault(getEntryKey(entry), Integer.MAX_VALUE)));
+    }
+
+    private String getOrderContext() {
+        return categoryName == null
+                ? MenuOrderManager.ROOT_CONTEXT
+                : GroupNameParser.normalizeCategoryKey(categoryName);
+    }
+
+    private String getEntryKey(GuiEntry entry) {
+        if (entry instanceof CategoryEntry categoryEntry) {
+            return "category:" + categoryEntry.key();
+        }
+        GroupEntry group = ((GroupGuiEntry) entry).group();
+        return "group:" + group.getType().name().toLowerCase(Locale.ROOT) + ":" + group.getGroupId();
     }
 
     private void populateInventory() {
@@ -253,10 +282,10 @@ public class BulbManagerGUI implements InventoryHolder {
         
         lore.add(Component.empty());
         lore.add(Component.text("Left-click: ", NamedTextColor.YELLOW)
-                .append(Component.text("Teleport to first placed", NamedTextColor.WHITE))
+                .append(Component.text("Show group details", NamedTextColor.WHITE))
                 .decoration(TextDecoration.ITALIC, false));
         lore.add(Component.text("Right-click: ", NamedTextColor.YELLOW)
-                .append(Component.text("Show group details", NamedTextColor.WHITE))
+                .append(Component.text("Teleport to first placed", NamedTextColor.WHITE))
                 .decoration(TextDecoration.ITALIC, false));
         lore.add(Component.text("Middle-click: ", NamedTextColor.LIGHT_PURPLE)
                 .append(Component.text("Rename group", NamedTextColor.WHITE))
@@ -339,6 +368,8 @@ public class BulbManagerGUI implements InventoryHolder {
                 Component.text("Page " + (currentPage + 1) + "/" + totalPages, NamedTextColor.GRAY)
                         .decoration(TextDecoration.ITALIC, false),
                 Component.text("Total groups: " + groups.size(), NamedTextColor.GRAY)
+                        .decoration(TextDecoration.ITALIC, false),
+                Component.text("Click to rearrange this menu", NamedTextColor.YELLOW)
                         .decoration(TextDecoration.ITALIC, false)
         ));
         
@@ -442,7 +473,21 @@ public class BulbManagerGUI implements InventoryHolder {
         }
 
         if (slot == 46) {
-            CategorySelectionGUI.startConnectorToolPrompt(player, categoryName);
+            CategorySelectionGUI.startConnectorToolPrompt(player, categoryName, showAllGroups);
+            return;
+        }
+
+        if (slot == 49) {
+            if (showAllGroups) {
+                player.sendMessage(Component.text("Switch to My Groups before changing your menu order.", NamedTextColor.RED));
+                return;
+            }
+            List<MenuReorderGUI.Entry> reorderEntries = entries.stream()
+                    .map(entry -> new MenuReorderGUI.Entry(getEntryKey(entry), createEntryItem(entry)))
+                    .toList();
+            player.closeInventory();
+            new MenuReorderGUI(bulbManager, chestManager, categoryManager, player, false,
+                    categoryName, getOrderContext(), reorderEntries).open();
             return;
         }
 
@@ -472,14 +517,14 @@ public class BulbManagerGUI implements InventoryHolder {
         } else if (isMiddleClick) {
             handleStartRename(group);
         } else if (isRightClick) {
-            handleShowDetails(group);
-        } else {
             List<Location> placed = group.getPlacedLocations();
             if (!placed.isEmpty()) {
                 handleTeleport(placed.get(0), GroupEntry.getIndexLabel(group.getLocationIndex(placed.get(0))));
             } else {
                 player.sendMessage(Component.text("No items are placed in this group!", NamedTextColor.RED));
             }
+        } else {
+            handleShowDetails(group);
         }
     }
 
@@ -713,6 +758,13 @@ public class BulbManagerGUI implements InventoryHolder {
     private int getEntryIndexFromSlot(int slot) {
         if (slot < 0 || slot >= ITEMS_PER_PAGE) return -1;
         return currentPage * ITEMS_PER_PAGE + slot;
+    }
+
+    private ItemStack createEntryItem(GuiEntry entry) {
+        if (entry instanceof CategoryEntry categoryEntry) {
+            return createCategoryItem(categoryEntry);
+        }
+        return createGroupItem(((GroupGuiEntry) entry).group());
     }
 
     private void handleTeleport(Location location, String name) {

@@ -3,6 +3,7 @@ package com.wirelessredstone.listener;
 import com.wirelessredstone.gui.BulbManagerGUI;
 import com.wirelessredstone.gui.CategoryAssignmentGUI;
 import com.wirelessredstone.gui.CategorySelectionGUI;
+import com.wirelessredstone.gui.MenuReorderGUI;
 import com.wirelessredstone.manager.CategoryManager;
 import com.wirelessredstone.manager.LinkedBulbManager;
 import com.wirelessredstone.manager.LinkedChestManager;
@@ -13,6 +14,8 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
@@ -32,6 +35,11 @@ public class GUIListener implements Listener {
 
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
+        if (event.getInventory().getHolder() instanceof MenuReorderGUI gui) {
+            gui.handleClick(event);
+            return;
+        }
+
         if (event.getInventory().getHolder() instanceof BulbManagerGUI gui) {
             event.setCancelled(true);
 
@@ -67,6 +75,20 @@ public class GUIListener implements Listener {
             }
 
             gui.handleClick(event.getSlot());
+        }
+    }
+
+    @EventHandler
+    public void onInventoryDrag(InventoryDragEvent event) {
+        if (event.getInventory().getHolder() instanceof MenuReorderGUI gui) {
+            gui.handleDrag(event);
+        }
+    }
+
+    @EventHandler
+    public void onInventoryClose(InventoryCloseEvent event) {
+        if (event.getInventory().getHolder() instanceof MenuReorderGUI gui) {
+            gui.handleClose();
         }
     }
 

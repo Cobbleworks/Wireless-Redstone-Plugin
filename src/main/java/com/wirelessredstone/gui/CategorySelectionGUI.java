@@ -32,6 +32,7 @@ public class CategorySelectionGUI implements InventoryHolder {
     
     private static final Map<UUID, PendingAction> pendingActions = new HashMap<>();
     private static final Map<UUID, String> pendingConnectorCategoryNames = new HashMap<>();
+    private static final Map<UUID, ConnectorPromptReturn> connectorPromptReturns = new HashMap<>();
 
     public enum PendingActionType {
         RENAME_CATEGORY,
@@ -41,6 +42,7 @@ public class CategorySelectionGUI implements InventoryHolder {
     }
 
     public record PendingAction(PendingActionType type, UUID categoryId) {}
+    private record ConnectorPromptReturn(String categoryName, boolean showAllGroups) {}
 
     private final CategoryManager categoryManager;
     private final LinkedBulbManager bulbManager;
@@ -474,6 +476,8 @@ public class CategorySelectionGUI implements InventoryHolder {
         if (bulbGroup.isPresent()) {
             if (giveExistingGroupConnectorTool(player, bulbGroup.get(), ConnectorToolFactory.GroupType.BULB, NamedTextColor.AQUA)) {
                 pendingActions.remove(player.getUniqueId());
+                connectorPromptReturns.remove(player.getUniqueId());
+                pendingConnectorCategoryNames.remove(player.getUniqueId());
             }
             return true;
         }
@@ -483,6 +487,8 @@ public class CategorySelectionGUI implements InventoryHolder {
             if (chestGroup.isPresent()) {
                 if (giveExistingGroupConnectorTool(player, chestGroup.get(), ConnectorToolFactory.GroupType.CHEST, NamedTextColor.GOLD)) {
                     pendingActions.remove(player.getUniqueId());
+                    connectorPromptReturns.remove(player.getUniqueId());
+                    pendingConnectorCategoryNames.remove(player.getUniqueId());
                 }
                 return true;
             }
@@ -522,7 +528,11 @@ public class CategorySelectionGUI implements InventoryHolder {
         if (input.equalsIgnoreCase("cancel")) {
             pendingConnectorCategoryNames.remove(player.getUniqueId());
             player.sendMessage(Component.text("Action cancelled.", NamedTextColor.GRAY));
-            reopenCategoryGUI(player, categoryManager, bulbManager, chestManager);
+            if (action.type() == PendingActionType.CREATE_CONNECTOR_TOOL) {
+                reopenConnectorPromptOrigin(player, categoryManager, bulbManager, chestManager);
+            } else {
+                reopenCategoryGUI(player, categoryManager, bulbManager, chestManager);
+            }
             return;
         }
 
@@ -549,6 +559,7 @@ public class CategorySelectionGUI implements InventoryHolder {
                 }
             }
             case CREATE_CONNECTOR_TOOL -> {
+                connectorPromptReturns.remove(player.getUniqueId());
                 String groupName = input.length() > 32 ? input.substring(0, 32) : input;
                 String categoryName = pendingConnectorCategoryNames.remove(player.getUniqueId());
                 if (categoryName == null) {
@@ -578,14 +589,27 @@ public class CategorySelectionGUI implements InventoryHolder {
         );
     }
 
+    private static void reopenConnectorPromptOrigin(Player player, CategoryManager categoryManager,
+                                                    LinkedBulbManager bulbManager, LinkedChestManager chestManager) {
+        ConnectorPromptReturn returnState = connectorPromptReturns.remove(player.getUniqueId());
+        String categoryName = returnState == null ? null : returnState.categoryName();
+        boolean showAllGroups = returnState != null && returnState.showAllGroups();
+        player.getServer().getScheduler().runTask(
+                player.getServer().getPluginManager().getPlugin("WirelessRedstone"),
+                () -> new BulbManagerGUI(bulbManager, chestManager, categoryManager, player,
+                        showAllGroups, categoryName).open());
+    }
+
     public static void cancelPendingAction(UUID playerUuid) {
         pendingActions.remove(playerUuid);
         pendingConnectorCategoryNames.remove(playerUuid);
+        connectorPromptReturns.remove(playerUuid);
     }
 
     public static void startConnectorToolPrompt(Player player, UUID categoryId, CategoryManager categoryManager) {
         pendingActions.put(player.getUniqueId(), new PendingAction(PendingActionType.CREATE_CONNECTOR_TOOL, categoryId));
         pendingConnectorCategoryNames.remove(player.getUniqueId());
+        connectorPromptReturns.put(player.getUniqueId(), new ConnectorPromptReturn(null, false));
         player.closeInventory();
         player.sendMessage(Component.text("Enter a name for the new wireless group (or 'cancel' to abort):", NamedTextColor.YELLOW));
         player.sendMessage(Component.text("Or right-click an existing wireless block to get a connector for its group.", NamedTextColor.GRAY));
@@ -597,7 +621,12 @@ public class CategorySelectionGUI implements InventoryHolder {
     }
 
     public static void startConnectorToolPrompt(Player player, String categoryName) {
+        startConnectorToolPrompt(player, categoryName, false);
+    }
+
+    public static void startConnectorToolPrompt(Player player, String categoryName, boolean showAllGroups) {
         pendingActions.put(player.getUniqueId(), new PendingAction(PendingActionType.CREATE_CONNECTOR_TOOL, null));
+        connectorPromptReturns.put(player.getUniqueId(), new ConnectorPromptReturn(categoryName, showAllGroups));
         if (categoryName == null || categoryName.isBlank()) {
             pendingConnectorCategoryNames.remove(player.getUniqueId());
         } else {
