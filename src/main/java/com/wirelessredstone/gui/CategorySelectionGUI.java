@@ -6,6 +6,7 @@ import com.wirelessredstone.manager.LinkedBulbManager;
 import com.wirelessredstone.manager.LinkedChestManager;
 import com.wirelessredstone.manager.WireViewManager;
 import com.wirelessredstone.item.ConnectorToolFactory;
+import com.wirelessredstone.listener.CircuitAnalyserListener;
 import com.wirelessredstone.model.BaseGroup;
 import com.wirelessredstone.model.BulbGroup;
 import com.wirelessredstone.model.Category;
@@ -366,12 +367,14 @@ public class CategorySelectionGUI implements InventoryHolder {
     }
 
     private void handleCreateCategory() {
+        clearOtherChatPrompts(player.getUniqueId());
         pendingActions.put(player.getUniqueId(), new PendingAction(PendingActionType.CREATE_CATEGORY, null));
         player.closeInventory();
         player.sendMessage(Component.text("Enter a name for the new category (or 'cancel' to abort):", NamedTextColor.YELLOW));
     }
 
     private void handleRenameCategory(Category category) {
+        clearOtherChatPrompts(player.getUniqueId());
         pendingActions.put(player.getUniqueId(), new PendingAction(PendingActionType.RENAME_CATEGORY, category.getCategoryId()));
         player.closeInventory();
         player.sendMessage(Component.text("Enter a new name for the category (or 'cancel' to abort):", NamedTextColor.YELLOW));
@@ -379,6 +382,7 @@ public class CategorySelectionGUI implements InventoryHolder {
     }
 
     private void handleSetDescription(Category category) {
+        clearOtherChatPrompts(player.getUniqueId());
         pendingActions.put(player.getUniqueId(), new PendingAction(PendingActionType.SET_CATEGORY_DESCRIPTION, category.getCategoryId()));
         player.closeInventory();
         player.sendMessage(Component.text("Enter a category description (or 'clear' to remove, 'cancel' to abort):", NamedTextColor.YELLOW));
@@ -607,6 +611,7 @@ public class CategorySelectionGUI implements InventoryHolder {
     }
 
     public static void startConnectorToolPrompt(Player player, UUID categoryId, CategoryManager categoryManager) {
+        clearOtherChatPrompts(player.getUniqueId());
         pendingActions.put(player.getUniqueId(), new PendingAction(PendingActionType.CREATE_CONNECTOR_TOOL, categoryId));
         pendingConnectorCategoryNames.remove(player.getUniqueId());
         connectorPromptReturns.put(player.getUniqueId(), new ConnectorPromptReturn(null, false));
@@ -625,6 +630,7 @@ public class CategorySelectionGUI implements InventoryHolder {
     }
 
     public static void startConnectorToolPrompt(Player player, String categoryName, boolean showAllGroups) {
+        clearOtherChatPrompts(player.getUniqueId());
         pendingActions.put(player.getUniqueId(), new PendingAction(PendingActionType.CREATE_CONNECTOR_TOOL, null));
         connectorPromptReturns.put(player.getUniqueId(), new ConnectorPromptReturn(categoryName, showAllGroups));
         if (categoryName == null || categoryName.isBlank()) {
@@ -639,6 +645,12 @@ public class CategorySelectionGUI implements InventoryHolder {
             player.sendMessage(Component.text("Category: ", NamedTextColor.GRAY)
                     .append(Component.text(categoryName, NamedTextColor.YELLOW)));
         }
+    }
+
+    private static void clearOtherChatPrompts(UUID playerId) {
+        CircuitAnalyserListener.cancelPendingOperation(playerId);
+        BulbManagerGUI.cancelPendingRename(playerId);
+        BulbManagerGUI.cancelPendingCategoryChange(playerId);
     }
 
     private static void giveItemToPlayer(Player player, ItemStack item) {

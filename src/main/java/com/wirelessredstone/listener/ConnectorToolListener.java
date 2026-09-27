@@ -32,9 +32,11 @@ import org.bukkit.event.block.BlockDamageEvent;
 import org.bukkit.event.player.PlayerAnimationEvent;
 import org.bukkit.event.player.PlayerAnimationType;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -51,6 +53,7 @@ public class ConnectorToolListener implements Listener {
     private final CircuitAnalyserListener circuitAnalyserListener;
     private final Set<UUID> handledLeftClickPlayers = ConcurrentHashMap.newKeySet();
     private final Set<UUID> handledExplicitClickPlayers = ConcurrentHashMap.newKeySet();
+    private final Map<UUID, Location> recentlyCreatedBlocks = new ConcurrentHashMap<>();
 
     public ConnectorToolListener(LinkedBulbManager bulbManager, LinkedChestManager chestManager,
                                  CircuitAnalyserListener circuitAnalyserListener) {
@@ -96,6 +99,8 @@ public class ConnectorToolListener implements Listener {
         }
 
         if (event.getAction() == Action.RIGHT_CLICK_BLOCK) {
+            // The creation click can produce another interact event after the tool changes mode.
+            if (location.equals(recentlyCreatedBlocks.get(player.getUniqueId()))) return;
             if (displayExistingGroupInfo(player, location)) {
                 return;
             }
@@ -165,6 +170,22 @@ public class ConnectorToolListener implements Listener {
         WirelessRedstonePlugin plugin = WirelessRedstonePlugin.getInstance();
         plugin.getServer().getScheduler().runTaskLater(plugin,
                 () -> handledExplicitClickPlayers.remove(playerId), 2L);
+    }
+
+    private void markCreatedBlock(Player player, Location location) {
+        UUID playerId = player.getUniqueId();
+        recentlyCreatedBlocks.put(playerId, location);
+        WirelessRedstonePlugin plugin = WirelessRedstonePlugin.getInstance();
+        plugin.getServer().getScheduler().runTaskLater(plugin,
+                () -> recentlyCreatedBlocks.remove(playerId, location), 2L);
+    }
+
+    @EventHandler
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        UUID playerId = event.getPlayer().getUniqueId();
+        recentlyCreatedBlocks.remove(playerId);
+        handledLeftClickPlayers.remove(playerId);
+        handledExplicitClickPlayers.remove(playerId);
     }
 
     private void handleLeftClickRemove(Player player, Location location) {
@@ -239,6 +260,8 @@ public class ConnectorToolListener implements Listener {
                 WireViewManager.getBulbGroupTextColor(groupId, bulbManager.getAllPlacedGroups()));
         player.getInventory().setItemInMainHand(newTool);
 
+        markCreatedBlock(player, location);
+
         ParticleEffects.spawnConnectParticles(location);
         player.sendMessage(Component.text("✓ Created group ", NamedTextColor.GREEN)
                 .append(Component.text(groupName, NamedTextColor.AQUA))
@@ -305,6 +328,8 @@ public class ConnectorToolListener implements Listener {
                 ConnectorToolFactory.GroupType.CHEST,
                 WireViewManager.getChestGroupTextColor(groupId, chestManager.getAllPlacedGroups()));
         player.getInventory().setItemInMainHand(newTool);
+
+        markCreatedBlock(player, location);
 
         ParticleEffects.spawnConnectParticles(location);
         

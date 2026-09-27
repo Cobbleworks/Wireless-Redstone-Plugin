@@ -1,6 +1,7 @@
 package com.wirelessredstone.gui;
 
 import com.wirelessredstone.WirelessRedstonePlugin;
+import com.wirelessredstone.listener.CircuitAnalyserListener;
 import com.wirelessredstone.manager.CategoryManager;
 import com.wirelessredstone.manager.LinkedBulbManager;
 import com.wirelessredstone.manager.LinkedChestManager;
@@ -612,6 +613,8 @@ public class BulbManagerGUI implements InventoryHolder {
     }
 
     private void handleStartRename(GroupEntry group) {
+        CategorySelectionGUI.cancelPendingAction(player.getUniqueId());
+        CircuitAnalyserListener.cancelPendingOperation(player.getUniqueId());
         pendingRenames.put(player.getUniqueId(), group);
         player.closeInventory();
         player.sendMessage(Component.text("Enter a new name for the group (or 'cancel' to abort):", NamedTextColor.YELLOW));
