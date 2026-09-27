@@ -148,7 +148,6 @@ All commands require the `wirelessredstone.use` permission (operator by default)
 | `/wireless create`                            | Ask for a new group name and give a creation-mode Circuit Tool                                                                    |
 | `/wireless create <groupName>`                | Give a Circuit Tool for an existing group, or creation-mode tool for a named new group. Use `category/groupName` to categorize it |
 | `/wireless modify name <groupName> <newName>` | Rename a group                                                                                                                    |
-| `/wireless recover <groupName>`               | Restore saved group blocks destroyed by the environment                                                                           |
 | `/wireless gui [--all]`                       | Open management GUI                                                                                                               |
 | `/wireless reload`                            | Reload configuration files (admin only)                                                                                           |
 

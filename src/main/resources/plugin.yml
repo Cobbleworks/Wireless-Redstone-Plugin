@@ -9,7 +9,7 @@ website: https://github.com/Cobbleworks/Wireless-Redstone-Plugin
 commands:
   wireless:
     description: Wireless Redstone commands
-    usage: /wireless <create|modify|recover|gui> [options]
+    usage: /wireless <create|modify|gui> [options]
     permission: wirelessredstone.use
     aliases: [wr]
 

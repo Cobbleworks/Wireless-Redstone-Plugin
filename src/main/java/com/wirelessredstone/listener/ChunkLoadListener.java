@@ -1,5 +1,7 @@
 package com.wirelessredstone.listener;
 
+import com.wirelessredstone.WirelessRedstonePlugin;
+import com.wirelessredstone.item.ChestVariant;
 import com.wirelessredstone.manager.LinkedBulbManager;
 import com.wirelessredstone.manager.LinkedChestManager;
 import com.wirelessredstone.model.BulbGroup;
@@ -13,6 +15,12 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.world.ChunkLoadEvent;
+import org.bukkit.event.block.BlockBurnEvent;
+import org.bukkit.event.block.BlockExplodeEvent;
+import org.bukkit.event.entity.EntityExplodeEvent;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Handles chunk load events to sync wireless blocks when their chunks are loaded.
@@ -45,7 +53,11 @@ public class ChunkLoadListener implements Listener {
                 int locChunkZ = loc.getBlockZ() >> 4;
                 
                 if (locChunkX == chunkX && locChunkZ == chunkZ) {
-                    syncBulbToGroupState(loc, group);
+                    if (BulbUtils.getBulbTypeFromMaterial(loc.getBlock().getType()) == group.getBulbType()) {
+                        syncBulbToGroupState(loc, group);
+                    } else {
+                        bulbManager.unregisterBulb(loc);
+                    }
                 }
             }
         }
@@ -60,10 +72,60 @@ public class ChunkLoadListener implements Listener {
                 int locChunkZ = loc.getBlockZ() >> 4;
                 
                 if (locChunkX == chunkX && locChunkZ == chunkZ) {
-                    syncContainerToGroupState(loc, group);
+                    if (isMatchingContainer(loc, group)) {
+                        syncContainerToGroupState(loc, group);
+                    } else {
+                        chestManager.unregisterChest(loc);
+                    }
                 }
             }
         }
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onBlockExplode(BlockExplodeEvent event) {
+        reconcileAfterEvent(event.blockList().stream().map(Block::getLocation).toList());
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onEntityExplode(EntityExplodeEvent event) {
+        reconcileAfterEvent(event.blockList().stream().map(Block::getLocation).toList());
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onBlockBurn(BlockBurnEvent event) {
+        reconcileAfterEvent(List.of(event.getBlock().getLocation()));
+    }
+
+    private void reconcileAfterEvent(List<Location> locations) {
+        List<Location> tracked = new ArrayList<>();
+        for (Location loc : locations) {
+            if (bulbManager.isWirelessBulbLocation(loc) || chestManager.isWirelessChestLocation(loc)) {
+                tracked.add(loc);
+            }
+        }
+        if (tracked.isEmpty()) return;
+        WirelessRedstonePlugin plugin = WirelessRedstonePlugin.getInstance();
+        plugin.getServer().getScheduler().runTask(plugin, () -> {
+            for (Location loc : tracked) {
+                bulbManager.getGroupByLocation(loc).ifPresent(group -> {
+                    if (BulbUtils.getBulbTypeFromMaterial(loc.getBlock().getType()) != group.getBulbType()) {
+                        bulbManager.unregisterBulb(loc);
+                    }
+                });
+                chestManager.getGroupByLocation(loc).ifPresent(group -> {
+                    if (!isMatchingContainer(loc, group)) {
+                        chestManager.unregisterChest(loc);
+                    }
+                });
+            }
+            plugin.getWireViewManager().refreshAllPlayers();
+        });
+    }
+
+    private boolean isMatchingContainer(Location loc, ChestGroup group) {
+        ChestVariant variant = ChestVariant.fromMaterial(loc.getBlock().getType());
+        return variant != null && variant.getContainerType() == group.getContainerType();
     }
 
     private void syncBulbToGroupState(Location location, BulbGroup group) {

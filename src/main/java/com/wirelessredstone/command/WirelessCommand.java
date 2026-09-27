@@ -14,17 +14,10 @@ import com.wirelessredstone.manager.WireViewManager;
 import com.wirelessredstone.model.BaseGroup;
 import com.wirelessredstone.model.BulbGroup;
 import com.wirelessredstone.model.ChestGroup;
-import com.wirelessredstone.util.BulbUtils;
 import com.wirelessredstone.util.GroupNameParser;
-import com.wirelessredstone.util.ParticleEffects;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.block.Block;
-import org.bukkit.block.BlockFace;
-import org.bukkit.block.data.Lightable;
-import org.bukkit.block.data.type.CopperBulb;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -154,12 +147,12 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
             case "help", "?" -> sendUsage(player);
             case "create" -> handleCreateCommand(player, parsedArgs);
             case "modify" -> handleModifyCommand(player, parsedArgs);
-            case "recover" -> handleRecoverCommand(player, parsedArgs);
             case "gui", "manage", "list" -> handleGUICommand(player, parsedArgs);
             case "reload" -> handleReloadCommand(player);
             case "circuit-rename" -> handleCircuitRenameCommand(player, parsedArgs);
             case "circuit-category" -> handleCircuitCategoryCommand(player, parsedArgs);
             case "circuit-description" -> handleCircuitDescriptionCommand(player, parsedArgs);
+            case "circuit-delete" -> handleCircuitDeleteCommand(player, parsedArgs);
             case "teleport" -> handleTeleportCommand(player, parsedArgs);
             default -> {
                 player.sendMessage(Component.text("Unknown subcommand. Use ", NamedTextColor.RED)
@@ -329,307 +322,6 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
         }
     }
 
-    private void handleRecoverCommand(Player player, String[] args) {
-        if (args.length < 2) {
-            player.sendMessage(Component.text("Usage: /wireless recover <groupname>", NamedTextColor.RED));
-            player.sendMessage(Component.text("Restores missing saved blocks for a group you own.", NamedTextColor.GRAY));
-            player.sendMessage(Component.text("Use /wireless gui to see your group names.", NamedTextColor.GRAY));
-            return;
-        }
-
-        String groupName = args[1];
-
-        // Search for bulb group first
-        Optional<BulbGroup> bulbGroupOpt = findBulbGroupByName(player, groupName);
-        Optional<ChestGroup> chestGroupOpt = findChestGroupByName(player, groupName);
-
-        if (bulbGroupOpt.isPresent()) {
-            recoverBulbGroup(player, bulbGroupOpt.get());
-        } else if (chestGroupOpt.isPresent()) {
-            recoverChestGroup(player, chestGroupOpt.get());
-        } else {
-            player.sendMessage(Component.text("No group found with name: " + groupName, NamedTextColor.RED));
-            player.sendMessage(Component.text("Use /wireless gui to see your groups.", NamedTextColor.GRAY));
-        }
-    }
-
-    private void recoverBulbGroup(Player player, BulbGroup group) {
-        int restored = 0;
-        int skippedUnplaced = 0;
-        int skippedOccupied = 0;
-        int skippedUnloaded = 0;
-        Material expectedMaterial = getExpectedBulbMaterial(group);
-
-        for (int i = 0; i < group.getMaxSize(); i++) {
-            Location location = group.getLocation(i);
-            if (location == null) {
-                skippedUnplaced++;
-                continue;
-            }
-
-            if (!ensureChunkLoaded(location)) {
-                skippedUnloaded++;
-                continue;
-            }
-
-            Block block = location.getBlock();
-            Material currentType = block.getType();
-            boolean alreadyCorrect = currentType == expectedMaterial;
-            boolean compatibleBulb = BulbUtils.getBulbTypeFromMaterial(currentType) == group.getBulbType();
-
-            if (!alreadyCorrect && !isReplaceableForRecovery(currentType) && !compatibleBulb) {
-                skippedOccupied++;
-                continue;
-            }
-
-            if (!alreadyCorrect) {
-                block.setType(expectedMaterial, false);
-                restored++;
-            }
-
-            applyBulbState(block, group);
-            bulbManager.registerPlacedBulb(location, group.getGroupId(), i, group.getOwnerUuid(), group.getBulbType(), group.getMaxSize());
-            ParticleEffects.spawnConnectParticles(location);
-        }
-
-        bulbManager.saveData();
-        WirelessRedstonePlugin.getInstance().getWireViewManager().refreshAllPlayers();
-        sendRecoverSummary(player, group, restored, skippedUnplaced, skippedOccupied, skippedUnloaded, NamedTextColor.AQUA, "block");
-    }
-
-    private void recoverChestGroup(Player player, ChestGroup group) {
-        int restored = 0;
-        int skippedUnplaced = 0;
-        int skippedOccupied = 0;
-        int skippedUnloaded = 0;
-        Set<Integer> processed = new HashSet<>();
-        boolean largeChestGroup = group.getInventorySize() == ChestGroup.LARGE_CHEST_INVENTORY_SIZE
-                && (group.getContainerType() == ChestVariant.ContainerType.CHEST
-                || group.getContainerType() == ChestVariant.ContainerType.COPPER_CHEST);
-
-        for (int i = 0; i < group.getMaxSize(); i++) {
-            if (processed.contains(i)) {
-                continue;
-            }
-
-            Location location = group.getLocation(i);
-            if (location == null) {
-                skippedUnplaced++;
-                continue;
-            }
-
-            if (largeChestGroup) {
-                int pairIndex = findAdjacentGroupLocationIndex(group, i);
-                if (pairIndex >= 0) {
-                    processed.add(i);
-                    processed.add(pairIndex);
-                    RecoveryResult pairResult = recoverDoubleChestPair(group, i, pairIndex);
-                    restored += pairResult.restored();
-                    skippedOccupied += pairResult.skippedOccupied();
-                    skippedUnloaded += pairResult.skippedUnloaded();
-                    continue;
-                }
-            }
-
-            RecoveryResult result = recoverSingleContainer(group, i);
-            restored += result.restored();
-            skippedOccupied += result.skippedOccupied();
-            skippedUnloaded += result.skippedUnloaded();
-        }
-
-        chestManager.saveData();
-        WirelessRedstonePlugin.getInstance().getWireViewManager().refreshAllPlayers();
-        sendRecoverSummary(player, group, restored, skippedUnplaced, skippedOccupied, skippedUnloaded, NamedTextColor.GOLD, "container");
-    }
-
-    private void sendRecoverSummary(Player player, BaseGroup group, int restored, int skippedUnplaced,
-                                    int skippedOccupied, int skippedUnloaded, NamedTextColor groupColor, String blockLabel) {
-        if (restored == 0 && skippedUnplaced == 0 && skippedOccupied == 0 && skippedUnloaded == 0) {
-            player.sendMessage(Component.text("No missing saved " + blockLabel + "s found in group ", NamedTextColor.YELLOW)
-                    .append(Component.text(group.getDisplayName(), groupColor))
-                    .append(Component.text(".", NamedTextColor.YELLOW)));
-            return;
-        }
-
-        if (restored > 0) {
-            player.sendMessage(Component.text("Restored ", NamedTextColor.GREEN)
-                    .append(Component.text(restored, groupColor))
-                    .append(Component.text(" saved " + blockLabel + "(s) for group ", NamedTextColor.GREEN))
-                    .append(Component.text(group.getDisplayName(), groupColor))
-                    .append(Component.text(".", NamedTextColor.GREEN)));
-        } else {
-            player.sendMessage(Component.text("No saved " + blockLabel + " positions needed restoring for group ", NamedTextColor.YELLOW)
-                    .append(Component.text(group.getDisplayName(), groupColor))
-                    .append(Component.text(".", NamedTextColor.YELLOW)));
-        }
-
-        if (skippedUnplaced > 0) {
-            player.sendMessage(Component.text(skippedUnplaced + " empty slot(s) have no saved position. Use a Circuit Tool to add new blocks.", NamedTextColor.GRAY));
-        }
-        if (skippedOccupied > 0) {
-            player.sendMessage(Component.text(skippedOccupied + " saved position(s) were occupied by another block and were skipped.", NamedTextColor.GRAY));
-        }
-        if (skippedUnloaded > 0) {
-            player.sendMessage(Component.text(skippedUnloaded + " saved position(s) could not be loaded and were skipped.", NamedTextColor.GRAY));
-        }
-    }
-
-    private Material getExpectedBulbMaterial(BulbGroup group) {
-        if (group.getVariantMaterial() != null) {
-            return group.getVariantMaterial();
-        }
-        return BulbVariant.fromBulbType(group.getBulbType()).getMaterial();
-    }
-
-    private Material getExpectedChestMaterial(ChestGroup group) {
-        if (group.getVariantMaterial() != null) {
-            return group.getVariantMaterial();
-        }
-        return ChestVariant.fromContainerType(group.getContainerType()).getMaterial();
-    }
-
-    private boolean ensureChunkLoaded(Location location) {
-        if (location == null || location.getWorld() == null) {
-            return false;
-        }
-        return location.getChunk().isLoaded() || location.getChunk().load();
-    }
-
-    private boolean isReplaceableForRecovery(Material material) {
-        return material.isAir() || material == Material.WATER || material == Material.LAVA;
-    }
-
-    private void applyBulbState(Block block, BulbGroup group) {
-        var data = block.getBlockData();
-        if (data instanceof CopperBulb copperBulb) {
-            copperBulb.setLit(group.isLit());
-            block.setBlockData(copperBulb, false);
-        } else if (data instanceof Lightable lightable) {
-            lightable.setLit(group.isLit());
-            block.setBlockData(lightable, false);
-        }
-    }
-
-    private RecoveryResult recoverSingleContainer(ChestGroup group, int index) {
-        Location location = group.getLocation(index);
-        if (!ensureChunkLoaded(location)) {
-            return new RecoveryResult(0, 0, 1);
-        }
-
-        Material expectedMaterial = getExpectedChestMaterial(group);
-        Block block = location.getBlock();
-        Material currentType = block.getType();
-
-        if (currentType != expectedMaterial && !isReplaceableForRecovery(currentType)) {
-            return new RecoveryResult(0, 1, 0);
-        }
-
-        int restored = 0;
-        if (currentType != expectedMaterial) {
-            block.setType(expectedMaterial, false);
-            restored = 1;
-        }
-
-        chestManager.registerPlacedChest(location, group.getGroupId(), index, group.getOwnerUuid(), group.getMaxSize(), group.getContainerType());
-        chestManager.applySharedInventory(location, group);
-        ParticleEffects.spawnConnectParticles(location);
-        return new RecoveryResult(restored, 0, 0);
-    }
-
-    private RecoveryResult recoverDoubleChestPair(ChestGroup group, int firstIndex, int secondIndex) {
-        Location firstLocation = group.getLocation(firstIndex);
-        Location secondLocation = group.getLocation(secondIndex);
-        if (!ensureChunkLoaded(firstLocation) || !ensureChunkLoaded(secondLocation)) {
-            return new RecoveryResult(0, 0, 1);
-        }
-
-        Material expectedMaterial = getExpectedChestMaterial(group);
-        Block firstBlock = firstLocation.getBlock();
-        Block secondBlock = secondLocation.getBlock();
-        Material firstType = firstBlock.getType();
-        Material secondType = secondBlock.getType();
-
-        if ((firstType != expectedMaterial && !isReplaceableForRecovery(firstType))
-                || (secondType != expectedMaterial && !isReplaceableForRecovery(secondType))) {
-            return new RecoveryResult(0, 1, 0);
-        }
-
-        int restored = 0;
-        if (firstType != expectedMaterial) {
-            firstBlock.setType(expectedMaterial, false);
-            restored++;
-        }
-        if (secondType != expectedMaterial) {
-            secondBlock.setType(expectedMaterial, false);
-            restored++;
-        }
-
-        applyDoubleChestData(firstBlock, secondBlock);
-        chestManager.registerPlacedChest(firstLocation, group.getGroupId(), firstIndex, group.getOwnerUuid(), group.getMaxSize(), group.getContainerType());
-        chestManager.registerPlacedChest(secondLocation, group.getGroupId(), secondIndex, group.getOwnerUuid(), group.getMaxSize(), group.getContainerType());
-        chestManager.applySharedInventory(firstLocation, group);
-        chestManager.applySharedInventory(secondLocation, group);
-        ParticleEffects.spawnConnectParticles(firstLocation);
-        ParticleEffects.spawnConnectParticles(secondLocation);
-        return new RecoveryResult(restored, 0, 0);
-    }
-
-    private int findAdjacentGroupLocationIndex(ChestGroup group, int sourceIndex) {
-        Location source = group.getLocation(sourceIndex);
-        if (source == null) {
-            return -1;
-        }
-
-        for (int i = 0; i < group.getMaxSize(); i++) {
-            if (i == sourceIndex) {
-                continue;
-            }
-            Location candidate = group.getLocation(i);
-            if (candidate == null || candidate.getWorld() == null || source.getWorld() == null) {
-                continue;
-            }
-            if (!candidate.getWorld().equals(source.getWorld()) || candidate.getBlockY() != source.getBlockY()) {
-                continue;
-            }
-
-            int dx = Math.abs(candidate.getBlockX() - source.getBlockX());
-            int dz = Math.abs(candidate.getBlockZ() - source.getBlockZ());
-            if (dx + dz == 1) {
-                return i;
-            }
-        }
-
-        return -1;
-    }
-
-    private void applyDoubleChestData(Block firstBlock, Block secondBlock) {
-        Location first = firstBlock.getLocation();
-        Location second = secondBlock.getLocation();
-
-        if (first.getBlockZ() == second.getBlockZ()) {
-            Block west = first.getBlockX() <= second.getBlockX() ? firstBlock : secondBlock;
-            Block east = west == firstBlock ? secondBlock : firstBlock;
-            setChestBlockData(west, BlockFace.NORTH, org.bukkit.block.data.type.Chest.Type.LEFT);
-            setChestBlockData(east, BlockFace.NORTH, org.bukkit.block.data.type.Chest.Type.RIGHT);
-        } else {
-            Block north = first.getBlockZ() <= second.getBlockZ() ? firstBlock : secondBlock;
-            Block south = north == firstBlock ? secondBlock : firstBlock;
-            setChestBlockData(north, BlockFace.EAST, org.bukkit.block.data.type.Chest.Type.LEFT);
-            setChestBlockData(south, BlockFace.EAST, org.bukkit.block.data.type.Chest.Type.RIGHT);
-        }
-    }
-
-    private void setChestBlockData(Block block, BlockFace facing, org.bukkit.block.data.type.Chest.Type type) {
-        var data = block.getBlockData();
-        if (data instanceof org.bukkit.block.data.type.Chest chestData) {
-            chestData.setFacing(facing);
-            chestData.setType(type);
-            block.setBlockData(chestData, false);
-        }
-    }
-
-    private record RecoveryResult(int restored, int skippedOccupied, int skippedUnloaded) {}
-
     private void handleGUICommand(Player player, String[] args) {
         boolean showAll = args.length >= 2 && args[1].equalsIgnoreCase("--all");
         new BulbManagerGUI(bulbManager, chestManager, categoryManager, player, showAll, null).open();
@@ -759,6 +451,41 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
         }
     }
 
+    private void handleCircuitDeleteCommand(Player player, String[] args) {
+        if (args.length < 3 || !player.hasPermission("wirelessredstone.remove")) {
+            player.sendMessage(Component.text("You don't have permission to remove groups.", NamedTextColor.RED));
+            return;
+        }
+
+        try {
+            UUID groupId = UUID.fromString(args[1]);
+            BaseGroup group = switch (args[2].toLowerCase()) {
+                case "bulb" -> bulbManager.getGroupById(groupId).orElse(null);
+                case "chest" -> chestManager.getGroupById(groupId).orElse(null);
+                default -> null;
+            };
+            if (group == null) {
+                player.sendMessage(Component.text("That wireless group no longer exists.", NamedTextColor.RED));
+                return;
+            }
+            if (group.getOwnerUuid() != null && !group.getOwnerUuid().equals(player.getUniqueId())
+                    && !player.hasPermission("wirelessredstone.admin")) {
+                player.sendMessage(Component.text("You can only remove your own groups.", NamedTextColor.RED));
+                return;
+            }
+
+            if (group instanceof BulbGroup) {
+                bulbManager.removeGroup(groupId);
+            } else {
+                chestManager.removeGroup(groupId);
+            }
+            plugin.getWireViewManager().refreshAllPlayers();
+            player.sendMessage(Component.text("Group deleted: " + group.getDisplayName(), NamedTextColor.GREEN));
+        } catch (IllegalArgumentException ignored) {
+            player.sendMessage(Component.text("That delete link is no longer valid.", NamedTextColor.RED));
+        }
+    }
+
     private void saveGroupData(BaseGroup group) {
         if (group instanceof BulbGroup) {
             bulbManager.saveData();
@@ -778,9 +505,6 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
         // Group management
         player.sendMessage(Component.text("/wireless modify name <groupName> <newName>", NamedTextColor.YELLOW)
                 .append(Component.text(" - Rename a group", NamedTextColor.GRAY)));
-        player.sendMessage(Component.text("/wireless recover <name>", NamedTextColor.YELLOW)
-                .append(Component.text(" - Restore saved blocks destroyed by the environment", NamedTextColor.GRAY)));
-        
         // Other
         player.sendMessage(Component.text("/wireless gui [--all]", NamedTextColor.YELLOW)
                 .append(Component.text(" - Open management GUI", NamedTextColor.GRAY)));
@@ -797,7 +521,7 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
         if (args.length == 1) {
             String input = args[0].toLowerCase();
             List<String> subCommands = new ArrayList<>(List.of(
-                    "create", "modify", "recover",
+                    "create", "modify",
                     "gui", "manage", "list"
             ));
             if (sender.hasPermission("wirelessredstone.admin")) {
@@ -846,12 +570,6 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
             else if (subCommand.equals("gui") || subCommand.equals("manage") || subCommand.equals("list")) {
                 if ("--all".startsWith(input) && sender.hasPermission("wirelessredstone.admin")) {
                     completions.add("--all");
-                }
-            }
-            // /wireless recover <groupName>
-            else if (subCommand.equals("recover")) {
-                if (args.length == 2 && sender instanceof Player player) {
-                    addGroupNameCompletions(player, input, completions);
                 }
             }
         }

@@ -339,6 +339,7 @@ public class LinkedChestManager extends LinkedGroupManager<ChestGroup> {
             }
 
             if (!group.isEmpty()) {
+                group.compactLocations();
                 chestGroups.put(groupId, group);
             }
         }

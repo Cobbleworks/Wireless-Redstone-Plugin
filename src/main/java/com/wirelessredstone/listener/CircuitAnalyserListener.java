@@ -94,19 +94,14 @@ public class CircuitAnalyserListener implements Listener {
         player.sendMessage(Component.text("═══ ⚡ Circuit Analysis ⚡ ═══", NamedTextColor.LIGHT_PURPLE)
                 .decoration(TextDecoration.BOLD, true));
 
-        // Group Name (clickable to rename) - more prominent
+        // Full category/group name is edited as a single value.
         String fullName = group.getDisplayName();
-        String displayName = GroupNameParser.parse(fullName).groupName();
         String renameCommand = "/wireless circuit-rename " + groupId + " " + (isBulbGroup ? "bulb" : "chest");
         player.sendMessage(Component.text("Name: ", NamedTextColor.GRAY)
-                .append(Component.text(displayName, NamedTextColor.WHITE).decoration(TextDecoration.BOLD, true)
+                .append(Component.text(fullName, NamedTextColor.WHITE).decoration(TextDecoration.BOLD, true)
                         .hoverEvent(HoverEvent.showText(Component.text("Click to rename", NamedTextColor.YELLOW)))
                         .clickEvent(ClickEvent.runCommand(renameCommand)))
                 .append(Component.text(" ✎", NamedTextColor.DARK_GRAY)));
-
-        String categoryName = GroupNameParser.parse(fullName).categoryName();
-        player.sendMessage(Component.text("Category: ", NamedTextColor.GRAY)
-                .append(Component.text(categoryName == null ? "Uncategorized" : categoryName, NamedTextColor.YELLOW)));
 
         String descriptionCommand = "/wireless circuit-description " + groupId + " " + (isBulbGroup ? "bulb" : "chest");
         player.sendMessage(Component.text("Description: ", NamedTextColor.GRAY)
@@ -163,6 +158,10 @@ public class CircuitAnalyserListener implements Listener {
             }
         }
 
+        player.sendMessage(Component.text("[Delete Group]", NamedTextColor.RED)
+                .decoration(TextDecoration.BOLD, true)
+                .hoverEvent(HoverEvent.showText(Component.text("Click to delete this group and its blocks", NamedTextColor.RED)))
+                .clickEvent(ClickEvent.runCommand("/wireless circuit-delete " + groupId + " " + (isBulbGroup ? "bulb" : "chest"))));
         player.sendMessage(Component.text("═══════════════════════════════", NamedTextColor.DARK_GRAY));
     }
 

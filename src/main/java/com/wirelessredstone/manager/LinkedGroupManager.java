@@ -43,11 +43,11 @@ public abstract class LinkedGroupManager<G extends BaseGroup> {
                                        GroupFactory<G> factory) {
         Location normalized = LocationUtils.normalize(location);
         G group = groups.computeIfAbsent(groupId,
-                id -> factory.create(id, groupSize, ownerUuid));
-        if (groupSize > group.getMaxSize()) {
-            group.extendGroup(groupSize - group.getMaxSize());
-        }
-        group.setLocation(index, normalized);
+                id -> factory.create(id, 1, ownerUuid));
+        if (group.hasLocation(normalized)) return group;
+        int[] slots = group.allocateSlots(1, 26);
+        if (slots.length == 0) return group;
+        group.setLocation(slots[0], normalized);
         if (ownerUuid != null && group.getOwnerUuid() == null) {
             group.setOwnerUuid(ownerUuid);
         }

@@ -600,14 +600,8 @@ public class ConnectorToolListener implements Listener {
         int slot = group.getLocationIndex(location);
         char slotLabel = slot >= 0 ? (char) ('A' + slot) : '?';
 
-        // Unregister the bulb (clears the slot)
+        // Unregistering compacts the remaining slots.
         bulbManager.unregisterBulb(location);
-        
-        // Shrink the group by removing the now-empty slot
-        if (slot >= 0 && group.getMaxSize() > 1) {
-            group.removeSlot(slot);
-            bulbManager.saveData();
-        }
 
         ParticleEffects.spawnDisconnectParticles(location);
         player.sendMessage(Component.text("✓ Removed block from group ", NamedTextColor.GREEN)
@@ -640,8 +634,6 @@ public class ConnectorToolListener implements Listener {
             chestManager.unregisterChest(otherHalfLocation);
         }
         
-        removeSlots(group, slot, slot2);
-        chestManager.saveData();
 
         ParticleEffects.spawnDisconnectParticles(location);
         if (isLargeChest) {
@@ -837,15 +829,4 @@ public class ConnectorToolListener implements Listener {
         return first + " & " + ChestGroup.getIndexLabel(slot2);
     }
 
-    private void removeSlots(ChestGroup group, int slot, int slot2) {
-        int first = Math.max(slot, slot2);
-        int second = Math.min(slot, slot2);
-
-        if (first >= 0 && group.getMaxSize() > 1) {
-            group.removeSlot(first);
-        }
-        if (second >= 0 && group.getMaxSize() > 1) {
-            group.removeSlot(second);
-        }
-    }
 }

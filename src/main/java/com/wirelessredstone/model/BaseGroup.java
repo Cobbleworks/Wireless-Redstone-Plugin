@@ -58,10 +58,17 @@ public abstract class BaseGroup {
     public void removeLocation(Location location) {
         for (int i = 0; i < locations.size(); i++) {
             if (LocationUtils.isSameBlock(location, locations.get(i))) {
-                locations.set(i, null);
+                locations.remove(i);
+                maxSize--;
                 break;
             }
         }
+    }
+
+    /** Compacts holes left in groups saved by older versions. */
+    public void compactLocations() {
+        locations.removeIf(Objects::isNull);
+        maxSize = locations.size();
     }
 
     public List<Location> getOtherLocations(Location location) {
@@ -176,20 +183,6 @@ public abstract class BaseGroup {
         extendGroup(missing);
         for (int i = 0; i < missing; i++) available.add(oldSize + i);
         return available.stream().mapToInt(Integer::intValue).toArray();
-    }
-
-    /**
-     * Removes an empty slot from the group, compacting it.
-     * If the slot at the given index is empty, it removes that slot.
-     * If the slot is not empty, it clears it first, then removes it.
-     * @param index The index of the slot to remove
-     * @return true if the slot was removed, false if index is invalid
-     */
-    public boolean removeSlot(int index) {
-        if (index < 0 || index >= maxSize || maxSize <= 1) return false;
-        locations.remove(index);
-        maxSize--;
-        return true;
     }
 
     /**

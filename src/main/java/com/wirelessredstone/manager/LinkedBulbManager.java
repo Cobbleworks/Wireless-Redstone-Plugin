@@ -276,6 +276,7 @@ public class LinkedBulbManager extends LinkedGroupManager<BulbGroup> {
             }
 
             if (!group.isEmpty()) {
+                group.compactLocations();
                 bulbGroups.put(groupId, group);
             }
         }
@@ -325,6 +326,7 @@ public class LinkedBulbManager extends LinkedGroupManager<BulbGroup> {
             }
 
             if (!group.isEmpty()) {
+                group.compactLocations();
                 bulbGroups.put(groupId, group);
             }
         }
