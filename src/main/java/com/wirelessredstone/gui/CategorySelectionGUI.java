@@ -34,6 +34,7 @@ public class CategorySelectionGUI implements InventoryHolder {
     private static final Map<UUID, PendingAction> pendingActions = new HashMap<>();
     private static final Map<UUID, String> pendingConnectorCategoryNames = new HashMap<>();
     private static final Map<UUID, ConnectorPromptReturn> connectorPromptReturns = new HashMap<>();
+    private static final Map<UUID, Boolean> connectorPromptPreviousWireView = new HashMap<>();
 
     public enum PendingActionType {
         RENAME_CATEGORY,
@@ -482,6 +483,7 @@ public class CategorySelectionGUI implements InventoryHolder {
                 pendingActions.remove(player.getUniqueId());
                 connectorPromptReturns.remove(player.getUniqueId());
                 pendingConnectorCategoryNames.remove(player.getUniqueId());
+                connectorPromptPreviousWireView.remove(player.getUniqueId());
             }
             return true;
         }
@@ -493,6 +495,7 @@ public class CategorySelectionGUI implements InventoryHolder {
                     pendingActions.remove(player.getUniqueId());
                     connectorPromptReturns.remove(player.getUniqueId());
                     pendingConnectorCategoryNames.remove(player.getUniqueId());
+                    connectorPromptPreviousWireView.remove(player.getUniqueId());
                 }
                 return true;
             }
@@ -531,6 +534,7 @@ public class CategorySelectionGUI implements InventoryHolder {
 
         if (input.equalsIgnoreCase("cancel")) {
             pendingConnectorCategoryNames.remove(player.getUniqueId());
+            restoreConnectorPromptWireView(player);
             player.sendMessage(Component.text("Action cancelled.", NamedTextColor.GRAY));
             if (action.type() == PendingActionType.CREATE_CONNECTOR_TOOL) {
                 reopenConnectorPromptOrigin(player, categoryManager, bulbManager, chestManager);
@@ -564,6 +568,7 @@ public class CategorySelectionGUI implements InventoryHolder {
             }
             case CREATE_CONNECTOR_TOOL -> {
                 connectorPromptReturns.remove(player.getUniqueId());
+                connectorPromptPreviousWireView.remove(player.getUniqueId());
                 String groupName = input.length() > 32 ? input.substring(0, 32) : input;
                 String categoryName = pendingConnectorCategoryNames.remove(player.getUniqueId());
                 if (categoryName == null) {
@@ -608,10 +613,12 @@ public class CategorySelectionGUI implements InventoryHolder {
         pendingActions.remove(playerUuid);
         pendingConnectorCategoryNames.remove(playerUuid);
         connectorPromptReturns.remove(playerUuid);
+        connectorPromptPreviousWireView.remove(playerUuid);
     }
 
     public static void startConnectorToolPrompt(Player player, UUID categoryId, CategoryManager categoryManager) {
         clearOtherChatPrompts(player.getUniqueId());
+        enableConnectorPromptWireView(player);
         pendingActions.put(player.getUniqueId(), new PendingAction(PendingActionType.CREATE_CONNECTOR_TOOL, categoryId));
         pendingConnectorCategoryNames.remove(player.getUniqueId());
         connectorPromptReturns.put(player.getUniqueId(), new ConnectorPromptReturn(null, false));
@@ -631,6 +638,7 @@ public class CategorySelectionGUI implements InventoryHolder {
 
     public static void startConnectorToolPrompt(Player player, String categoryName, boolean showAllGroups) {
         clearOtherChatPrompts(player.getUniqueId());
+        enableConnectorPromptWireView(player);
         pendingActions.put(player.getUniqueId(), new PendingAction(PendingActionType.CREATE_CONNECTOR_TOOL, null));
         connectorPromptReturns.put(player.getUniqueId(), new ConnectorPromptReturn(categoryName, showAllGroups));
         if (categoryName == null || categoryName.isBlank()) {
@@ -651,6 +659,20 @@ public class CategorySelectionGUI implements InventoryHolder {
         CircuitAnalyserListener.cancelPendingOperation(playerId);
         BulbManagerGUI.cancelPendingRename(playerId);
         BulbManagerGUI.cancelPendingCategoryChange(playerId);
+    }
+
+    private static void enableConnectorPromptWireView(Player player) {
+        UUID playerId = player.getUniqueId();
+        WireViewManager wireViewManager = WirelessRedstonePlugin.getInstance().getWireViewManager();
+        connectorPromptPreviousWireView.put(playerId, wireViewManager.hasWireViewEnabled(player));
+        wireViewManager.enableWireView(player);
+    }
+
+    private static void restoreConnectorPromptWireView(Player player) {
+        Boolean wasEnabled = connectorPromptPreviousWireView.remove(player.getUniqueId());
+        if (wasEnabled == null || !wasEnabled) {
+            WirelessRedstonePlugin.getInstance().getWireViewManager().disableWireView(player);
+        }
     }
 
     private static void giveItemToPlayer(Player player, ItemStack item) {
