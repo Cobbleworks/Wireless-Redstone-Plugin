@@ -152,7 +152,6 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
             case "circuit-rename" -> handleCircuitRenameCommand(player, parsedArgs);
             case "circuit-category" -> handleCircuitCategoryCommand(player, parsedArgs);
             case "circuit-description" -> handleCircuitDescriptionCommand(player, parsedArgs);
-            case "circuit-delete" -> handleCircuitDeleteCommand(player, parsedArgs);
             case "teleport" -> handleTeleportCommand(player, parsedArgs);
             default -> {
                 player.sendMessage(Component.text("Unknown subcommand. Use ", NamedTextColor.RED)
@@ -448,41 +447,6 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
             CircuitAnalyserListener.initiateDescriptionChange(player, groupId, isBulbGroup);
         } catch (IllegalArgumentException e) {
             // Invalid UUID - silent fail
-        }
-    }
-
-    private void handleCircuitDeleteCommand(Player player, String[] args) {
-        if (args.length < 3 || !player.hasPermission("wirelessredstone.remove")) {
-            player.sendMessage(Component.text("You don't have permission to remove groups.", NamedTextColor.RED));
-            return;
-        }
-
-        try {
-            UUID groupId = UUID.fromString(args[1]);
-            BaseGroup group = switch (args[2].toLowerCase()) {
-                case "bulb" -> bulbManager.getGroupById(groupId).orElse(null);
-                case "chest" -> chestManager.getGroupById(groupId).orElse(null);
-                default -> null;
-            };
-            if (group == null) {
-                player.sendMessage(Component.text("That wireless group no longer exists.", NamedTextColor.RED));
-                return;
-            }
-            if (group.getOwnerUuid() != null && !group.getOwnerUuid().equals(player.getUniqueId())
-                    && !player.hasPermission("wirelessredstone.admin")) {
-                player.sendMessage(Component.text("You can only remove your own groups.", NamedTextColor.RED));
-                return;
-            }
-
-            if (group instanceof BulbGroup) {
-                bulbManager.removeGroup(groupId);
-            } else {
-                chestManager.removeGroup(groupId);
-            }
-            plugin.getWireViewManager().refreshAllPlayers();
-            player.sendMessage(Component.text("Group deleted: " + group.getDisplayName(), NamedTextColor.GREEN));
-        } catch (IllegalArgumentException ignored) {
-            player.sendMessage(Component.text("That delete link is no longer valid.", NamedTextColor.RED));
         }
     }
 

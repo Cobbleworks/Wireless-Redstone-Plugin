@@ -11,7 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Changed `/wireless create` to use the Connector Tool chat prompt, making connector-based setup the primary group creation flow.
 - Changed `/wireless inspect` to `/wireless analyze`.
 - Removed `/wireless recover`; groups compact when blocks are removed and fill available slots when blocks are added.
-- Added a red Delete Group action to the Circuit Report and combined category and group name in its Name field.
+- Combined category and group name in the Circuit Report's Name field.
 - Changed wireless group GUI right-clicks to print analyser-style group details with clickable teleport links.
 - Changed wireless group GUI icon assignment from Shift+Middle-click to Q/drop-key to avoid conflicting with rename.
 - Fixed copper bulb connector creation/addition so same-group duplicate add events are ignored and copper bulbs are waxed before registration.

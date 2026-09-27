@@ -158,10 +158,6 @@ public class CircuitAnalyserListener implements Listener {
             }
         }
 
-        player.sendMessage(Component.text("[Delete Group]", NamedTextColor.RED)
-                .decoration(TextDecoration.BOLD, true)
-                .hoverEvent(HoverEvent.showText(Component.text("Click to delete this group and its blocks", NamedTextColor.RED)))
-                .clickEvent(ClickEvent.runCommand("/wireless circuit-delete " + groupId + " " + (isBulbGroup ? "bulb" : "chest"))));
         player.sendMessage(Component.text("═══════════════════════════════", NamedTextColor.DARK_GRAY));
     }
 
