@@ -9,17 +9,24 @@ import com.wirelessredstone.manager.LinkedBulbManager;
 import com.wirelessredstone.manager.LinkedChestManager;
 import io.papermc.paper.event.player.AsyncChatEvent;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
+import org.bukkit.Location;
+import org.bukkit.block.Container;
+import org.bukkit.block.DoubleChest;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.Action;
 import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
-import org.bukkit.event.block.Action;
+import org.bukkit.event.inventory.InventoryOpenEvent;
+import org.bukkit.event.player.PlayerInteractAtEntityEvent;
+import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.inventory.InventoryHolder;
 
 public class GUIListener implements Listener {
 
@@ -112,6 +119,53 @@ public class GUIListener implements Listener {
         if (handled) {
             event.setCancelled(true);
         }
+    }
+
+    @EventHandler
+    public void onPlayerInteractEntity(PlayerInteractEntityEvent event) {
+        selectGlowEntityGroup(event);
+    }
+
+    @EventHandler
+    public void onPlayerInteractAtEntity(PlayerInteractAtEntityEvent event) {
+        selectGlowEntityGroup(event);
+    }
+
+    private void selectGlowEntityGroup(PlayerInteractEntityEvent event) {
+        if (event.getHand() != EquipmentSlot.HAND) return;
+        if (!CategorySelectionGUI.hasPendingConnectorToolPrompt(event.getPlayer().getUniqueId())) return;
+        if (!event.getRightClicked().getScoreboardTags().contains("wireview_glow")
+                && !event.getRightClicked().getScoreboardTags().contains("wireview_single_glow")) return;
+
+        if (CategorySelectionGUI.processPendingConnectorToolSelection(
+                event.getPlayer(), event.getRightClicked().getLocation().getBlock().getLocation(),
+                bulbManager, chestManager)) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler
+    public void onInventoryOpen(InventoryOpenEvent event) {
+        if (!(event.getPlayer() instanceof Player player)
+                || !CategorySelectionGUI.hasPendingConnectorToolPrompt(player.getUniqueId())) return;
+
+        InventoryHolder holder = event.getInventory().getHolder();
+        if (holder instanceof Container container) {
+            if (selectContainerGroup(player, container.getLocation())) event.setCancelled(true);
+        } else if (holder instanceof DoubleChest doubleChest) {
+            if (doubleChest.getLeftSide() instanceof Container left
+                    && selectContainerGroup(player, left.getLocation())) {
+                event.setCancelled(true);
+            } else if (doubleChest.getRightSide() instanceof Container right
+                    && selectContainerGroup(player, right.getLocation())) {
+                event.setCancelled(true);
+            }
+        }
+    }
+
+    private boolean selectContainerGroup(Player player, Location location) {
+        return CategorySelectionGUI.processPendingConnectorToolSelection(
+                player, location, bulbManager, chestManager);
     }
 
     @EventHandler
