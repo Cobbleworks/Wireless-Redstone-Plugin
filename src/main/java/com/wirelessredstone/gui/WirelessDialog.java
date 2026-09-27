@@ -59,8 +59,10 @@ public final class WirelessDialog {
         List<ActionButton> actions = new ArrayList<>();
         actions.add(button(Component.text("✂ Get Circuit Tool", NamedTextColor.GREEN), "Create a new wireless group", 200,
                 p -> create(p, all, current)));
-        actions.add(button(Component.text(all ? "My groups" : "Refresh", NamedTextColor.YELLOW), "Refresh this list", 75,
-                p -> open(p, false, current)));
+        actions.add(button(Component.text(all || !player.hasPermission("wirelessredstone.admin")
+                        ? "My groups" : "All groups", NamedTextColor.YELLOW),
+                all || !player.hasPermission("wirelessredstone.admin") ? "Show your groups" : "Show every group", 75,
+                p -> open(p, !all && p.hasPermission("wirelessredstone.admin"), 0)));
         if (groups.isEmpty()) {
             actions.add(button(Component.text("No groups yet", NamedTextColor.GRAY), "Use the Circuit Tool to create one", 200,
                     p -> create(p, all, current)));
@@ -79,8 +81,12 @@ public final class WirelessDialog {
             }
             label = label.append(Component.text(GroupNameParser.parse(group.getDisplayName()).groupName(),
                     bulb ? NamedTextColor.AQUA : NamedTextColor.WHITE));
-            actions.add(button(label, "Open group details", 200, p -> edit(p, id, bulb, all, current)));
-            actions.add(button(Component.text("Edit ✎", NamedTextColor.YELLOW), "Rename, get a tool, or remove", 75,
+            String detailsTooltip = "Open group details";
+            if (group.getDescription() != null) detailsTooltip += "\n" + group.getDescription();
+            actions.add(button(label, detailsTooltip, 200, p -> edit(p, id, bulb, all, current)));
+            actions.add(button(Component.text("Edit ✎", NamedTextColor.YELLOW),
+                    group.getDescription() == null ? "Rename, get a tool, or remove"
+                            : "Rename, get a tool, or remove\n" + group.getDescription(), 75,
                     p -> edit(p, id, bulb, all, current)));
         }
         if (current > 0) {
@@ -90,11 +96,6 @@ public final class WirelessDialog {
         if (current + 1 < pages) {
             actions.add(button(Component.text("Next →"), "Next page", 200, p -> open(p, all, current + 1)));
             actions.add(button(Component.text(" "), "", 75, p -> open(p, all, current + 1)));
-        }
-        if (!all && player.hasPermission("wirelessredstone.admin")) {
-            actions.add(button(Component.text("All players' groups", NamedTextColor.LIGHT_PURPLE), "Show every group", 200,
-                    p -> open(p, true, 0)));
-            actions.add(button(Component.text(" "), "", 75, p -> open(p, true, 0)));
         }
         List<DialogBody> body = List.of(DialogBody.plainMessage(Component.text(
                 "Nearest groups first • " + groups.size() + " groups • Page " + (current + 1) + "/" + pages,
@@ -150,12 +151,6 @@ public final class WirelessDialog {
         if (bulb) body.add(DialogBody.plainMessage(Component.text("State: "
                 + (((BulbGroup) group).isLit() ? "ON" : "OFF"), NamedTextColor.YELLOW)));
         if (group.getDescription() != null) body.add(DialogBody.plainMessage(Component.text(group.getDescription(), NamedTextColor.GRAY)));
-        for (int i = 0; i < group.getLocations().size(); i++) {
-            Location loc = group.getLocation(i);
-            body.add(DialogBody.plainMessage(Component.text(BaseGroup.getIndexLabel(i) + ": "
-                    + (loc == null ? "Not placed" : loc.getWorld().getName() + "  " + loc.getBlockX() + ", "
-                    + loc.getBlockY() + ", " + loc.getBlockZ()), NamedTextColor.GRAY)));
-        }
         List<ActionButton> actions = new ArrayList<>();
         actions.add(button(Component.text("✂ Circuit Tool", NamedTextColor.GREEN), "Get a tool for this group", 150,
                 p -> giveExistingTool(p, id, bulb)));
@@ -167,10 +162,13 @@ public final class WirelessDialog {
                 p -> confirmRemove(p, id, bulb, all, page)));
         if (player.hasPermission("wirelessredstone.teleport")) {
             for (int i = 0; i < group.getLocations().size(); i++) {
-                if (group.getLocation(i) == null) continue;
+                Location location = group.getLocation(i);
+                if (location == null) continue;
                 int slot = i;
                 actions.add(button(Component.text("Teleport " + BaseGroup.getIndexLabel(i), NamedTextColor.AQUA),
-                        "Teleport to this block", 150, p -> teleport(p, id, bulb, slot)));
+                        "Teleport to this block\n" + location.getWorld().getName() + ": "
+                                + location.getBlockX() + ", " + location.getBlockY() + ", " + location.getBlockZ(),
+                        150, p -> teleport(p, id, bulb, slot)));
             }
         }
         show(player, group.getDisplayName(), body, List.of(), actions, 2,
