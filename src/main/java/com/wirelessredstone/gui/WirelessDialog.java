@@ -28,6 +28,7 @@ import org.bukkit.inventory.ItemStack;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 import java.util.function.Consumer;
 
@@ -46,29 +47,36 @@ public final class WirelessDialog {
         this.categories = plugin.getCategoryManager();
     }
 
-    public void open(Player player, boolean showAll) { open(player, showAll, 0); }
+    public void open(Player player, boolean showAll) { open(player, showAll, 0, ""); }
 
-    private void open(Player player, boolean showAll, int page) {
+    private void open(Player player, boolean showAll, int page, String query) {
         if (!player.hasPermission("wirelessredstone.use")) return;
         boolean all = showAll && player.hasPermission("wirelessredstone.admin");
+        String search = query == null ? "" : query.trim();
         List<BaseGroup> groups = visibleGroups(player, all);
+        if (!search.isEmpty()) {
+            String needle = search.toLowerCase(Locale.ROOT);
+            groups.removeIf(group -> !group.getDisplayName().toLowerCase(Locale.ROOT).contains(needle)
+                    && (group.getDescription() == null
+                    || !group.getDescription().toLowerCase(Locale.ROOT).contains(needle))
+                    && (categoryName(group) == null
+                    || !categoryName(group).toLowerCase(Locale.ROOT).contains(needle)));
+        }
         groups.sort(Comparator.comparingDouble((BaseGroup group) -> distanceSquared(player, group))
                 .thenComparing(BaseGroup::getDisplayName, String.CASE_INSENSITIVE_ORDER));
         int pages = Math.max(1, (groups.size() + PAGE_SIZE - 1) / PAGE_SIZE);
         int current = Math.max(0, Math.min(page, pages - 1));
         List<ActionButton> actions = new ArrayList<>();
+        actions.add(button(Component.text("Search", NamedTextColor.GREEN), "Search names and descriptions", 90,
+                (p, view) -> open(p, all, 0, view.getText("search"))));
+        actions.add(button(Component.text("Clear", NamedTextColor.GRAY), "Clear search", 55,
+                p -> open(p, all, 0, "")));
         actions.add(button(Component.text("✂ Get Circuit Tool", NamedTextColor.GREEN), "Create a new wireless group", 200,
-                p -> create(p, all, current)));
+                p -> create(p, all, current, search)));
         actions.add(button(Component.text(all || !player.hasPermission("wirelessredstone.admin")
                         ? "My groups" : "All groups", NamedTextColor.YELLOW),
                 all || !player.hasPermission("wirelessredstone.admin") ? "Show your groups" : "Show every group", 75,
-                p -> open(p, !all && p.hasPermission("wirelessredstone.admin"), 0)));
-        if (groups.isEmpty()) {
-            actions.add(button(Component.text("No groups yet", NamedTextColor.GRAY), "Use the Circuit Tool to create one", 200,
-                    p -> create(p, all, current)));
-            actions.add(button(Component.text("Create", NamedTextColor.GREEN), "Create a group", 75,
-                    p -> create(p, all, current)));
-        }
+                p -> open(p, !all && p.hasPermission("wirelessredstone.admin"), 0, search)));
         for (int i = current * PAGE_SIZE; i < Math.min(groups.size(), (current + 1) * PAGE_SIZE); i++) {
             BaseGroup group = groups.get(i);
             UUID id = group.getGroupId();
@@ -81,26 +89,36 @@ public final class WirelessDialog {
             }
             label = label.append(Component.text(GroupNameParser.parse(group.getDisplayName()).groupName(),
                     bulb ? NamedTextColor.AQUA : NamedTextColor.WHITE));
-            String detailsTooltip = "Open group details";
-            if (group.getDescription() != null) detailsTooltip += "\n" + group.getDescription();
-            actions.add(button(label, detailsTooltip, 200, p -> edit(p, id, bulb, all, current)));
-            actions.add(button(Component.text("Edit ✎", NamedTextColor.YELLOW),
-                    group.getDescription() == null ? "Rename, get a tool, or remove"
-                            : "Rename, get a tool, or remove\n" + group.getDescription(), 75,
-                    p -> edit(p, id, bulb, all, current)));
+            Component detailsTooltip = Component.text("Open group details");
+            if (group.getDescription() != null) {
+                detailsTooltip = detailsTooltip.append(Component.newline())
+                        .append(Component.text(group.getDescription(), NamedTextColor.LIGHT_PURPLE)
+                                .decorate(TextDecoration.ITALIC));
+            }
+            actions.add(button(label, detailsTooltip, 200, p -> edit(p, id, bulb, all, current, search)));
+            actions.add(button(Component.text("Edit ✎", NamedTextColor.YELLOW), "Rename, get a tool, or remove", 75,
+                    p -> edit(p, id, bulb, all, current, search)));
         }
         if (current > 0) {
-            actions.add(button(Component.text("← Previous"), "Previous page", 200, p -> open(p, all, current - 1)));
-            actions.add(button(Component.text(" "), "", 75, p -> open(p, all, current - 1)));
+            actions.add(button(Component.text("← Previous"), "Previous page", 200, p -> open(p, all, current - 1, search)));
+            actions.add(button(Component.text(" "), "", 75, p -> open(p, all, current - 1, search)));
         }
         if (current + 1 < pages) {
-            actions.add(button(Component.text("Next →"), "Next page", 200, p -> open(p, all, current + 1)));
-            actions.add(button(Component.text(" "), "", 75, p -> open(p, all, current + 1)));
+            actions.add(button(Component.text("Next →"), "Next page", 200, p -> open(p, all, current + 1, search)));
+            actions.add(button(Component.text(" "), "", 75, p -> open(p, all, current + 1, search)));
         }
-        List<DialogBody> body = List.of(DialogBody.plainMessage(Component.text(
+        List<DialogBody> body = new ArrayList<>();
+        body.add(DialogBody.plainMessage(Component.text(
                 "Nearest groups first • " + groups.size() + " groups • Page " + (current + 1) + "/" + pages,
                 NamedTextColor.GRAY)));
-        show(player, "Wireless Redstone", body, List.of(), actions, 2,
+        if (groups.isEmpty()) {
+            body.add(DialogBody.plainMessage(Component.text(search.isEmpty()
+                    ? "No groups yet. Use the Circuit Tool to create one."
+                    : "No matching groups. Try another search or clear the field.", NamedTextColor.GRAY)));
+        }
+        show(player, "Wireless Redstone", body,
+                List.of(DialogInput.text("search", Component.text("Search groups"))
+                        .initial(search).maxLength(100).width(275).build()), actions, 2,
                 button(Component.text("Close"), "Close", 100, Player::closeDialog));
     }
 
@@ -142,9 +160,9 @@ public final class WirelessDialog {
         return group;
     }
 
-    private void edit(Player player, UUID id, boolean bulb, boolean all, int page) {
+    private void edit(Player player, UUID id, boolean bulb, boolean all, int page, String search) {
         BaseGroup group = resolve(player, id, bulb);
-        if (group == null) { open(player, all, page); return; }
+        if (group == null) { open(player, all, page, search); return; }
         List<DialogBody> body = new ArrayList<>();
         body.add(DialogBody.plainMessage(Component.text("Type: " + (bulb ? "Bulb / lamp" : "Container")
                 + "  •  Placed: " + group.getPlacedCount() + "/" + group.getMaxSize(), NamedTextColor.GRAY)));
@@ -155,11 +173,11 @@ public final class WirelessDialog {
         actions.add(button(Component.text("✂ Circuit Tool", NamedTextColor.GREEN), "Get a tool for this group", 150,
                 p -> giveExistingTool(p, id, bulb)));
         actions.add(button(Component.text("Rename ✎", NamedTextColor.YELLOW), "Rename this group", 150,
-                p -> rename(p, id, bulb, all, page)));
+                p -> rename(p, id, bulb, all, page, search)));
         actions.add(button(Component.text("Edit description", NamedTextColor.YELLOW), "Edit group description", 150,
-                p -> description(p, id, bulb, all, page)));
+                p -> description(p, id, bulb, all, page, search)));
         actions.add(button(Component.text("Remove group", NamedTextColor.RED), "Permanently remove the group", 150,
-                p -> confirmRemove(p, id, bulb, all, page)));
+                p -> confirmRemove(p, id, bulb, all, page, search)));
         if (player.hasPermission("wirelessredstone.teleport")) {
             for (int i = 0; i < group.getLocations().size(); i++) {
                 Location location = group.getLocation(i);
@@ -172,26 +190,26 @@ public final class WirelessDialog {
             }
         }
         show(player, group.getDisplayName(), body, List.of(), actions, 2,
-                button(Component.text("← Groups"), "Back to groups", 100, p -> open(p, all, page)));
+                button(Component.text("← Groups"), "Back to groups", 100, p -> open(p, all, page, search)));
     }
 
-    public void openCreate(Player player) { create(player, false, 0); }
+    public void openCreate(Player player) { create(player, false, 0, ""); }
 
-    private void create(Player player, boolean all, int page) {
+    private void create(Player player, boolean all, int page, String search) {
         List<ActionButton> actions = List.of(button(Component.text("Get Circuit Tool", NamedTextColor.GREEN),
                 "Create a tool for a new group", 150, (p, view) -> {
                     String name = view.getText("name");
-                    if (name == null || name.isBlank()) { p.sendMessage(Component.text("Enter a group name.", NamedTextColor.RED)); create(p, all, page); return; }
+                    if (name == null || name.isBlank()) { p.sendMessage(Component.text("Enter a group name.", NamedTextColor.RED)); create(p, all, page, search); return; }
                     give(p, ConnectorToolFactory.createCreationModeConnectorTool(name.trim()));
                     p.sendMessage(Component.text("Circuit Tool created for " + name.trim() + ".", NamedTextColor.GREEN));
                 }));
         show(player, "New Circuit Tool", List.of(DialogBody.plainMessage(Component.text(
                 "Use category/name to place the new group in a category.", NamedTextColor.GRAY))),
                 List.of(DialogInput.text("name", Component.text("Group name")).maxLength(64).width(300).build()),
-                actions, 1, button(Component.text("← Groups"), "Back", 100, p -> open(p, all, page)));
+                actions, 1, button(Component.text("← Groups"), "Back", 100, p -> open(p, all, page, search)));
     }
 
-    private void rename(Player player, UUID id, boolean bulb, boolean all, int page) {
+    private void rename(Player player, UUID id, boolean bulb, boolean all, int page, String search) {
         BaseGroup group = resolve(player, id, bulb);
         if (group == null) return;
         show(player, "Rename group", List.of(DialogBody.plainMessage(Component.text(
@@ -204,15 +222,15 @@ public final class WirelessDialog {
                     BaseGroup current = resolve(p, id, bulb);
                     if (current == null) return;
                     String name = view.getText("name");
-                    if (name == null || name.isBlank()) { p.sendMessage(Component.text("Name cannot be empty.", NamedTextColor.RED)); rename(p, id, bulb, all, page); return; }
+                    if (name == null || name.isBlank()) { p.sendMessage(Component.text("Name cannot be empty.", NamedTextColor.RED)); rename(p, id, bulb, all, page, search); return; }
                     current.setCustomName(name.trim());
                     current.setCategoryId(null);
                     save(bulb);
-                    edit(p, id, bulb, all, page);
-                })), 1, button(Component.text("← Back"), "Back", 100, p -> edit(p, id, bulb, all, page)));
+                    edit(p, id, bulb, all, page, search);
+                })), 1, button(Component.text("← Back"), "Back", 100, p -> edit(p, id, bulb, all, page, search)));
     }
 
-    private void description(Player player, UUID id, boolean bulb, boolean all, int page) {
+    private void description(Player player, UUID id, boolean bulb, boolean all, int page, String search) {
         BaseGroup group = resolve(player, id, bulb);
         if (group == null) return;
         show(player, "Edit description", List.of(),
@@ -224,16 +242,16 @@ public final class WirelessDialog {
                     if (current == null) return;
                     current.setDescription(view.getText("description"));
                     save(bulb);
-                    edit(p, id, bulb, all, page);
-                })), 1, button(Component.text("← Back"), "Back", 100, p -> edit(p, id, bulb, all, page)));
+                    edit(p, id, bulb, all, page, search);
+                })), 1, button(Component.text("← Back"), "Back", 100, p -> edit(p, id, bulb, all, page, search)));
     }
 
-    private void confirmRemove(Player player, UUID id, boolean bulb, boolean all, int page) {
+    private void confirmRemove(Player player, UUID id, boolean bulb, boolean all, int page, String search) {
         BaseGroup group = resolve(player, id, bulb);
         if (group == null) return;
         if (!player.hasPermission("wirelessredstone.remove")) {
             player.sendMessage(Component.text("You don't have permission to remove groups.", NamedTextColor.RED));
-            edit(player, id, bulb, all, page);
+            edit(player, id, bulb, all, page, search);
             return;
         }
         show(player, "Remove group?", List.of(DialogBody.plainMessage(Component.text(group.getDisplayName(), NamedTextColor.RED))),
@@ -241,8 +259,8 @@ public final class WirelessDialog {
                     if (resolve(p, id, bulb) == null || !p.hasPermission("wirelessredstone.remove")) return;
                     if (bulb) bulbs.removeGroup(id); else chests.removeGroup(id);
                     p.sendMessage(Component.text("Group removed.", NamedTextColor.GREEN));
-                    open(p, all, page);
-                })), 1, button(Component.text("Cancel"), "Keep group", 100, p -> edit(p, id, bulb, all, page)));
+                    open(p, all, page, search);
+                })), 1, button(Component.text("Cancel"), "Keep group", 100, p -> edit(p, id, bulb, all, page, search)));
     }
 
     private void teleport(Player player, UUID id, boolean bulb, int slot) {
@@ -274,12 +292,21 @@ public final class WirelessDialog {
     private void save(boolean bulb) { if (bulb) bulbs.saveData(); else chests.saveData(); }
 
     private ActionButton button(Component label, String tooltip, int width, Consumer<Player> action) {
+        return button(label, Component.text(tooltip), width, action);
+    }
+
+    private ActionButton button(Component label, Component tooltip, int width, Consumer<Player> action) {
         return button(label, tooltip, width, (player, view) -> action.accept(player));
     }
 
     private ActionButton button(Component label, String tooltip, int width,
                                 java.util.function.BiConsumer<Player, io.papermc.paper.dialog.DialogResponseView> action) {
-        return ActionButton.builder(label).tooltip(Component.text(tooltip)).width(width)
+        return button(label, Component.text(tooltip), width, action);
+    }
+
+    private ActionButton button(Component label, Component tooltip, int width,
+                                java.util.function.BiConsumer<Player, io.papermc.paper.dialog.DialogResponseView> action) {
+        return ActionButton.builder(label).tooltip(tooltip).width(width)
                 .action(DialogAction.customClick((view, audience) -> {
                     if (audience instanceof Player player && player.isOnline()) action.accept(player, view);
                 }, ClickCallback.Options.builder().uses(1).build())).build();

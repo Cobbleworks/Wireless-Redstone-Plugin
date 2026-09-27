@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+- Added name and description search to the wireless group dialog.
 - Replaced inventory management screens with Paper dialogs, ordered groups by nearest placed block, and moved rename, removal, and location details into group dialogs.
 - Removed custom menu icons and manual menu ordering; categories now appear as bold name prefixes.
 - Added category descriptions in the wireless GUI.

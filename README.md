@@ -16,7 +16,7 @@ Wireless Redstone is an open-source Minecraft plugin that allows players to crea
 
 - **Wireless Bulbs and Lamps:** Create linked groups of copper bulbs or redstone lamps that synchronize state across any distance (2-26 blocks per group)
 - **Wireless Containers:** Create linked groups of chests, barrels, shulker boxes, or copper chests that share inventory in real time
-- **Management dialogs:** Distance-sorted group list with category labels, Circuit Tool access, group editing, block locations, and teleport buttons
+- **Management dialogs:** Searchable, distance-sorted group list with category labels, Circuit Tool access, group editing, and teleport buttons
 - **Circuit Tool:** Management and diagnostic tool for adding/removing blocks, inspecting wireless groups, and showing color-coded glowing outlines per group
 - **Block Recovery:** Recover lost or accidentally broken wireless blocks that still belong to an existing group
 - **All Copper Variants:** Full support for normal, exposed, weathered, and oxidized copper bulbs and chests - including all waxed variants
