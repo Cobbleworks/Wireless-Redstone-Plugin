@@ -1,1 +1,6 @@
 # Wireless Redstone configuration.
+
+# How often (in server ticks) to redraw circuit tool connection lines.
+# Lower values make the lines appear more continuous but use more server resources.
+wire-view:
+  interval-ticks: 1

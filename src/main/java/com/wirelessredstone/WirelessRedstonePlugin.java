@@ -104,7 +104,8 @@ public class WirelessRedstonePlugin extends JavaPlugin {
     private void startTasks() {
         syncTask = new BulbSyncTask(bulbManager).runTaskTimer(this, 1L, 1L);
         connectorWireViewTask = new ConnectorWireViewTask(this, wireViewManager);
-        connectorWireViewTask.runTaskTimer(this, 10L, 10L); // Run every 10 ticks (0.5 seconds)
+        long wireViewIntervalTicks = Math.max(1L, getConfig().getLong("wire-view.interval-ticks", 1L));
+        connectorWireViewTask.runTaskTimer(this, 1L, wireViewIntervalTicks);
     }
 
     public static WirelessRedstonePlugin getInstance() {

@@ -28,9 +28,6 @@ public class ConnectorWireViewTask extends BukkitRunnable {
     private final JavaPlugin plugin;
     private final WireViewManager wireViewManager;
     private final Set<UUID> playersWithConnectorView = ConcurrentHashMap.newKeySet();
-    private int connectionLineTick = 0;
-
-    private static final int CONNECTION_LINE_INTERVAL_TICKS = 10;
     private static final Color CHEST_GROUP_CONNECTION_COLOR = Color.fromRGB(255, 170, 0);
 
     public ConnectorWireViewTask(JavaPlugin plugin, WireViewManager wireViewManager) {
@@ -59,11 +56,7 @@ public class ConnectorWireViewTask extends BukkitRunnable {
             }
         }
 
-        connectionLineTick += 10;
-        if (connectionLineTick >= CONNECTION_LINE_INTERVAL_TICKS) {
-            connectionLineTick = 0;
-            drawConnectionLinesForConnectorViewers();
-        }
+        drawConnectionLinesForConnectorViewers();
     }
 
     private void drawConnectionLinesForConnectorViewers() {
