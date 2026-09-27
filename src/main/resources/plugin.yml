@@ -1,7 +1,7 @@
 name: WirelessRedstone
 version: ${project.version}
 main: com.wirelessredstone.WirelessRedstonePlugin
-api-version: "1.21"
+api-version: "1.21.10"
 description: Wireless Redstone plugin with linked copper bulbs and redstone lamps
 author: Cobbleworks
 website: https://github.com/Cobbleworks/Wireless-Redstone-Plugin
@@ -18,10 +18,10 @@ permissions:
     description: Allows using wireless redstone commands
     default: op
   wirelessredstone.teleport:
-    description: Allows teleporting to bulb locations via GUI
+    description: Allows teleporting to wireless block locations via dialogs
     default: op
   wirelessredstone.remove:
-    description: Allows removing bulb groups via GUI
+    description: Allows removing wireless groups via dialogs
     default: op
   wirelessredstone.admin:
     description: Allows viewing and managing all players' bulb groups

@@ -18,7 +18,6 @@ public abstract class BaseGroup {
     protected UUID ownerUuid;
     protected String customName;
     protected String description;
-    protected Material customIcon;
     protected UUID categoryId;
 
     protected BaseGroup(UUID groupId, int maxSize) {
@@ -142,14 +141,6 @@ public abstract class BaseGroup {
 
     public void setDescription(String description) {
         this.description = description != null && !description.isBlank() ? description : null;
-    }
-
-    public Material getCustomIcon() {
-        return customIcon;
-    }
-
-    public void setCustomIcon(Material customIcon) {
-        this.customIcon = customIcon;
     }
 
     public UUID getCategoryId() {

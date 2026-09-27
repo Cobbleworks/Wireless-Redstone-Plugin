@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+- Replaced inventory management screens with Paper dialogs, ordered groups by nearest placed block, and moved rename, removal, and location details into group dialogs.
+- Removed custom menu icons and manual menu ordering; categories now appear as bold name prefixes.
 - Added category descriptions in the wireless GUI.
 - Added GUI buttons for receiving the Connector Tool and Circuit Analyser.
 - Changed `/wireless create` to use the Connector Tool chat prompt, making connector-based setup the primary group creation flow.

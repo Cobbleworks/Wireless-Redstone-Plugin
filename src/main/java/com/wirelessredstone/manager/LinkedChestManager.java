@@ -218,8 +218,8 @@ public class LinkedChestManager extends LinkedGroupManager<ChestGroup> {
             if (group.getDescription() != null) {
                 config.set(basePath + ".description", group.getDescription());
             }
-            if (group.getCustomIcon() != null) {
-                config.set(basePath + ".customIcon", group.getCustomIcon().name());
+            if (group.getCategoryId() != null) {
+                config.set(basePath + ".categoryId", group.getCategoryId().toString());
             }
             if (group.getVariantMaterial() != null) {
                 config.set(basePath + ".variantMaterial", group.getVariantMaterial().name());
@@ -285,13 +285,6 @@ public class LinkedChestManager extends LinkedGroupManager<ChestGroup> {
             group.setInventorySize(groupInventorySize);
             group.setCustomName(config.getString(basePath + ".customName"));
             group.setDescription(config.getString(basePath + ".description"));
-            
-            String customIconStr = config.getString(basePath + ".customIcon");
-            if (customIconStr != null) {
-                try {
-                    group.setCustomIcon(Material.valueOf(customIconStr));
-                } catch (IllegalArgumentException ignored) {}
-            }
             
             String categoryIdStr = config.getString(basePath + ".categoryId");
             if (categoryIdStr != null) {

@@ -1,8 +1,7 @@
 package com.wirelessredstone.command;
 
 import com.wirelessredstone.WirelessRedstonePlugin;
-import com.wirelessredstone.gui.BulbManagerGUI;
-import com.wirelessredstone.gui.CategorySelectionGUI;
+import com.wirelessredstone.gui.WirelessDialog;
 import com.wirelessredstone.item.BulbVariant;
 import com.wirelessredstone.item.ChestVariant;
 import com.wirelessredstone.item.ConnectorToolFactory;
@@ -205,13 +204,13 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
 
     /**
      * Handles /wireless create [groupName].
-     * Without arguments, starts the same chat prompt used by the GUI connector action.
+     * Without arguments, opens the Circuit Tool creation dialog.
      * With a name, creates a circuit tool for the specified group (or creates a new group if it doesn't exist).
      * Use category/group-name to make the group appear under a category.
      */
     private void handleCreateCommand(Player player, String[] args) {
         if (args.length < 2) {
-            CategorySelectionGUI.startConnectorToolPrompt(player, null);
+            new WirelessDialog(plugin).openCreate(player);
             return;
         }
 
@@ -323,7 +322,7 @@ public class WirelessCommand implements CommandExecutor, TabCompleter {
 
     private void handleGUICommand(Player player, String[] args) {
         boolean showAll = args.length >= 2 && args[1].equalsIgnoreCase("--all");
-        new BulbManagerGUI(bulbManager, chestManager, categoryManager, player, showAll, null).open();
+        new WirelessDialog(plugin).open(player, showAll);
     }
 
     private void handleReloadCommand(Player player) {

@@ -1,8 +1,6 @@
 package com.wirelessredstone.listener;
 
 import com.wirelessredstone.WirelessRedstonePlugin;
-import com.wirelessredstone.gui.BulbManagerGUI;
-import com.wirelessredstone.gui.CategorySelectionGUI;
 import com.wirelessredstone.manager.CategoryManager;
 import com.wirelessredstone.manager.LinkedBulbManager;
 import com.wirelessredstone.manager.LinkedChestManager;
@@ -274,7 +272,6 @@ public class CircuitAnalyserListener implements Listener {
      * Initiates a rename operation for a group from the circuit report.
      */
     public static void initiateRename(Player player, UUID groupId, boolean isBulbGroup) {
-        clearOtherChatPrompts(player.getUniqueId());
         pendingOperations.put(player.getUniqueId(), new PendingOperation(groupId, isBulbGroup, OperationType.RENAME));
         player.sendMessage(Component.empty());
         player.sendMessage(Component.text("✎ ", NamedTextColor.YELLOW)
@@ -296,7 +293,6 @@ public class CircuitAnalyserListener implements Listener {
      * Initiates a description change operation for a group from the circuit report.
      */
     public static void initiateDescriptionChange(Player player, UUID groupId, boolean isBulbGroup) {
-        clearOtherChatPrompts(player.getUniqueId());
         pendingOperations.put(player.getUniqueId(), new PendingOperation(groupId, isBulbGroup, OperationType.DESCRIPTION));
         player.sendMessage(Component.empty());
         player.sendMessage(Component.text("✎ ", NamedTextColor.YELLOW)
@@ -316,12 +312,6 @@ public class CircuitAnalyserListener implements Listener {
      */
     public static void cancelPendingOperation(UUID playerUuid) {
         pendingOperations.remove(playerUuid);
-    }
-
-    private static void clearOtherChatPrompts(UUID playerId) {
-        CategorySelectionGUI.cancelPendingAction(playerId);
-        BulbManagerGUI.cancelPendingRename(playerId);
-        BulbManagerGUI.cancelPendingCategoryChange(playerId);
     }
 
     @EventHandler

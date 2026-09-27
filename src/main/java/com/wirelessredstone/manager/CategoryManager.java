@@ -2,7 +2,6 @@ package com.wirelessredstone.manager;
 
 import com.wirelessredstone.WirelessRedstonePlugin;
 import com.wirelessredstone.model.Category;
-import org.bukkit.Material;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 
@@ -71,14 +70,6 @@ public class CategoryManager {
         }
     }
 
-    public void setCategoryIcon(UUID categoryId, Material icon) {
-        Category category = categories.get(categoryId);
-        if (category != null) {
-            category.setIcon(icon);
-            saveData();
-        }
-    }
-
     public void deleteCategory(UUID categoryId) {
         categories.remove(categoryId);
         saveData();
@@ -116,10 +107,6 @@ public class CategoryManager {
             if (category.getOwnerUuid() != null) {
                 config.set(basePath + ".owner", category.getOwnerUuid().toString());
             }
-            if (category.getIcon() != null) {
-                config.set(basePath + ".icon", category.getIcon().name());
-                config.set(basePath + ".customIcon", true);
-            }
             index++;
         }
 
@@ -153,17 +140,6 @@ public class CategoryManager {
             
             Category category = new Category(categoryId, ownerUuid, name);
             category.setDescription(config.getString(basePath + ".description"));
-            
-            String iconStr = config.getString(basePath + ".icon");
-            if (iconStr != null) {
-                try {
-                    Material icon = Material.valueOf(iconStr);
-                    boolean legacyDefaultIcon = icon == Material.CHEST && !config.getBoolean(basePath + ".customIcon", false);
-                    if (!legacyDefaultIcon) {
-                        category.setIcon(icon);
-                    }
-                } catch (IllegalArgumentException ignored) {}
-            }
             
             categories.put(categoryId, category);
         }

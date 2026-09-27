@@ -7,7 +7,7 @@
   <b>Synchronize block states or shared inventories across distance through named groups and in-game tools.</b>
 </p>
 <p align="center">
-  <a href="https://github.com/Cobbleworks/Wireless-Redstone-Plugin/releases"><img src="https://img.shields.io/github/v/release/Cobbleworks/Wireless-Redstone-Plugin?include_prereleases&style=flat-square&color=4CAF50" alt="Latest Release"></a>&nbsp;&nbsp;<a href="https://github.com/Cobbleworks/Wireless-Redstone-Plugin/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue?style=flat-square" alt="License"></a>&nbsp;&nbsp;<img src="https://img.shields.io/badge/Java-21+-orange?style=flat-square" alt="Java Version">&nbsp;&nbsp;<img src="https://img.shields.io/badge/Minecraft-1.21+-green?style=flat-square" alt="Minecraft Version">&nbsp;&nbsp;<img src="https://img.shields.io/badge/Platform-Paper-yellow?style=flat-square" alt="Platform">&nbsp;&nbsp;<img src="https://img.shields.io/badge/Status-Active-brightgreen?style=flat-square" alt="Status">&nbsp;&nbsp;<a href="https://github.com/Cobbleworks/Wireless-Redstone-Plugin/issues"><img src="https://img.shields.io/github/issues/Cobbleworks/Wireless-Redstone-Plugin?style=flat-square&color=orange" alt="Open Issues"></a>
+  <a href="https://github.com/Cobbleworks/Wireless-Redstone-Plugin/releases"><img src="https://img.shields.io/github/v/release/Cobbleworks/Wireless-Redstone-Plugin?include_prereleases&style=flat-square&color=4CAF50" alt="Latest Release"></a>&nbsp;&nbsp;<a href="https://github.com/Cobbleworks/Wireless-Redstone-Plugin/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue?style=flat-square" alt="License"></a>&nbsp;&nbsp;<img src="https://img.shields.io/badge/Java-21+-orange?style=flat-square" alt="Java Version">&nbsp;&nbsp;<img src="https://img.shields.io/badge/Minecraft-1.21.10+-green?style=flat-square" alt="Minecraft Version">&nbsp;&nbsp;<img src="https://img.shields.io/badge/Platform-Paper-yellow?style=flat-square" alt="Platform">&nbsp;&nbsp;<img src="https://img.shields.io/badge/Status-Active-brightgreen?style=flat-square" alt="Status">&nbsp;&nbsp;<a href="https://github.com/Cobbleworks/Wireless-Redstone-Plugin/issues"><img src="https://img.shields.io/github/issues/Cobbleworks/Wireless-Redstone-Plugin?style=flat-square&color=orange" alt="Open Issues"></a>
 </p>
 
 Wireless Redstone is an open-source Minecraft plugin that allows players to create named groups of wirelessly linked blocks that synchronize their states or inventories across any distance. Link copper bulbs and redstone lamps into groups that toggle together, or link chests, shulker boxes, and copper chests into shared inventory groups that update in real time. All group data is saved persistently and survives server restarts, with full GUI-based management, a unified circuit tool for rapid assignment and inspection, and hopper-compatible container support.
@@ -16,7 +16,7 @@ Wireless Redstone is an open-source Minecraft plugin that allows players to crea
 
 - **Wireless Bulbs and Lamps:** Create linked groups of copper bulbs or redstone lamps that synchronize state across any distance (2-26 blocks per group)
 - **Wireless Containers:** Create linked groups of chests, barrels, shulker boxes, or copper chests that share inventory in real time
-- **Management GUI:** Visual interface for managing all wireless groups with category organization, category descriptions, custom naming, icon assignment, and quick tool buttons
+- **Management dialogs:** Distance-sorted group list with category labels, Circuit Tool access, group editing, block locations, and teleport buttons
 - **Circuit Tool:** Management and diagnostic tool for adding/removing blocks, inspecting wireless groups, and showing color-coded glowing outlines per group
 - **Block Recovery:** Recover lost or accidentally broken wireless blocks that still belong to an existing group
 - **All Copper Variants:** Full support for normal, exposed, weathered, and oxidized copper bulbs and chests - including all waxed variants
@@ -27,7 +27,7 @@ Wireless Redstone is an open-source Minecraft plugin that allows players to crea
 ## **Supported Platforms**
 
 - **Server Software:** `Paper` and compatible Paper forks
-- **Minecraft Versions:** `1.21` and higher
+- **Minecraft Versions:** `1.21.10` and higher
 - **Java Requirements:** `Java 21+`
 - **Dependencies:** None - fully self-contained, no external plugins required
 
@@ -61,7 +61,7 @@ Wireless Redstone is an open-source Minecraft plugin that allows players to crea
 Before installing Wireless Redstone, confirm the following requirements are met:
 
 - A Minecraft server running **Paper** or a compatible Paper fork
-- Server version **1.21 or higher** (`api-version: 1.21` is the minimum)
+- Server version **1.21.10 or higher** (`api-version: 1.21.10` is the minimum)
 - **Java 21** or newer installed on the machine running the server
 - Operator or console access to install plugin files
 
@@ -84,16 +84,16 @@ plugins/
     ├── config.yml       - Plugin settings, including visual effect durations
     ├── bulbs.yml        - All bulb and lamp group data
     ├── chests.yml       - All container group data and shared inventories
-    └── categories.yml   - Category definitions and icons
+    └── categories.yml   - Legacy category definitions
 ```
 
-All data files are managed automatically by the plugin. Do not edit them manually while the server is running - all management is done in-game using the `/wireless` command and GUI. If you make manual edits while the server is stopped, run `/wireless reload` after restarting.
+All data files are managed automatically by the plugin. Do not edit them manually while the server is running. Manage groups with `/wireless`; prefix a group name with `category/` to categorize it. Existing category assignments are still displayed. If you make manual edits while the server is stopped, run `/wireless reload` after restarting.
 
 ### **Verifying Installation**
 
 - Run `/plugins` in-game - `WirelessRedstone` should appear green in the list
 - Run `/version WirelessRedstone` to confirm the installed version matches the release you downloaded
-- Run `/wireless` to open the management GUI - a chest inventory should open
+- Run `/wireless` to open the management dialog
 - If the plugin fails to load, check the server console for `WirelessRedstone` error messages (common causes: wrong Java version, corrupt JAR, or unsupported API version)
 
 ## **Third-Party Plugins**
@@ -111,7 +111,7 @@ Wireless Redstone persists all runtime data to YAML files under `plugins/Wireles
 | `config.yml`     | Plugin settings                                                                   |
 | `bulbs.yml`      | Bulb/lamp groups, ownership, names, category links, variant material, locations   |
 | `chests.yml`     | Container groups, shared inventories, ownership, names, category links, locations |
-| `categories.yml` | Category definitions, owners, descriptions, icons                                 |
+| `categories.yml` | Legacy category definitions and owners                                           |
 
 > **Note:** Do not edit these files manually while the server is running. Use `/wireless reload` after any manual edits made while the server is stopped.
 
@@ -143,12 +143,12 @@ All commands require the `wirelessredstone.use` permission (operator by default)
 
 | Command                                       | Description                                                                                                                       |
 | --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `/wireless`                                   | Open management GUI (same as `/wireless gui`)                                                                                     |
+| `/wireless`                                   | Open the distance-sorted management dialog (same as `/wireless gui`)                                                               |
 | `/wireless help`                              | Show command help                                                                                                                 |
-| `/wireless create`                            | Ask for a new group name and give a creation-mode Circuit Tool                                                                    |
+| `/wireless create`                            | Open a name input dialog for a new Circuit Tool                                                                                   |
 | `/wireless create <groupName>`                | Give a Circuit Tool for an existing group, or creation-mode tool for a named new group. Use `category/groupName` to categorize it |
 | `/wireless modify name <groupName> <newName>` | Rename a group                                                                                                                    |
-| `/wireless gui [--all]`                       | Open management GUI                                                                                                               |
+| `/wireless gui [--all]`                       | Open management dialog; `--all` includes other players' groups for admins                                                         |
 | `/wireless reload`                            | Reload configuration files (admin only)                                                                                           |
 
 ## **Permissions**
@@ -156,8 +156,8 @@ All commands require the `wirelessredstone.use` permission (operator by default)
 | Permission                  | Description                                                         | Default |
 | --------------------------- | ------------------------------------------------------------------- | ------- |
 | `wirelessredstone.use`      | Allows using wireless redstone commands                             | `op`    |
-| `wirelessredstone.teleport` | Allows teleporting to bulb locations via GUI                        | `op`    |
-| `wirelessredstone.remove`   | Allows removing bulb groups via GUI                                 | `op`    |
+| `wirelessredstone.teleport` | Allows teleporting to wireless block locations from dialogs        | `op`    |
+| `wirelessredstone.remove`   | Allows removing wireless groups from dialogs                        | `op`    |
 | `wirelessredstone.admin`    | Allows viewing/managing all players' groups and using admin actions | `op`    |
 
 ## **Building from Source**

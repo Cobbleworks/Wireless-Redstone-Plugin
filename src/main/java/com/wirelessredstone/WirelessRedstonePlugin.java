@@ -9,12 +9,10 @@ import com.wirelessredstone.listener.ChestPlaceListener;
 import com.wirelessredstone.listener.ChunkLoadListener;
 import com.wirelessredstone.listener.CircuitAnalyserListener;
 import com.wirelessredstone.listener.ConnectorToolListener;
-import com.wirelessredstone.listener.GUIListener;
 import com.wirelessredstone.listener.WireViewListener;
 import com.wirelessredstone.manager.CategoryManager;
 import com.wirelessredstone.manager.LinkedBulbManager;
 import com.wirelessredstone.manager.LinkedChestManager;
-import com.wirelessredstone.manager.MenuOrderManager;
 import com.wirelessredstone.manager.WireViewManager;
 import com.wirelessredstone.task.BulbSyncTask;
 import com.wirelessredstone.task.ConnectorWireViewTask;
@@ -27,7 +25,6 @@ public class WirelessRedstonePlugin extends JavaPlugin {
     private LinkedBulbManager bulbManager;
     private LinkedChestManager chestManager;
     private CategoryManager categoryManager;
-    private MenuOrderManager menuOrderManager;
     private WireViewManager wireViewManager;
     private BukkitTask syncTask;
     private ConnectorWireViewTask connectorWireViewTask;
@@ -40,7 +37,6 @@ public class WirelessRedstonePlugin extends JavaPlugin {
         bulbManager = new LinkedBulbManager(this);
         chestManager = new LinkedChestManager(this);
         categoryManager = new CategoryManager(this);
-        menuOrderManager = new MenuOrderManager(this);
         wireViewManager = new WireViewManager(this, bulbManager, chestManager);
 
         registerCommands();
@@ -71,9 +67,6 @@ public class WirelessRedstonePlugin extends JavaPlugin {
         if (categoryManager != null) {
             categoryManager.saveData();
         }
-        if (menuOrderManager != null) {
-            menuOrderManager.saveData();
-        }
         getLogger().info("WirelessRedstone has been disabled!");
     }
 
@@ -94,7 +87,6 @@ public class WirelessRedstonePlugin extends JavaPlugin {
         pluginManager.registerEvents(new ChestBreakListener(chestManager), this);
         pluginManager.registerEvents(new ChestInventoryListener(chestManager), this);
         pluginManager.registerEvents(new ChunkLoadListener(bulbManager, chestManager), this);
-        pluginManager.registerEvents(new GUIListener(bulbManager, chestManager, categoryManager), this);
         pluginManager.registerEvents(new WireViewListener(wireViewManager), this);
         var circuitAnalyserListener = new CircuitAnalyserListener(bulbManager, chestManager, categoryManager);
         pluginManager.registerEvents(circuitAnalyserListener, this);
@@ -124,10 +116,6 @@ public class WirelessRedstonePlugin extends JavaPlugin {
         return categoryManager;
     }
 
-    public MenuOrderManager getMenuOrderManager() {
-        return menuOrderManager;
-    }
-
     public WireViewManager getWireViewManager() {
         return wireViewManager;
     }
@@ -145,7 +133,6 @@ public class WirelessRedstonePlugin extends JavaPlugin {
         bulbManager.reloadData();
         chestManager.reloadData();
         categoryManager.reloadData();
-        menuOrderManager.reloadData();
         wireViewManager.cleanupAll();
         getLogger().info("WirelessRedstone configuration reloaded!");
     }
